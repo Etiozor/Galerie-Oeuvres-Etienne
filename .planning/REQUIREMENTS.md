@@ -79,35 +79,35 @@
 
 ---
 
-## Traçabilité (à compléter par le roadmapper)
+## Traceability
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| GALLERY-01 | — | — |
-| GALLERY-02 | — | — |
-| GALLERY-03 | — | — |
-| GALLERY-04 | — | — |
-| ART-01 | — | — |
-| ART-02 | — | — |
-| ART-03 | — | — |
-| ART-04 | — | — |
-| ART-05 | — | — |
-| PIPE-01 | — | — |
-| PIPE-02 | — | — |
-| PIPE-03 | — | — |
-| PIPE-04 | — | — |
-| PIPE-05 | — | — |
-| AUTH-01 | — | — |
-| AUTH-02 | — | — |
-| AUTH-03 | — | — |
-| AUTH-04 | — | — |
-| MARKET-01 | — | — |
-| MARKET-02 | — | — |
-| MARKET-03 | — | — |
-| MARKET-04 | — | — |
-| ADMIN-01 | — | — |
-| ADMIN-02 | — | — |
-| ADMIN-03 | — | — |
-| ADMIN-04 | — | — |
-| ADMIN-05 | — | — |
-| ABOUT-01 | — | — |
+| AUTH-04 | Phase 1 | 01-03 |
+| PIPE-01 | Phase 2 | 02-01 |
+| PIPE-02 | Phase 2 | 02-02 |
+| PIPE-03 | Phase 2 | 02-02 |
+| PIPE-04 | Phase 2 | 02-04 |
+| PIPE-05 | Phase 2 | 02-04 |
+| ADMIN-03 | Phase 2 | 02-04 |
+| GALLERY-01 | Phase 3 | 03-01 |
+| GALLERY-02 | Phase 3 | 03-01 |
+| GALLERY-03 | Phase 3 | 03-02 |
+| GALLERY-04 | Phase 3 | 03-03 |
+| ART-01 | Phase 3 | 03-03 |
+| ART-02 | Phase 3 | 03-03 |
+| ART-03 | Phase 3 | 03-03 |
+| ART-04 | Phase 3 | 03-03 |
+| ART-05 | Phase 3 | 03-01 |
+| ABOUT-01 | Phase 3 | 03-04 |
+| AUTH-01 | Phase 4 | 04-01 |
+| AUTH-02 | Phase 4 | 04-01 |
+| AUTH-03 | Phase 4 | 04-01 |
+| MARKET-01 | Phase 4 | 04-02 |
+| MARKET-02 | Phase 4 | 04-03 |
+| MARKET-03 | Phase 4 | 04-04 |
+| MARKET-04 | Phase 4 | 04-04 |
+| ADMIN-01 | Phase 5 | 05-02 |
+| ADMIN-02 | Phase 5 | 05-01 |
+| ADMIN-04 | Phase 5 | 05-01 |
+| ADMIN-05 | Phase 5 | 05-03 |
