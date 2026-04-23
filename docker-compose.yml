@@ -1,0 +1,56 @@
+# docker-compose.yml
+# Lance les services locaux nécessaires au développement de la Galerie POF.
+#
+# PRÉREQUIS : Docker Desktop for Windows doit être installé et démarré.
+# Téléchargement : https://www.docker.com/products/docker-desktop/
+#
+# COMMANDES UTILES :
+#   docker compose up -d    → démarrer en arrière-plan
+#   docker compose down     → arrêter les conteneurs (les données sont conservées)
+#   docker compose logs db  → voir les logs de la base de données
+#   docker compose down -v  → arrêter ET supprimer les données (⚠ irréversible)
+
+services:
+  # Service de base de données PostgreSQL
+  # PostgreSQL est la base de données principale de la galerie.
+  # Elle stocke les œuvres, les offres, les visiteurs, et les sessions artiste.
+  db:
+    image: postgres:16-alpine
+    # alpine = image légère (moins de 50 Mo) — suffisante pour le développement
+
+    # Redémarre automatiquement si Docker redémarre (ex: reboot Windows)
+    restart: unless-stopped
+
+    # Variables de configuration de la base de données
+    # Ces valeurs sont uniquement pour le développement local — pas de données sensibles ici
+    # En production sur Railway, PostgreSQL est géré séparément avec des credentials différents
+    environment:
+      POSTGRES_DB: galerie_pof
+      POSTGRES_USER: pof_user
+      POSTGRES_PASSWORD: pof_dev_password
+
+    # Expose le port PostgreSQL sur la machine Windows
+    # Format : "port_windows:port_container"
+    # 5432 est le port standard PostgreSQL — accessible depuis localhost:5432
+    ports:
+      - "5432:5432"
+
+    # Volume persistant : les données de la base survivent aux redémarrages Docker
+    # Sans ce volume, la base serait effacée à chaque docker compose down
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    # Vérifie que PostgreSQL est vraiment prêt à accepter des connexions
+    # avant de signaler le service comme "healthy"
+    # Utile pour éviter que l'application se connecte avant que la base soit prête
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pof_user -d galerie_pof"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Volumes nommés : Docker gère ces dossiers en dehors du projet
+# Les données persistent même après docker compose down
+# Pour tout réinitialiser : docker compose down -v
+volumes:
+  postgres_data:
