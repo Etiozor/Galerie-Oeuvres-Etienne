@@ -1,211 +1,186 @@
 ---
 phase: 01-foundation
-reviewed: 2026-04-23T00:00:00Z
+reviewed: 2026-04-24T00:00:00Z
 depth: standard
-files_reviewed: 14
+files_reviewed: 7
 files_reviewed_list:
-  - package.json
-  - next.config.ts
-  - tsconfig.json
-  - src/app/layout.tsx
-  - src/app/page.tsx
-  - src/app/globals.css
-  - docker-compose.yml
-  - .env.example
-  - .gitignore
-  - .npmrc
-  - drizzle.config.ts
-  - src/db/schema.ts
-  - src/db/index.ts
-  - src/db/seed.ts
+  - src/lib/auth.ts
+  - src/app/api/auth/[...all]/route.ts
+  - middleware.ts
+  - src/app/admin/page.tsx
+  - src/app/admin/login/page.tsx
+  - src/lib/storage/index.ts
+  - src/lib/storage/local.ts
 findings:
   critical: 1
-  warning: 4
-  info: 3
-  total: 8
+  warning: 3
+  info: 2
+  total: 6
 status: issues_found
 ---
 
-# Phase 01 : Code Review Report
+# Phase 01 : Code Review Report (Better Auth + Storage Layer)
 
-**Reviewed:** 2026-04-23
+**Reviewed:** 2026-04-24
 **Depth:** standard
-**Files Reviewed:** 14
+**Files Reviewed:** 7
 **Status:** issues_found
 
 ## Summary
 
-La fondation du projet est solide. La structure de la base de données est bien pensée, le schéma Drizzle est complet et cohérent avec les décisions d'architecture documentées. Les commentaires en français sont présents partout, conformément aux conventions du projet.
+Ce second lot de fichiers couvre l'implémentation de Better Auth (auth.ts, route API, middleware, pages admin) et l'abstraction de stockage (StorageProvider + LocalStorageAdapter). La structure générale est bien conçue : le middleware est correctement placé, le StorageProvider est proprement abstrait, et les commentaires en français sont présents partout.
 
-Deux problèmes structurels méritent une attention immédiate : la présence d'un mot de passe de développement dans `.env.example` (qui sera engagé dans git) et l'absence de gestion de la déconnexion du pool de base de données dans le seed script. Quatre avertissements concernent des risques de bugs potentiels en production ou en développement. Trois points d'information signalent des opportunités d'amélioration mineures.
+Un problème critique a été identifié dans l'adaptateur de stockage local : la vérification anti-path-traversal est insuffisante sur Windows (environnement de développement actuel) et face à des clés contenant des chemins absolus. Trois avertissements concernent des bugs potentiels réels : le matcher du middleware ne couvre pas `/admin` sans sous-chemin, le formulaire de déconnexion peut échouer silencieusement, et le formulaire de connexion ne redirige pas avec `router.refresh()` (risque de session périmée). Deux points d'information signalent des opportunités d'amélioration mineures.
 
 ---
 
 ## Critical Issues
 
-### CR-01: Mot de passe de développement en clair dans un fichier versionné
+### CR-01: Path traversal non bloqué pour les clés de chemin absolu (Windows)
 
-**File:** `.env.example:14`
-**Issue:** La `DATABASE_URL` dans `.env.example` contient le mot de passe de développement en clair (`pof_dev_password`). Ce fichier est explicitement versionné (checké dans git). Bien que ce mot de passe soit uniquement pour le développement local, il correspond exactement aux credentials définis dans `docker-compose.yml`, ce qui crée un couplage entre les deux fichiers et normalise la pratique de commiter des credentials. Si un développeur copie ce fichier et le déploie sans modification, les credentials de dev seront exposés. De plus, le pattern dans `.gitignore` ne protège que `.env.local` et `.env.*.local` — un `.env` simple ne serait pas ignoré.
+**File:** `src/lib/storage/local.ts:63-69`
 
-**Fix:** Remplacer les vraies valeurs par des placeholders explicites dans `.env.example` :
-```bash
-# Avant (actuel — credentials en clair) :
-DATABASE_URL="postgresql://pof_user:pof_dev_password@localhost:5432/galerie_pof"
+**Issue:** La méthode `assertSafeKey` vérifie que `filePath.startsWith(this.uploadDir)` pour prévenir la traversal de chemin. Cette vérification a deux failles :
 
-# Après (placeholder sûr) :
-DATABASE_URL="postgresql://VOTRE_USER:VOTRE_MOT_DE_PASSE@localhost:5432/galerie_pof"
-# Valeurs dev locales : postgresql://pof_user:pof_dev_password@localhost:5432/galerie_pof
+1. **Clé de chemin absolu ignorée par `path.join` sur Windows** : `path.join('F:\\Vente POF\\uploads', 'C:\\Windows\\System32\\hosts')` retourne `C:\Windows\System32\hosts` sur Windows (car `path.join` traite les segments absolus comme des racines et écrase le chemin précédent). Ce résultat ne commence pas par `uploadDir`, donc l'erreur est bien levée — mais seulement si `uploadDir` est un chemin Windows. Si `uploadDir` contient des séparateurs mixtes (`/` vs `\`), la comparaison `startsWith` peut rater.
+
+2. **Système de fichiers insensible à la casse (Windows/macOS)** : `filePath.startsWith(this.uploadDir)` est une comparaison de chaînes sensible à la casse. Sur Windows, `F:\Vente POF\uploads` et `f:\vente pof\uploads` référencent le même dossier mais la vérification `startsWith` échouerait ou accepterait à tort selon la casse utilisée. Une clé comme `../../../etc/passwd` normalisée différemment selon la casse des dossiers pourrait contourner la protection.
+
+3. **Absence de normalisation avant comparaison** : `path.join` normalise les `..` mais `startsWith` compare des chaînes brutes. Si `uploadDir` ne se termine pas par un séparateur, une clé `../uploads-evil/file.jpg` pourrait produire un chemin qui commence par `uploadDir` mais pointe en dehors (ex: `uploadDir` = `/app/uploads`, chemin résolu = `/app/uploads-evil/file.jpg` — `startsWith` retournerait `true` à tort).
+
+**Fix:**
+```typescript
+private assertSafeKey(key: string, filePath: string): void {
+  // Normaliser les deux chemins de manière cohérente avant de comparer.
+  // path.resolve() retourne un chemin absolu canonique.
+  // Ajouter path.sep à la fin de uploadDir pour éviter les faux positifs
+  // (ex: "/uploads" matche "/uploads-evil/..." sans le séparateur final).
+  const safeBase = this.uploadDir.endsWith(path.sep)
+    ? this.uploadDir
+    : this.uploadDir + path.sep
+
+  const resolvedFile = path.resolve(filePath)
+
+  // Sur Windows, comparer en minuscules (système de fichiers insensible à la casse)
+  const isWin = process.platform === 'win32'
+  const normalizedBase = isWin ? safeBase.toLowerCase() : safeBase
+  const normalizedFile = isWin ? resolvedFile.toLowerCase() : resolvedFile
+
+  if (!normalizedFile.startsWith(normalizedBase)) {
+    throw new Error(
+      `Clé de stockage invalide : "${key}". ` +
+      'La clé ne peut pas contenir de séquences "../" ou pointer hors du dossier uploads/.'
+    )
+  }
+}
 ```
-Alternativement, ajouter `.env` (sans suffixe) à `.gitignore` pour couvrir ce cas.
 
 ---
 
 ## Warnings
 
-### WR-01: Pool de connexions non fermé dans le seed script — risque de hang
+### WR-01: Le matcher du middleware ne couvre pas `/admin` sans sous-chemin
 
-**File:** `src/db/seed.ts:214`
-**Issue:** Le script seed appelle `process.exit(0)` directement, sans fermer le pool de connexions PostgreSQL (`pool.end()`). Bien que `process.exit()` tue le processus, certaines versions de `node-postgres` peuvent bloquer la sortie si le pool est actif, ou laisser des connexions pendantes côté serveur. Le pattern robuste est de fermer explicitement le pool avant de quitter.
+**File:** `middleware.ts:43-46`
 
-Le pool est créé dans `src/db/index.ts` mais n'est pas exporté — seul `db` est exporté. Pour fermer proprement, soit le pool doit être exporté, soit Drizzle expose une méthode `$client`.
+**Issue:** Le matcher `['/admin/:path*']` utilise `:path*` (zéro ou plusieurs segments). En Next.js, `:path*` correspond effectivement à zéro segment également, donc `/admin` seul devrait être couvert. Cependant, le comportement exact dépend de la version de Next.js. Dans certaines versions, `/admin` (sans slash final et sans sous-chemin) ne déclenche pas le middleware avec ce pattern — seul `/admin/` ou `/admin/quelque-chose` le ferait. Si `/admin` n'est pas intercepté, la page `src/app/admin/page.tsx` serait accessible sans authentification (la vérification de session dans la page elle-même redirige, mais c'est une couche de défense secondaire, pas primaire).
 
-**Fix:**
+**Fix:** Utiliser un matcher explicite couvrant les deux cas :
 ```typescript
-// Dans src/db/index.ts — exporter le pool pour le seed
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-export const db = drizzle(pool, { schema })
-
-// Dans src/db/seed.ts — fermer le pool avant process.exit
-seed()
-  .then(async () => {
-    await pool.end()
-    process.exit(0)
-  })
-  .catch(async (error) => {
-    console.error('❌ Erreur lors du seed :', error)
-    await pool.end()
-    process.exit(1)
-  })
+export const config = {
+  matcher: ['/admin', '/admin/:path*'],
+}
 ```
+Ou tester explicitement que `/admin` (sans slash final) déclenche bien une redirection vers `/admin/login` quand non authentifié.
 
-### WR-02: `updatedAt` non mis à jour automatiquement — risque de données obsolètes
+### WR-02: Formulaire de déconnexion sans gestion d'erreur ni feedback utilisateur
 
-**File:** `src/db/schema.ts:190` et `src/db/schema.ts:281`
-**Issue:** Les colonnes `updatedAt` sur `artworks` (ligne 190) et `visitors` (ligne 281) ont `.defaultNow()` pour l'insertion, mais il n'existe aucun mécanisme pour les mettre à jour automatiquement lors des modifications. En Drizzle ORM, `.defaultNow()` ne s'applique qu'à l'INSERT, pas à l'UPDATE. Résultat : `updatedAt` restera figé à la date de création pour toutes les œuvres et tous les visiteurs modifiés depuis l'admin.
+**File:** `src/app/admin/page.tsx:45-49`
 
-**Fix:** Deux options :
-1. Créer un trigger PostgreSQL (robuste, indépendant de l'ORM) :
-```sql
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+**Issue:** La déconnexion est implémentée comme un formulaire HTML natif `<form action="/api/auth/sign-out" method="POST">`. Cette approche présente deux problèmes :
 
-CREATE TRIGGER artworks_updated_at
-BEFORE UPDATE ON artworks
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-```
-2. Ou rappeler explicitement dans chaque Server Action de mise à jour :
+1. **Pas de feedback utilisateur** : Si l'endpoint échoue (réseau, erreur serveur), la page ne donne aucun retour. L'artiste pense être déconnecté alors qu'il ne l'est peut-être pas.
+
+2. **Comportement du cookie de session** : Better Auth gère la révocation de session côté serveur. Un POST simple sans les headers attendus par Better Auth (notamment `Content-Type: application/json` ou un token CSRF selon la configuration) peut retourner une erreur 4xx sans que l'utilisateur le voie. La session reste active côté serveur.
+
+**Fix:** Remplacer par un bouton avec un `onClick` handler (ou une Server Action) qui gère explicitement la réponse :
 ```typescript
-await db.update(artworks)
-  .set({ ...data, updatedAt: new Date() })
-  .where(eq(artworks.id, id))
-```
-L'option 2 est plus simple à maintenir dans ce projet. Documenter ce choix dans le schéma pour éviter les oublis en Phase 5.
+// Option 1 : Utiliser le client Better Auth dans un Client Component
+import { authClient } from '@/lib/auth-client' // à créer si absent
 
-### WR-03: `drizzle.config.ts` utilise l'opérateur non-null assertion (`!`) sur DATABASE_URL
-
-**File:** `drizzle.config.ts:32`
-**Issue:** `process.env.DATABASE_URL!` utilise l'assertion non-null TypeScript qui supprime l'erreur de type sans vérification à l'exécution. Si `DATABASE_URL` n'est pas définie lors de l'exécution de `drizzle-kit push` ou `drizzle-kit studio`, l'outil recevra `undefined` converti en chaîne `"undefined"` comme URL de connexion, produisant une erreur de connexion confuse au lieu d'un message d'erreur clair.
-
-La vérification défensive existe dans `src/db/index.ts` (lignes 19-24) mais pas dans `drizzle.config.ts`.
-
-**Fix:**
-```typescript
-// drizzle.config.ts
-const dbUrl = process.env.DATABASE_URL
-if (!dbUrl) {
-  throw new Error(
-    'Variable DATABASE_URL manquante pour drizzle-kit. ' +
-    'Vérifiez votre fichier .env.local.'
-  )
+async function handleSignOut() {
+  await authClient.signOut()
+  router.push('/admin/login')
 }
 
-export default {
-  schema: './src/db/schema.ts',
-  out: './drizzle',
-  dialect: 'postgresql',
-  dbCredentials: { url: dbUrl },
-} satisfies Config
+// Option 2 : Server Action avec redirection
+async function signOutAction() {
+  'use server'
+  // Appel à auth.api.signOut() puis redirect
+}
 ```
 
-### WR-04: Références FK nullables sur `artworks.typeId` et `artworks.mediumId` sans index
+### WR-03: Connexion réussie sans `router.refresh()` — risque de session périmée dans le cache Next.js
 
-**File:** `src/db/schema.ts:154-157`
-**Issue:** Les colonnes `typeId` et `mediumId` sur `artworks` sont des clés étrangères nullable (pas de `.notNull()`), ce qui est cohérent avec le fait qu'une œuvre peut ne pas encore avoir de type/médium assigné. Cependant, ces colonnes n'ont pas d'index, alors qu'elles seront utilisées dans les requêtes de filtre de la galerie (ex: "afficher toutes les peintures", "afficher les acryliques"). Les index `artworks_status_idx` et `artworks_pipeline_idx` sont présents, mais les colonnes de jointure FK sont oubliées.
+**File:** `src/app/admin/login/page.tsx:57`
 
-**Fix:** Ajouter des index sur les FK dans la définition de la table :
+**Issue:** Après une connexion réussie, le code appelle `router.push('/admin')` mais pas `router.refresh()`. Dans Next.js App Router, `router.push` réutilise le cache du routeur client. Si `/admin` a été visité précédemment (même sans session), le cache peut contenir une version de la page sans les données de session. `router.refresh()` force Next.js à re-fetcher les Server Components avec la nouvelle session.
+
+Sans `router.refresh()`, il est possible que la page `/admin` s'affiche avec des données obsolètes ou déclenche une nouvelle redirection vers `/admin/login` parce que le middleware voit le cookie de session mais le Server Component du cache ne l'a pas encore.
+
+**Fix:**
 ```typescript
-export const artworks = pgTable('artworks', {
-  // ... colonnes existantes ...
-}, (table) => [
-  index('artworks_status_idx').on(table.status),
-  index('artworks_pipeline_idx').on(table.pipelineState),
-  // Ajouter :
-  index('artworks_type_idx').on(table.typeId),
-  index('artworks_medium_idx').on(table.mediumId),
-])
+// Après connexion réussie
+router.refresh() // Invalider le cache Next.js pour prendre en compte la nouvelle session
+router.push('/admin')
 ```
+Ou utiliser `router.replace('/admin')` suivi de `router.refresh()`.
 
 ---
 
 ## Info
 
-### IN-01: Variables CSS référencent des polices non importées (`--font-geist-sans`, `--font-geist-mono`)
+### IN-01: `require()` dynamique dans `getStorage()` — anti-pattern ESM mitigé
 
-**File:** `src/app/globals.css:11-12`
-**Issue:** Le bloc `@theme` référence `var(--font-geist-sans)` et `var(--font-geist-mono)` comme valeurs de `--font-sans` et `--font-mono`. Ces variables CSS seront `undefined` au runtime car les polices Geist ne sont pas importées dans `layout.tsx` (aucune importation `next/font/google` ou `next/font/local`). La police de repli définie sur `body` (`Arial, Helvetica, sans-serif`) s'appliquera, mais la déclaration `@theme` est trompeuse et pourrait causer des surprises lors du passage à une vraie police en Phase 3.
+**File:** `src/lib/storage/index.ts:99`
 
-**Fix:** Soit importer les polices Geist dans `layout.tsx` dès maintenant, soit supprimer les lignes 11-12 de `globals.css` et garder uniquement la police Arial jusqu'en Phase 3 :
-```css
-/* Supprimer ou mettre en commentaire jusqu'en Phase 3 : */
-/* --font-sans: var(--font-geist-sans); */
-/* --font-mono: var(--font-geist-mono); */
-```
+**Issue:** La factory `getStorage()` utilise `require('./local')` (CommonJS) avec un commentaire eslint-disable pour charger l'adaptateur local. Le commentaire explique que c'est pour éviter de charger le module `fs` en production R2. Cependant, Next.js 15 avec App Router utilise des bundles ESM et peut avoir des comportements inattendus avec `require()` dynamique dans certains contextes (Edge Runtime, etc.).
 
-### IN-02: Le script `build` utilise `--turbopack` — flag expérimental en production
+De plus, le type casté `as { LocalStorageAdapter: new () => LocalStorageAdapter }` est techniquement inexact : le type `LocalStorageAdapter` importé en haut du fichier est le type de l'instance, pas du constructeur. TypeScript accepte ce cast mais c'est trompeur.
 
-**File:** `package.json:7`
-**Issue:** Le script `"build": "next build --turbopack"` active Turbopack pour les builds de production. Turbopack est stable pour le développement (`next dev`) mais son support pour les builds de production (`next build`) était encore expérimental dans Next.js 15. Cela peut causer des différences de comportement entre dev et prod, ou des erreurs de build inattendues lors du déploiement sur Railway en Phase 6.
-
-**Fix:** Retirer `--turbopack` du script `build` et le conserver uniquement pour `dev` :
-```json
-"scripts": {
-  "dev": "next dev --turbopack",
-  "build": "next build",
-  "start": "next start"
+**Fix:** Utiliser un import dynamique ESM natif à la place :
+```typescript
+case 'local': {
+  const { LocalStorageAdapter } = await import('./local')
+  return new LocalStorageAdapter()
 }
+// Note : getStorage() doit alors être async
+export async function getStorage(): Promise<StorageProvider> { ... }
 ```
+Ou, plus simplement, puisque `fs` n'est pas disponible en Edge Runtime de toute façon, importer directement en haut du fichier et documenter que cet adaptateur ne fonctionne qu'en Node.js runtime.
 
-### IN-03: Absence de `.env` (sans suffixe) dans `.gitignore`
+### IN-02: `getUrl()` ne vérifie pas la sécurité de la clé
 
-**File:** `.gitignore:35`
-**Issue:** Le `.gitignore` protège `.env.local` et `.env.*.local` mais pas `.env` tout seul. Si un développeur crée un fichier `.env` (pratique courante dans certains workflows), il sera commité accidentellement. Ce risque est amplifié par CR-01 (les credentials réels sont facilement reconnaissables dans `.env.example`).
+**File:** `src/lib/storage/local.ts:169`
 
-**Fix:** Ajouter `.env` au `.gitignore` :
-```gitignore
-# Variables d'environnement locales (contiennent des secrets)
-.env
-.env.local
-.env.*.local
+**Issue:** La méthode `getUrl()` normalise les séparateurs Windows mais n'appelle pas `assertSafeKey()`. Une clé malveillante comme `../../admin/secret` produirait l'URL `http://localhost:3000/uploads/../../admin/secret`. Les navigateurs normalisent généralement ces URLs, mais selon le contexte d'utilisation (génération de liens dans des templates), cela pourrait exposer des URLs inattendues.
+
+Ce risque est faible car `getUrl()` ne touche pas au système de fichiers — elle génère juste une chaîne. Mais la cohérence avec les autres méthodes (`put`, `get`, `delete`) qui toutes vérifient la clé serait préférable.
+
+**Fix:**
+```typescript
+getUrl(key: string): string {
+  // Vérification défensive : même logique que les autres méthodes
+  const filePath = path.join(this.uploadDir, key)
+  this.assertSafeKey(key, filePath)
+
+  const normalizedKey = key.replace(/\\/g, '/')
+  return `${this.baseUrl}/uploads/${normalizedKey}`
+}
 ```
 
 ---
 
-_Reviewed: 2026-04-23_
+_Reviewed: 2026-04-24_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
