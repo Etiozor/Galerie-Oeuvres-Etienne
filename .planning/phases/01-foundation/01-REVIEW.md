@@ -1,67 +1,84 @@
 ---
 phase: 01-foundation
-reviewed: 2026-04-24T00:00:00Z
+reviewed: 2026-04-25T10:00:00Z
 depth: standard
-files_reviewed: 7
+files_reviewed: 21
 files_reviewed_list:
-  - src/lib/auth.ts
-  - src/app/api/auth/[...all]/route.ts
+  - .env.example
+  - .gitignore
+  - .npmrc
+  - docker-compose.yml
+  - drizzle.config.ts
   - middleware.ts
-  - src/app/admin/page.tsx
+  - next.config.ts
+  - package.json
   - src/app/admin/login/page.tsx
+  - src/app/admin/page.tsx
+  - src/app/api/auth/[...all]/route.ts
+  - src/app/globals.css
+  - src/app/layout.tsx
+  - src/app/page.tsx
+  - src/db/index.ts
+  - src/db/schema.ts
+  - src/db/seed.ts
+  - src/lib/auth.ts
   - src/lib/storage/index.ts
   - src/lib/storage/local.ts
+  - tsconfig.json
 findings:
   critical: 1
-  warning: 3
-  info: 2
-  total: 6
+  warning: 4
+  info: 3
+  total: 8
 status: issues_found
 ---
 
-# Phase 01 : Code Review Report (Better Auth + Storage Layer)
+# Phase 01 : Code Review — Foundation (revue complète)
 
-**Reviewed:** 2026-04-24
+**Reviewed:** 2026-04-25T10:00:00Z
 **Depth:** standard
-**Files Reviewed:** 7
+**Files Reviewed:** 21
 **Status:** issues_found
 
 ## Summary
 
-Ce second lot de fichiers couvre l'implémentation de Better Auth (auth.ts, route API, middleware, pages admin) et l'abstraction de stockage (StorageProvider + LocalStorageAdapter). La structure générale est bien conçue : le middleware est correctement placé, le StorageProvider est proprement abstrait, et les commentaires en français sont présents partout.
+La phase 01 (Foundation) est globalement bien construite. Le schéma de base de données est complet et cohérent avec les décisions d'architecture documentées dans CLAUDE.md. Le middleware respecte la contrainte Edge Runtime (aucun import de Better Auth ni de Kysely). L'abstraction StorageProvider est propre et bien documentée. Les commentaires en français expliquant le WHY sont présents sur l'ensemble des fichiers. TypeScript strict est activé avec `noUncheckedIndexedAccess`.
 
-Un problème critique a été identifié dans l'adaptateur de stockage local : la vérification anti-path-traversal est insuffisante sur Windows (environnement de développement actuel) et face à des clés contenant des chemins absolus. Trois avertissements concernent des bugs potentiels réels : le matcher du middleware ne couvre pas `/admin` sans sous-chemin, le formulaire de déconnexion peut échouer silencieusement, et le formulaire de connexion ne redirige pas avec `router.refresh()` (risque de session périmée). Deux points d'information signalent des opportunités d'amélioration mineures.
+Deux findings du review précédent (CR-01 path traversal, IN-02 getUrl sans vérification) sont confirmés et précisés. De nouveaux problèmes ont été identifiés sur les colonnes `updatedAt` (ne se mettront jamais à jour), la redirection post-déconnexion, et le comportement du cache Next.js après connexion.
 
 ---
 
 ## Critical Issues
 
-### CR-01: Path traversal non bloqué pour les clés de chemin absolu (Windows)
+### CR-01 : Path traversal dans assertSafeKey — faux positif sur répertoires frères
 
 **File:** `src/lib/storage/local.ts:63-69`
 
-**Issue:** La méthode `assertSafeKey` vérifie que `filePath.startsWith(this.uploadDir)` pour prévenir la traversal de chemin. Cette vérification a deux failles :
+**Issue:** La vérification `filePath.startsWith(this.uploadDir)` est insuffisante. Si `uploadDir` vaut `/app/uploads`, un chemin résolu comme `/app/uploadsevil/foo.txt` (produit par une clé `../uploadsevil/foo.txt`) passe la vérification car la chaîne commence bien par `/app/uploads`. Ce cas est confirmé par test :
 
-1. **Clé de chemin absolu ignorée par `path.join` sur Windows** : `path.join('F:\\Vente POF\\uploads', 'C:\\Windows\\System32\\hosts')` retourne `C:\Windows\System32\hosts` sur Windows (car `path.join` traite les segments absolus comme des racines et écrase le chemin précédent). Ce résultat ne commence pas par `uploadDir`, donc l'erreur est bien levée — mais seulement si `uploadDir` est un chemin Windows. Si `uploadDir` contient des séparateurs mixtes (`/` vs `\`), la comparaison `startsWith` peut rater.
+```
+uploadDir  = F:\Vente POF\uploads
+key        = ../uploadsevil/secret.txt
+filePath   = path.join(uploadDir, key) = F:\Vente POF\uploadsevil\secret.txt
+startsWith("F:\Vente POF\uploads") → true  ← faux positif confirmé
+```
 
-2. **Système de fichiers insensible à la casse (Windows/macOS)** : `filePath.startsWith(this.uploadDir)` est une comparaison de chaînes sensible à la casse. Sur Windows, `F:\Vente POF\uploads` et `f:\vente pof\uploads` référencent le même dossier mais la vérification `startsWith` échouerait ou accepterait à tort selon la casse utilisée. Une clé comme `../../../etc/passwd` normalisée différemment selon la casse des dossiers pourrait contourner la protection.
-
-3. **Absence de normalisation avant comparaison** : `path.join` normalise les `..` mais `startsWith` compare des chaînes brutes. Si `uploadDir` ne se termine pas par un séparateur, une clé `../uploads-evil/file.jpg` pourrait produire un chemin qui commence par `uploadDir` mais pointe en dehors (ex: `uploadDir` = `/app/uploads`, chemin résolu = `/app/uploads-evil/file.jpg` — `startsWith` retournerait `true` à tort).
+De plus, sur Windows (environnement de développement actuel), le système de fichiers est insensible à la casse, mais `startsWith` compare des chaînes de façon sensible à la casse — une clé contournant la casse passerait la vérification.
 
 **Fix:**
+
 ```typescript
 private assertSafeKey(key: string, filePath: string): void {
-  // Normaliser les deux chemins de manière cohérente avant de comparer.
-  // path.resolve() retourne un chemin absolu canonique.
-  // Ajouter path.sep à la fin de uploadDir pour éviter les faux positifs
-  // (ex: "/uploads" matche "/uploads-evil/..." sans le séparateur final).
+  // Résoudre le chemin de façon canonique (élimine les .. résiduels)
+  const resolvedFile = path.resolve(filePath)
+
+  // Ajouter path.sep garantit une correspondance de répertoire et non de préfixe de chaîne.
+  // Sans path.sep : "/app/uploads" matche "/app/uploadsevil/" à tort.
   const safeBase = this.uploadDir.endsWith(path.sep)
     ? this.uploadDir
     : this.uploadDir + path.sep
 
-  const resolvedFile = path.resolve(filePath)
-
-  // Sur Windows, comparer en minuscules (système de fichiers insensible à la casse)
+  // Sur Windows : comparer en minuscules (FS insensible à la casse)
   const isWin = process.platform === 'win32'
   const normalizedBase = isWin ? safeBase.toLowerCase() : safeBase
   const normalizedFile = isWin ? resolvedFile.toLowerCase() : resolvedFile
@@ -79,98 +96,143 @@ private assertSafeKey(key: string, filePath: string): void {
 
 ## Warnings
 
-### WR-01: Le matcher du middleware ne couvre pas `/admin` sans sous-chemin
+### WR-01 : updatedAt ne se met jamais à jour automatiquement (artworks, visitors)
 
-**File:** `middleware.ts:43-46`
+**File:** `src/db/schema.ts:259` et `src/db/schema.ts:350`
 
-**Issue:** Le matcher `['/admin/:path*']` utilise `:path*` (zéro ou plusieurs segments). En Next.js, `:path*` correspond effectivement à zéro segment également, donc `/admin` seul devrait être couvert. Cependant, le comportement exact dépend de la version de Next.js. Dans certaines versions, `/admin` (sans slash final et sans sous-chemin) ne déclenche pas le middleware avec ce pattern — seul `/admin/` ou `/admin/quelque-chose` le ferait. Si `/admin` n'est pas intercepté, la page `src/app/admin/page.tsx` serait accessible sans authentification (la vérification de session dans la page elle-même redirige, mais c'est une couche de défense secondaire, pas primaire).
+**Issue:** Les colonnes `updatedAt` des tables `artworks` et `visitors` ont `.defaultNow()` (valeur initiale à l'INSERT), mais aucun mécanisme de mise à jour à l'UPDATE. PostgreSQL ne met pas automatiquement à jour les colonnes timestamp contrairement à MySQL. En pratique, quand l'artiste modifiera le titre d'une œuvre en Phase 5, le champ `updated_at` restera figé à la date d'insertion — rendant ce champ inutile pour trier par "dernière modification".
 
-**Fix:** Utiliser un matcher explicite couvrant les deux cas :
+Drizzle ORM fournit `.$onUpdate()` pour ce cas.
+
+**Fix:**
+
 ```typescript
-export const config = {
-  matcher: ['/admin', '/admin/:path*'],
-}
-```
-Ou tester explicitement que `/admin` (sans slash final) déclenche bien une redirection vers `/admin/login` quand non authentifié.
+// Dans la table artworks (ligne ~259) :
+updatedAt: timestamp('updated_at', { withTimezone: true })
+  .notNull()
+  .defaultNow()
+  .$onUpdate(() => new Date()),
 
-### WR-02: Formulaire de déconnexion sans gestion d'erreur ni feedback utilisateur
+// Dans la table visitors (ligne ~350) :
+updatedAt: timestamp('updated_at', { withTimezone: true })
+  .notNull()
+  .defaultNow()
+  .$onUpdate(() => new Date()),
+```
+
+Note : `.$onUpdate()` agit au niveau de Drizzle ORM uniquement — si des UPDATE sont faits via SQL brut ou un autre outil, le timestamp ne sera pas mis à jour. Pour ce projet, les mutations passent toutes par Drizzle, donc c'est suffisant.
+
+---
+
+### WR-02 : Déconnexion via formulaire HTML — affiche du JSON brut au lieu de rediriger
 
 **File:** `src/app/admin/page.tsx:45-49`
 
-**Issue:** La déconnexion est implémentée comme un formulaire HTML natif `<form action="/api/auth/sign-out" method="POST">`. Cette approche présente deux problèmes :
+**Issue:** Le formulaire `<form action="/api/auth/sign-out" method="POST">` soumet une requête POST native. Better Auth supprime le cookie de session et retourne `{ "success": true }` en JSON. Le navigateur affiche ce JSON brut à l'artiste au lieu de le rediriger vers `/admin/login`.
 
-1. **Pas de feedback utilisateur** : Si l'endpoint échoue (réseau, erreur serveur), la page ne donne aucun retour. L'artiste pense être déconnecté alors qu'il ne l'est peut-être pas.
+```html
+<!-- Comportement actuel : le navigateur affiche {"success":true} -->
+<form action="/api/auth/sign-out" method="POST">
+  <button type="submit">Se déconnecter</button>
+</form>
+```
 
-2. **Comportement du cookie de session** : Better Auth gère la révocation de session côté serveur. Un POST simple sans les headers attendus par Better Auth (notamment `Content-Type: application/json` ou un token CSRF selon la configuration) peut retourner une erreur 4xx sans que l'utilisateur le voie. La session reste active côté serveur.
+**Fix:** Extraire un petit Client Component pour gérer la déconnexion avec redirection explicite :
 
-**Fix:** Remplacer par un bouton avec un `onClick` handler (ou une Server Action) qui gère explicitement la réponse :
-```typescript
-// Option 1 : Utiliser le client Better Auth dans un Client Component
-import { authClient } from '@/lib/auth-client' // à créer si absent
+```tsx
+// Créer : src/app/admin/_components/SignOutButton.tsx
+'use client'
 
-async function handleSignOut() {
-  await authClient.signOut()
-  router.push('/admin/login')
-}
+import { useRouter } from 'next/navigation'
 
-// Option 2 : Server Action avec redirection
-async function signOutAction() {
-  'use server'
-  // Appel à auth.api.signOut() puis redirect
+/**
+ * Bouton de déconnexion.
+ * Appelle l'endpoint Better Auth puis redirige vers /admin/login.
+ * Séparé en Client Component car il a besoin du hook useRouter.
+ */
+export function SignOutButton() {
+  const router = useRouter()
+
+  async function handleSignOut() {
+    await fetch('/api/auth/sign-out', { method: 'POST' })
+    router.push('/admin/login')
+    router.refresh() // Invalider le cache Next.js
+  }
+
+  return (
+    <button onClick={handleSignOut} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
+      Se déconnecter
+    </button>
+  )
 }
 ```
 
-### WR-03: Connexion réussie sans `router.refresh()` — risque de session périmée dans le cache Next.js
+```tsx
+// Dans src/app/admin/page.tsx, remplacer le <form> par :
+import { SignOutButton } from './_components/SignOutButton'
+// ...
+<div style={{ marginTop: '2rem' }}>
+  <SignOutButton />
+</div>
+```
+
+---
+
+### WR-03 : Connexion sans router.refresh() — risque de cache périmé
 
 **File:** `src/app/admin/login/page.tsx:57`
 
-**Issue:** Après une connexion réussie, le code appelle `router.push('/admin')` mais pas `router.refresh()`. Dans Next.js App Router, `router.push` réutilise le cache du routeur client. Si `/admin` a été visité précédemment (même sans session), le cache peut contenir une version de la page sans les données de session. `router.refresh()` force Next.js à re-fetcher les Server Components avec la nouvelle session.
-
-Sans `router.refresh()`, il est possible que la page `/admin` s'affiche avec des données obsolètes ou déclenche une nouvelle redirection vers `/admin/login` parce que le middleware voit le cookie de session mais le Server Component du cache ne l'a pas encore.
+**Issue:** Après connexion réussie, le code appelle uniquement `router.push('/admin')`. Dans Next.js App Router, `router.push` réutilise le cache du routeur client. Si `/admin` a été visité avant la connexion (page qui redirige vers le login), le cache peut contenir une version sans session. Le Server Component de `/admin` sera alors rendu avec les données en cache plutôt que de vérifier la nouvelle session.
 
 **Fix:**
+
 ```typescript
-// Après connexion réussie
-router.refresh() // Invalider le cache Next.js pour prendre en compte la nouvelle session
+// Connexion réussie — invalider le cache avant de naviguer
+router.refresh() // Force le re-fetch des Server Components avec la nouvelle session
 router.push('/admin')
 ```
-Ou utiliser `router.replace('/admin')` suivi de `router.refresh()`.
+
+---
+
+### WR-04 : Le matcher du middleware peut ne pas couvrir /admin sans sous-chemin
+
+**File:** `middleware.ts:50-53`
+
+**Issue:** Le matcher `['/admin/:path*']` utilise `:path*` (zéro ou plusieurs segments). En Next.js, ce pattern couvre théoriquement `/admin` lui-même, mais le comportement exact peut varier selon la version. Si `/admin` sans slash final n'est pas intercepté, la route `src/app/admin/page.tsx` serait accessible sans cookie de session — seule la vérification interne à la page (`auth.api.getSession`) ferait la redirection, ce qui est la défense secondaire, pas primaire.
+
+**Fix:** Rendre le matcher explicite pour lever toute ambiguïté :
+
+```typescript
+export const config = {
+  // Couvre explicitement /admin (sans sous-chemin) ET /admin/login, /admin/works, etc.
+  matcher: ['/admin', '/admin/:path*'],
+}
+```
 
 ---
 
 ## Info
 
-### IN-01: `require()` dynamique dans `getStorage()` — anti-pattern ESM mitigé
-
-**File:** `src/lib/storage/index.ts:99`
-
-**Issue:** La factory `getStorage()` utilise `require('./local')` (CommonJS) avec un commentaire eslint-disable pour charger l'adaptateur local. Le commentaire explique que c'est pour éviter de charger le module `fs` en production R2. Cependant, Next.js 15 avec App Router utilise des bundles ESM et peut avoir des comportements inattendus avec `require()` dynamique dans certains contextes (Edge Runtime, etc.).
-
-De plus, le type casté `as { LocalStorageAdapter: new () => LocalStorageAdapter }` est techniquement inexact : le type `LocalStorageAdapter` importé en haut du fichier est le type de l'instance, pas du constructeur. TypeScript accepte ce cast mais c'est trompeur.
-
-**Fix:** Utiliser un import dynamique ESM natif à la place :
-```typescript
-case 'local': {
-  const { LocalStorageAdapter } = await import('./local')
-  return new LocalStorageAdapter()
-}
-// Note : getStorage() doit alors être async
-export async function getStorage(): Promise<StorageProvider> { ... }
-```
-Ou, plus simplement, puisque `fs` n'est pas disponible en Edge Runtime de toute façon, importer directement en haut du fichier et documenter que cet adaptateur ne fonctionne qu'en Node.js runtime.
-
-### IN-02: `getUrl()` ne vérifie pas la sécurité de la clé
+### IN-01 : getUrl() n'applique pas assertSafeKey contrairement aux autres méthodes
 
 **File:** `src/lib/storage/local.ts:169`
 
-**Issue:** La méthode `getUrl()` normalise les séparateurs Windows mais n'appelle pas `assertSafeKey()`. Une clé malveillante comme `../../admin/secret` produirait l'URL `http://localhost:3000/uploads/../../admin/secret`. Les navigateurs normalisent généralement ces URLs, mais selon le contexte d'utilisation (génération de liens dans des templates), cela pourrait exposer des URLs inattendues.
+**Issue:** Les méthodes `put()`, `get()`, et `delete()` appellent toutes `assertSafeKey()`. La méthode `getUrl()` construit l'URL directement sans validation :
 
-Ce risque est faible car `getUrl()` ne touche pas au système de fichiers — elle génère juste une chaîne. Mais la cohérence avec les autres méthodes (`put`, `get`, `delete`) qui toutes vérifient la clé serait préférable.
-
-**Fix:**
 ```typescript
 getUrl(key: string): string {
-  // Vérification défensive : même logique que les autres méthodes
+  const normalizedKey = key.replace(/\\/g, '/')
+  return `${this.baseUrl}/uploads/${normalizedKey}` // Pas d'assertSafeKey ici
+}
+```
+
+Une clé `../../api/auth/sign-in/email` produirait l'URL `http://localhost:3000/uploads/../../api/auth/sign-in/email`. Les navigateurs normalisent ces URLs (risque faible en pratique car les clés viennent de la DB), mais l'incohérence avec les autres méthodes crée un code smell — surtout si `getUrl()` est appelée avec une clé externe dans les phases suivantes.
+
+**Fix:**
+
+```typescript
+getUrl(key: string): string {
+  // Même vérification défensive que put/get/delete pour la cohérence
   const filePath = path.join(this.uploadDir, key)
   this.assertSafeKey(key, filePath)
 
@@ -181,6 +243,46 @@ getUrl(key: string): string {
 
 ---
 
-_Reviewed: 2026-04-24_
+### IN-02 : require() dynamique dans getStorage() — anti-pattern ESM
+
+**File:** `src/lib/storage/index.ts:99`
+
+**Issue:** La factory `getStorage()` utilise `require('./local')` (CommonJS) avec un `eslint-disable` pour éviter de charger le module `fs` en production. Next.js 15 utilise des bundles ESM. Le `require()` dynamique fonctionne dans le contexte Node.js runtime mais est inutilement complexe et le commentaire eslint-disable indique que c'est reconnu comme anti-pattern.
+
+**Fix:** Utiliser un import dynamique ESM natif. La fonction devient alors `async`, ce qui est cohérent avec son caractère factory :
+
+```typescript
+export async function getStorage(): Promise<StorageProvider> {
+  const backend = process.env.STORAGE_BACKEND ?? 'local'
+
+  switch (backend) {
+    case 'local': {
+      // Import dynamique ESM — évite de bundler le module fs dans le contexte R2
+      const { LocalStorageAdapter } = await import('./local')
+      return new LocalStorageAdapter()
+    }
+    case 'r2':
+      throw new Error('R2StorageAdapter non encore implémenté...')
+    default:
+      throw new Error(`Valeur STORAGE_BACKEND non reconnue : "${backend}".`)
+  }
+}
+```
+
+Note : rendre `getStorage()` async implique de mettre à jour tous les appelants avec `await getStorage()`. Acceptable car cette fonction sera utilisée uniquement dans des contextes serveur (Server Actions, Route Handlers).
+
+---
+
+### IN-03 : .env non versionné présent à la racine
+
+**File:** `.gitignore:52`
+
+**Issue:** Le `git status` initial montre `?? .env` — un fichier `.env` non versionné existe à la racine. `.gitignore` l'ignore correctement (ligne 52). Cependant, Next.js charge `.env` avant `.env.local` dans sa hiérarchie de priorité. Si `.env` contient `BETTER_AUTH_SECRET` avec une valeur réelle (pas un placeholder), ce fichier ne devrait pas cohabiter avec `.env.local` pour éviter la confusion.
+
+**Fix:** S'assurer que les variables de développement sont uniquement dans `.env.local` (comme documenté dans `.env.example`). Supprimer `.env` s'il est redondant avec `.env.local`, ou le renommer en `.env.local`.
+
+---
+
+_Reviewed: 2026-04-25T10:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
