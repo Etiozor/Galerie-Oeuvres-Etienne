@@ -53,7 +53,12 @@ export default function AdminLoginPage() {
         return
       }
 
-      // Connexion réussie — rediriger vers le tableau de bord
+      // Connexion réussie — invalider le cache Next.js puis rediriger
+      // router.refresh() est INDISPENSABLE ici : sans lui, Next.js App Router peut
+      // servir une version en cache de /admin (visitée avant connexion, qui redirige
+      // vers /admin/login). Le Server Component admin recevrait alors les données
+      // en cache plutôt que de vérifier la nouvelle session fraîchement posée.
+      router.refresh()
       router.push('/admin')
     } catch {
       setError('Erreur de connexion. Vérifiez votre réseau.')
