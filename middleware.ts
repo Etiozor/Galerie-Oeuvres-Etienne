@@ -14,25 +14,32 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 
 export async function middleware(request: NextRequest) {
-  // Vérifier si l'artiste a une session valide
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  })
+  // Vérification légère : présence du cookie de session Better Auth.
+  //
+  // POURQUOI ne pas appeler auth.api.getSession() ici ?
+  // Le middleware s'exécute dans l'Edge Runtime de Next.js, qui ne peut pas
+  // charger les modules Node.js lourds (kysely, pg). Importer l'objet auth
+  // complet ferait planter le build Edge.
+  //
+  // La vérification complète (session en base, expiration) se fait dans
+  // chaque Server Component protégé via auth.api.getSession(). Le middleware
+  // se contente de bloquer les requêtes sans cookie — cas le plus fréquent.
+  const sessionCookie = request.cookies.get('better-auth.session_token')
+  const hasSession = !!sessionCookie?.value
 
   const { pathname } = request.nextUrl
 
   // Si l'artiste est connecté et tente d'aller sur /admin/login,
   // le rediriger directement vers le tableau de bord
-  if (session && pathname === '/admin/login') {
+  if (hasSession && pathname === '/admin/login') {
     return NextResponse.redirect(new URL('/admin', request.url))
   }
 
   // Si l'artiste n'est pas connecté et tente d'accéder à une route protégée,
   // le rediriger vers la page de connexion
-  if (!session && pathname.startsWith('/admin') && pathname !== '/admin/login') {
+  if (!hasSession && pathname.startsWith('/admin') && pathname !== '/admin/login') {
     return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 

@@ -17,12 +17,15 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from '@/db'
+import * as schema from '@/db/schema'
 
 export const auth = betterAuth({
-  // Connexion à PostgreSQL via le pool Drizzle existant
-  // Better Auth crée et gère ses propres tables (user, session, account)
+  // Connexion à PostgreSQL via le pool Drizzle existant.
+  // On passe le schéma complet pour que Better Auth trouve ses tables
+  // (user, session, account, verification) définies dans schema.ts.
   database: drizzleAdapter(db, {
-    provider: 'pg', // Indique que c'est PostgreSQL (pas MySQL ni SQLite)
+    provider: 'pg',
+    schema, // Better Auth lit les tables user/session/account/verification ici
   }),
 
   // Activation de l'authentification par email + mot de passe [D-05]

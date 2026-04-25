@@ -10,6 +10,11 @@ import type { NextConfig } from 'next'
  * - eslint : vérification du code bloquante en build pour maintenir la qualité
  */
 const nextConfig: NextConfig = {
+  // Empêche Next.js de bundler kysely et l'adapter Better Auth.
+  // Ces packages utilisent des modules Node.js natifs (fs, crypto) incompatibles
+  // avec le bundler Edge/RSC — ils doivent rester des modules Node.js externes.
+  serverExternalPackages: ['kysely', '@better-auth/kysely-adapter'],
+
   // Bloquer le build si TypeScript a des erreurs — pas de build cassé en production
   typescript: {
     ignoreBuildErrors: false,
