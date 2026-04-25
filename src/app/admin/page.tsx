@@ -14,6 +14,7 @@
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { SignOutButton } from './_components/SignOutButton'
 
 export default async function AdminPage() {
   // Récupérer la session de l'artiste connecté
@@ -41,12 +42,10 @@ export default async function AdminPage() {
         Le tableau de bord complet sera disponible en Phase 5.
         Pour l&apos;instant, la connexion fonctionne correctement.
       </p>
-      {/* Formulaire de déconnexion — action Simple HTML pour l'instant */}
-      <form action="/api/auth/sign-out" method="POST" style={{ marginTop: '2rem' }}>
-        <button type="submit" style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-          Se déconnecter
-        </button>
-      </form>
+      {/* Bouton de déconnexion — Client Component pour éviter l'affichage JSON brut */}
+      <div style={{ marginTop: '2rem' }}>
+        <SignOutButton />
+      </div>
     </main>
   )
 }
