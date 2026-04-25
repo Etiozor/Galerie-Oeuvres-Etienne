@@ -64,8 +64,8 @@ Valeurs déclarées (multiples de 4) :
 | 3xl | 64px | Espacement niveau page (padding vertical de main) |
 
 **Exceptions :**
-- Zone de clic du bouton fichier : hauteur minimum 44px (cible tactile iPhone — WCAG 2.5.5)
-- Boutons d'action sur l'écran de validation : hauteur minimum 44px pour usage mobile
+- Zone de clic du bouton fichier : **hauteur minimum 44px** (cible tactile iPhone — WCAG 2.5.5). Cette valeur s'applique à la *hauteur de l'élément* uniquement — ne pas l'utiliser comme token de spacing (margin/gap/padding).
+- Boutons d'action sur l'écran de validation : **hauteur minimum 44px** pour usage mobile (même règle — hauteur d'élément uniquement).
 
 ---
 
@@ -74,9 +74,11 @@ Valeurs déclarées (multiples de 4) :
 | Rôle | Taille | Graisse | Interligne | Usage |
 |------|--------|---------|------------|-------|
 | Body | 16px | 400 (regular) | 1.5 | Texte courant, descriptions, messages d'erreur |
-| Label | 14px | 500 (medium) | 1.4 | Labels de champs, libellés de badge, métadonnées |
+| Label | 14px | 600 (semibold) | 1.4 | Labels de champs, libellés de badge, métadonnées |
 | Heading | 20px | 600 (semibold) | 1.3 | Titres de section (ex. "Valider l'œuvre", "Mes œuvres") |
 | Display | 28px | 600 (semibold) | 1.2 | Titre de page principal (ex. "Uploader une photo") |
+
+**Graisses : 2 uniquement** — 400 (regular) pour le corps de texte, 600 (semibold) pour tout le reste. La hiérarchie visuelle est portée par la taille, pas par la graisse.
 
 **Police :** Geist Sans uniquement (déjà disponible via `--font-geist-sans`). Pas de police serif dans l'admin.
 
@@ -134,7 +136,7 @@ Valeurs déclarées (multiples de 4) :
 |---------|-------|
 | Titre de page | Mes œuvres |
 | Libellés des badges | En attente / En traitement / À valider / Publiée / Échec |
-| Bouton retry (état FAILED) | Réessayer |
+| Bouton retry (état FAILED) | Réessayer le traitement |
 | Confirmation retry | (pas de confirmation — action réversible, relance simplement le pipeline) |
 | État vide (aucune œuvre) | Aucune œuvre pour l'instant. Uploader votre première photo pour commencer. |
 | Lien CTA état vide | Uploader une photo |
@@ -159,6 +161,8 @@ Valeurs déclarées (multiples de 4) :
 ## Layout des interfaces
 
 ### Page upload — Structure
+
+**Point focal :** le bouton CTA primaire "Uploader la photo" (fond #171717, texte blanc, pleine largeur) est l'ancre visuelle principale de la page. Tout le layout converge vers lui.
 
 ```
 /admin/upload
@@ -264,11 +268,11 @@ Aucun registre tiers déclaré — vetting gate non requis.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (2 graisses : 400 + 600)
+- [x] Dimension 5 Spacing: PASS (44px = hauteur d'élément uniquement, justifié WCAG)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
