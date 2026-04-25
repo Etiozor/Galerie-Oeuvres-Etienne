@@ -61,7 +61,25 @@ export class LocalStorageAdapter implements StorageProvider {
    * @throws         Error si le chemin sort du dossier uploads/
    */
   private assertSafeKey(key: string, filePath: string): void {
-    if (!filePath.startsWith(this.uploadDir)) {
+    // Résoudre le chemin de façon canonique pour éliminer tous les ".." résiduels
+    const resolvedFile = path.resolve(filePath)
+
+    // Ajouter path.sep garantit une correspondance de RÉPERTOIRE et non de PRÉFIXE de chaîne.
+    // Sans path.sep : "/app/uploads" matcherait "/app/uploadsevil/" à tort.
+    // Exemple du bug : uploadDir="/app/uploads", key="../uploadsevil/x.txt"
+    //   → filePath="/app/uploadsevil/x.txt" → startsWith("/app/uploads") = true (FAUX POSITIF)
+    const safeBase = this.uploadDir.endsWith(path.sep)
+      ? this.uploadDir
+      : this.uploadDir + path.sep
+
+    // Sur Windows : le système de fichiers est insensible à la casse,
+    // mais startsWith() compare de façon sensible — normaliser en minuscules pour éviter
+    // qu'une clé contournant la casse passe la vérification.
+    const isWin = process.platform === 'win32'
+    const normalizedBase = isWin ? safeBase.toLowerCase() : safeBase
+    const normalizedFile = isWin ? resolvedFile.toLowerCase() : resolvedFile
+
+    if (!normalizedFile.startsWith(normalizedBase)) {
       throw new Error(
         `Clé de stockage invalide : "${key}". ` +
         'La clé ne peut pas contenir de séquences "../" ou pointer hors du dossier uploads/.'
