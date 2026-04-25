@@ -48,7 +48,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Ce middleware ne s'applique qu'aux routes /admin/*
-  // Les routes publiques (/api/auth, /gallery, etc.) ne sont pas interceptées
-  matcher: ['/admin/:path*'],
+  // Couvre explicitement /admin (sans sous-chemin) ET /admin/login, /admin/works, etc.
+  // POURQUOI les deux entrées ? Le pattern ':path*' (zéro ou plusieurs segments) devrait
+  // théoriquement inclure /admin seul, mais le comportement varie selon la version Next.js.
+  // Déclarer '/admin' explicitement lève toute ambiguïté et garantit que la page principale
+  // du tableau de bord est bien protégée en première ligne de défense.
+  matcher: ['/admin', '/admin/:path*'],
 }
