@@ -256,7 +256,11 @@ export const artworks = pgTable('artworks', {
   publishedAt: timestamp('published_at', { withTimezone: true }),
 
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  // .$onUpdate() déclenche la mise à jour automatique de ce timestamp à chaque UPDATE Drizzle.
+  // POURQUOI nécessaire ? PostgreSQL ne met PAS automatiquement à jour les timestamps
+  // contrairement à MySQL. Sans .$onUpdate(), ce champ resterait figé à la date d'insertion
+  // même après modification du titre, du prix, etc. en Phase 5.
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   // Index pour accélérer les filtres par statut et état pipeline
   // (utilisés fréquemment dans la galerie publique et l'admin)
@@ -347,7 +351,10 @@ export const visitors = pgTable('visitors', {
   email: varchar('email', { length: 255 }).unique(),
 
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  // .$onUpdate() assure la mise à jour automatique à chaque UPDATE via Drizzle.
+  // Même raison que pour artworks.updatedAt : PostgreSQL n'a pas de mécanisme natif
+  // équivalent à MySQL's ON UPDATE CURRENT_TIMESTAMP.
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   index('visitors_phone_idx').on(table.phone),
 ])
