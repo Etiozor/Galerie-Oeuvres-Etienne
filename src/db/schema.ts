@@ -207,7 +207,9 @@ export const artworks = pgTable('artworks', {
   id: serial('id').primaryKey(),
 
   // === Métadonnées de l'œuvre ===
-  title: varchar('title', { length: 255 }).notNull(),
+  // Titre par défaut 'Sans titre' pour les uploads sans métadonnées (D-01, D-02).
+  // L'artiste mettra à jour ce titre depuis l'admin en Phase 5.
+  title: varchar('title', { length: 255 }).notNull().default('Sans titre'),
   description: text('description'),
 
   // Date de CRÉATION de l'œuvre (pas la date d'ajout dans la galerie)
