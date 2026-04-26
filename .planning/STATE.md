@@ -10,24 +10,24 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 2 of 6 (Image Pipeline)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-04-26 — Plan 02-02 complete: processImage Sharp pipeline + uploadArtwork state machine (PENDING → PROCESSING → AWAITING_VALIDATION / FAILED)
+Last activity: 2026-04-26 — Plan 02-03 complete: retryPipeline Server Action + /admin/artworks page with PipelineBadge, PipelinePoller, RetryButton
 
-Progress: [██░░░░░░░░] 10%
+Progress: [███░░░░░░░] 15%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 7 min
-- Total execution time: 0.2 hours
+- Total plans completed: 3
+- Average duration: 6 min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 2. Image Pipeline | 2 | 13 min | 6.5 min |
+| 2. Image Pipeline | 3 | 17 min | 5.7 min |
 
 **Recent Trend:**
 - Last 5 plans: 7 min
@@ -53,6 +53,9 @@ Recent decisions affecting current work:
 - 02-02: processImage() separated from Server Action for testability (no Next.js/DB/Storage) and reuse by Retry action (D-09)
 - 02-02: rotate() must be first in Sharp chain — normalise() analyses pixels; rotating after gives wrong exposure correction
 - 02-02: normalise({ lower: 1, upper: 99 }) per-channel implicitly performs white balance by normalising R/G/B independently
+- 02-03: retryPipeline generates fresh UUID for processed/thumbnail keys on each retry — avoids CDN/HTTP cache on stale images
+- 02-03: PipelineBadge uses inline styles — spec-exact colors cannot be guaranteed via Tailwind utility cascade
+- 02-03: storage.delete mock must return Promise (.mockResolvedValue) — vi.fn() returns undefined, breaking .catch() chaining
 
 ### Pending Todos
 
@@ -76,5 +79,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 02-02-PLAN.md — processImage Sharp pipeline + uploadArtwork state machine
+Stopped at: Completed 02-03-PLAN.md — retryPipeline Server Action + /admin/artworks page with PipelineBadge, PipelinePoller, RetryButton
 Resume file: None

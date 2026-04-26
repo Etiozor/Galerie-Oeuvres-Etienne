@@ -47,7 +47,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Upload endpoint, validation HEIC/taille/format, Route Handler fichiers, next.config.ts bodySizeLimit, vitest
 - [x] 02-02-PLAN.md — Sharp pipeline (processImage), intégration dans uploadArtwork (PROCESSING → AWAITING_VALIDATION / FAILED)
-- [ ] 02-03-PLAN.md — Liste admin /admin/artworks, badges pipeline, polling 3s, Server Action retryPipeline
+- [x] 02-03-PLAN.md — Liste admin /admin/artworks, badges pipeline, polling 3s, Server Action retryPipeline
 - [ ] 02-04-PLAN.md — Écran de validation côte à côte, 3 Server Actions (approveArtwork / publishRaw / rejectArtwork), shadcn/ui
 **UI hint**: yes
 
@@ -127,7 +127,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/4 | Not started | - |
-| 2. Image Pipeline | 2/4 | In progress | - |
+| 2. Image Pipeline | 3/4 | In progress | - |
 | 3. Public Gallery | 0/4 | Not started | - |
 | 4. Visitor Profiles & Offers | 0/4 | Not started | - |
 | 5. Admin Back-office | 0/3 | Not started | - |
