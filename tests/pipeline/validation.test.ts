@@ -11,18 +11,26 @@
  * - Le retour d'erreur pour un artwork introuvable
  *
  * Couvre : PIPE-04, PIPE-05, ADMIN-03
+ *
+ * NOTE TECHNIQUE : vi.mock() est hoisted (remonté) au début du fichier par Vitest.
+ * Les variables déclarées après ne sont pas encore initialisées au moment du hoist.
+ * On utilise vi.hoisted() pour déclarer les mocks AVANT leur référencement dans vi.mock().
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// vi.hoisted() garantit que ces mocks sont disponibles quand vi.mock() est exécuté
+const { mockFindFirst, mockSet, mockWhere, mockDeleteWhere } = vi.hoisted(() => ({
+  mockFindFirst: vi.fn(),
+  mockSet: vi.fn(),
+  mockWhere: vi.fn(),
+  mockDeleteWhere: vi.fn(),
+}))
 
 vi.mock('@/lib/auth', () => ({
   auth: { api: { getSession: vi.fn() } },
 }))
 
-// Mocks Drizzle ORM — on simule les méthodes chaînables
-const mockFindFirst = vi.fn()
-const mockSet = vi.fn()
-const mockWhere = vi.fn()
-const mockDeleteWhere = vi.fn()
+// Mocks Drizzle ORM — on simule les méthodes chaînables de Drizzle
 vi.mock('@/db', () => ({
   db: {
     query: { artworks: { findFirst: mockFindFirst } },
