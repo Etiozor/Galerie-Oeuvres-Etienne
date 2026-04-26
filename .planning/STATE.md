@@ -10,24 +10,24 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 2 of 6 (Image Pipeline)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-04-26 — Plan 02-01 complete: upload endpoint, vitest infra, Route Handler, /admin/upload page
+Last activity: 2026-04-26 — Plan 02-02 complete: processImage Sharp pipeline + uploadArtwork state machine (PENDING → PROCESSING → AWAITING_VALIDATION / FAILED)
 
-Progress: [█░░░░░░░░░] 5%
+Progress: [██░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: 7 min
-- Total execution time: 0.1 hours
+- Total execution time: 0.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 2. Image Pipeline | 1 | 7 min | 7 min |
+| 2. Image Pipeline | 2 | 13 min | 6.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 7 min
@@ -50,6 +50,9 @@ Recent decisions affecting current work:
 - 02-01: Mock next/headers with vi.fn(() => new Headers()) in Vitest — headers() throws outside a Next.js request scope
 - 02-01: Buffer → new Uint8Array(buffer) cast for Response BodyInit compatibility in TypeScript 5 strict mode
 - 02-01: proxyClientMaxBodySize cast as NextConfig['experimental'] — present at runtime but absent from @types/next 15.x types
+- 02-02: processImage() separated from Server Action for testability (no Next.js/DB/Storage) and reuse by Retry action (D-09)
+- 02-02: rotate() must be first in Sharp chain — normalise() analyses pixels; rotating after gives wrong exposure correction
+- 02-02: normalise({ lower: 1, upper: 99 }) per-channel implicitly performs white balance by normalising R/G/B independently
 
 ### Pending Todos
 
@@ -73,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 02-01-PLAN.md — upload endpoint, vitest infra, Route Handler, /admin/upload page
+Stopped at: Completed 02-02-PLAN.md — processImage Sharp pipeline + uploadArtwork state machine
 Resume file: None
