@@ -12,6 +12,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock des dépendances extérieures — on ne touche pas la DB ni le stockage
+
+// next/headers n'est disponible que dans un contexte de requête Next.js.
+// En dehors (Vitest, Node.js natif), headers() lance une erreur.
+// On le mock pour retourner des en-têtes vides — auth.api.getSession est
+// lui-même mocké donc la valeur réelle des headers n'a aucun impact sur les tests.
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() => new Headers()),
+}))
+
 vi.mock('@/lib/auth', () => ({
   auth: {
     api: {
