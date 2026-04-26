@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 2 of 6 (Image Pipeline)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-04-26 — Plan 02-03 complete: retryPipeline Server Action + /admin/artworks page with PipelineBadge, PipelinePoller, RetryButton
+Plan: 4 of 4 in current phase (all plans complete — awaiting human verification checkpoint)
+Status: Checkpoint — human-verify
+Last activity: 2026-04-26 — Plan 02-04 complete: shadcn/ui + 3 validation Server Actions + /admin/artworks/[id]/validate page (side-by-side, 3 buttons, AlertDialog modal)
 
-Progress: [███░░░░░░░] 15%
+Progress: [████░░░░░░] 20%
 
 ## Performance Metrics
 
@@ -27,7 +27,7 @@ Progress: [███░░░░░░░] 15%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 2. Image Pipeline | 3 | 17 min | 5.7 min |
+| 2. Image Pipeline | 4 | 42 min | 10.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 7 min
@@ -56,6 +56,8 @@ Recent decisions affecting current work:
 - 02-03: retryPipeline generates fresh UUID for processed/thumbnail keys on each retry — avoids CDN/HTTP cache on stale images
 - 02-03: PipelineBadge uses inline styles — spec-exact colors cannot be guaranteed via Tailwind utility cascade
 - 02-03: storage.delete mock must return Promise (.mockResolvedValue) — vi.fn() returns undefined, breaking .catch() chaining
+- 02-04: vi.hoisted() required when vi.mock() factory references variables declared in the same file — Vitest hoists vi.mock() above all declarations
+- 02-04: shadcn base-nova style @base-ui/react has incomplete ESM build on Windows/Node 24 — replaced with Radix UI-based equivalents (same API)
 
 ### Pending Todos
 
@@ -79,5 +81,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: Completed 02-03-PLAN.md — retryPipeline Server Action + /admin/artworks page with PipelineBadge, PipelinePoller, RetryButton
+Stopped at: Checkpoint human-verify 02-04 — Phase 2 complete, awaiting artist verification of full pipeline (upload → process → validate)
 Resume file: None
