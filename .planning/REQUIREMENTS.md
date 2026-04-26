@@ -25,7 +25,7 @@
 
 ### PIPE — Pipeline de traitement d'image
 
-- [ ] **PIPE-01** : L'artiste peut uploader une image depuis son ordinateur ou son téléphone
+- [x] **PIPE-01** : L'artiste peut uploader une image depuis son ordinateur ou son téléphone
 - [ ] **PIPE-02** : Le pipeline corrige automatiquement l'exposition et le contraste de l'image
 - [ ] **PIPE-03** : Le pipeline effectue une balance des blancs basique (normalisation des couleurs)
 - [ ] **PIPE-04** : L'artiste voit un écran de comparaison avant/après et valide manuellement avant publication

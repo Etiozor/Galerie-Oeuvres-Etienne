@@ -5,32 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Une vitrine centralisée où chaque œuvre est mise en valeur et peut trouver preneur — remplacement définitif du "chercher dans ses photos de téléphone".
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 2 — Image Pipeline
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation)
-Plan: 0 of 4 in current phase
-Status: Ready to plan
-Last activity: 2026-04-22 — Roadmap created, requirements mapped, files written
+Phase: 2 of 6 (Image Pipeline)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-04-26 — Plan 02-01 complete: upload endpoint, vitest infra, Route Handler, /admin/upload page
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 5%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 7 min
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 2. Image Pipeline | 1 | 7 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: —
+- Last 5 plans: 7 min
 - Trend: —
 
 *Updated after each plan completion*
@@ -47,6 +47,9 @@ Recent decisions affecting current work:
 - Roadmap: HEIC files are rejected at upload with a clear message (libheif not available on standard deploys)
 - Roadmap: PostgreSQL via Docker from day one — no SQLite locally to avoid CI-pass/prod-fail dialect bugs
 - Roadmap: StorageProvider interface abstracted from day one so R2 swap in Phase 6 is env-var-only
+- 02-01: Mock next/headers with vi.fn(() => new Headers()) in Vitest — headers() throws outside a Next.js request scope
+- 02-01: Buffer → new Uint8Array(buffer) cast for Response BodyInit compatibility in TypeScript 5 strict mode
+- 02-01: proxyClientMaxBodySize cast as NextConfig['experimental'] — present at runtime but absent from @types/next 15.x types
 
 ### Pending Todos
 
@@ -69,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22
-Stopped at: Roadmap created — ROADMAP.md, STATE.md, REQUIREMENTS.md traceability written
+Last session: 2026-04-26
+Stopped at: Completed 02-01-PLAN.md — upload endpoint, vitest infra, Route Handler, /admin/upload page
 Resume file: None
