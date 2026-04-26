@@ -24,7 +24,8 @@ vi.mock('@/lib/storage', () => ({
   getStorage: vi.fn(() => ({
     get: vi.fn(),
     put: vi.fn(),
-    delete: vi.fn(),
+    // delete doit retourner une Promise pour que .catch(() => {}) fonctionne
+    delete: vi.fn().mockResolvedValue(undefined),
   })),
 }))
 vi.mock('@/lib/pipeline/process', () => ({
