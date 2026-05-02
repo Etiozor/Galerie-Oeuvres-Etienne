@@ -45,7 +45,8 @@ describe('filterArtworks', () => {
   it('filtre par type ET médium (intersection)', () => {
     const result = filterArtworks(mockArtworks, '1', '2')
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe(2)
+    // Accès sûr avec at(0) pour éviter TS2532 (noUncheckedIndexedAccess strict mode)
+    expect(result.at(0)?.id).toBe(2)
   })
 
   it("retourne [] si aucune œuvre ne correspond au filtre", () => {
