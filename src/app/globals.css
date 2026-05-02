@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/**
+ * Tokens CSS globaux de la Galerie POF.
+ *
+ * @theme inline : Tailwind 4 lit ce bloc pour générer les classes utilitaires.
+ * Ex : --color-bg → bg-bg, text-bg, border-bg, etc.
+ *
+ * Palette issue de la décision D-01 (03-CONTEXT.md verrouillé).
+ * Polices issues de la décision D-02.
+ * Règle D-03 : zéro coins arrondis sur tous les éléments.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Palette 60/30/10 (D-01) */
+  --color-bg: #f2e8cf;          /* 60% — fond principal (pages, grille masonry) */
+  --color-surface: #ede0b8;     /* 30% — navigation, info panel page détail, filtres */
+  --color-teal: #5b8e7d;        /* Accent — badge disponible, CTA principal */
+  --color-orange: #f4a259;      /* Accent — bouton "Faire une offre", hover actif */
+  --color-green: #8cb369;       /* Accent — badge "donné" */
+  --color-yellow: #f4e285;      /* Accent — filtre actif sélectionné */
+  --color-red: #bc4b51;         /* Destructif — badge "vendu" (stamp diagonal) */
+  --color-ink: #1a1a1a;         /* Texte principal (quasi-noir) */
+  --color-ink-muted: #5a5244;   /* Texte secondaire — méta, labels discrets */
+
+  /* Variables polices — injectées par next/font/google dans <html className="..."> */
+  /* Ces variables sont définies par next/font et passées via les classes CSS sur <html> */
+  --font-oswald: var(--font-oswald);
+  --font-space-mono: var(--font-space-mono);
+  --font-cormorant: var(--font-cormorant);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base : fond et texte par défaut du site */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+}
+
+/**
+ * Overlay hover sur les cartes de la galerie (D-11).
+ *
+ * POURQUOI une classe CSS globale plutôt que Tailwind ?
+ * Le sélecteur parent-enfant (.artwork-card:hover .artwork-overlay)
+ * n'est pas exprimable avec les classes Tailwind standards.
+ * Une classe CSS dédiée ici est plus lisible et sans risque de conflit.
+ *
+ * Usage : classe "artwork-card" sur la carte, "artwork-overlay" sur le div d'overlay.
+ */
+.artwork-card:hover .artwork-overlay {
+  opacity: 1 !important;
 }
