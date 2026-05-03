@@ -92,6 +92,12 @@ export default async function GalleryPage() {
     thumbnailUrl: a.thumbnailPath ? storage.getUrl(a.thumbnailPath) : null,
     // Processed pour la page détail, null si pas encore traité
     processedUrl: a.processedPath ? storage.getUrl(a.processedPath) : null,
+    // Recherche texte : on passe un extrait de description (500 chars max)
+    // pour limiter le poids des props tout en permettant la recherche côté client
+    descriptionSnippet: a.description ? a.description.slice(0, 500) : null,
+    // Tri par date de création : timestamp numérique pour comparaison côté client
+    // createdDate est un timestamp PostgreSQL → Date JS → .getTime() → number
+    createdTimestamp: a.createdDate ? a.createdDate.getTime() : 0,
   }))
 
   // Options de filtre : types et médiums triés par sortOrder

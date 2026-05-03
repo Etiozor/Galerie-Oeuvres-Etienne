@@ -18,6 +18,7 @@
  * Il sera fonctionnel en Phase 4 (profils visiteurs + offres).
  * Ce choix évite un composant vide — le visiteur comprend la fonctionnalité à venir.
  */
+import Link from 'next/link'
 import { ArtworkStatusBadge } from './ArtworkStatusBadge'
 import { ArtworkNav } from './ArtworkNav'
 
@@ -123,6 +124,22 @@ export function ArtworkInfoPanel({
 
   return (
     <div>
+      {/* 0. Lien retour vers la galerie — toujours visible en haut du panel */}
+      <Link
+        href="/"
+        style={{
+          fontFamily: 'var(--font-space-mono)',
+          fontSize: '11px',
+          letterSpacing: '0.05em',
+          color: 'var(--color-teal)',
+          textDecoration: 'none',
+          display: 'inline-block',
+          marginBottom: '16px',
+        }}
+      >
+        ← Galerie
+      </Link>
+
       {/* 1. Badge statut — même composant que dans la grille masonry */}
       <ArtworkStatusBadge status={status} />
 

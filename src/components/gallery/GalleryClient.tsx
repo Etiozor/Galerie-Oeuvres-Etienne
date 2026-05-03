@@ -44,6 +44,10 @@ interface ArtworkWithUrls {
   heightCmNum: number
   typeId: number | null
   mediumId: number | null
+  /** Extrait de description (≤500 chars) pour la recherche texte côté client */
+  descriptionSnippet: string | null
+  /** Timestamp de création de l'œuvre — pour le tri par date côté client */
+  createdTimestamp: number
 }
 
 interface GalleryClientProps {
@@ -64,26 +68,44 @@ export function GalleryClient({ artworks, types, mediums }: GalleryClientProps) 
   const activeTypeId = searchParams.get('type') ?? ''
   const activeMediumId = searchParams.get('medium') ?? ''
 
+  // Recherche texte libre — filtre sur titre + description côté client
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Tri : 'date-desc' = plus récentes en premier (défaut), 'date-asc' = plus anciennes
+  const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc'>('date-desc')
+
   // Compteur d'œuvres visibles — démarre à BATCH_SIZE (D-08 : 6 au départ)
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE)
 
   /**
    * CRITIQUE — Piège 6 (03-RESEARCH.md) :
-   * Réinitialiser le compteur à chaque changement de filtre.
+   * Réinitialiser le compteur à chaque changement de filtre ou de recherche.
    * Sans ce reset, on peut afficher 0 résultat si les N premiers items
-   * ne correspondent pas au filtre actif (ex: passer de 12 visibles
-   * à un filtre qui n'a que 3 résultats — sans reset on montre 12/3 = erreur).
+   * ne correspondent pas au filtre actif.
    */
   useEffect(() => {
     setVisibleCount(BATCH_SIZE)
-  }, [activeTypeId, activeMediumId])
+  }, [activeTypeId, activeMediumId, searchQuery, sortOrder])
 
-  // Filtrage côté client sur les données complètes (Pattern 1 RESEARCH.md)
-  const filteredArtworks = artworks.filter((a) => {
-    if (activeTypeId && String(a.typeId) !== activeTypeId) return false
-    if (activeMediumId && String(a.mediumId) !== activeMediumId) return false
-    return true
-  })
+  // Filtrage côté client — type, médium, recherche texte (titre + description)
+  const filteredArtworks = artworks
+    .filter((a) => {
+      if (activeTypeId && String(a.typeId) !== activeTypeId) return false
+      if (activeMediumId && String(a.mediumId) !== activeMediumId) return false
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const inTitle = a.title.toLowerCase().includes(q)
+        const inDesc = a.descriptionSnippet?.toLowerCase().includes(q) ?? false
+        if (!inTitle && !inDesc) return false
+      }
+      return true
+    })
+    // Tri par date de création de l'œuvre
+    .sort((a, b) =>
+      sortOrder === 'date-asc'
+        ? a.createdTimestamp - b.createdTimestamp
+        : b.createdTimestamp - a.createdTimestamp
+    )
 
   // Tranche visible — les N premières œuvres filtrées
   const visibleArtworks = filteredArtworks.slice(0, visibleCount)
@@ -108,7 +130,7 @@ export function GalleryClient({ artworks, types, mediums }: GalleryClientProps) 
 
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
-      {/* Barre de filtres — placeholder Plan 01, implémentation complète Plan 02 */}
+      {/* Barre de filtres — type, médium, recherche texte, tri */}
       <FilterBar
         types={types}
         mediums={mediums}
@@ -116,6 +138,10 @@ export function GalleryClient({ artworks, types, mediums }: GalleryClientProps) 
         activeMediumId={activeMediumId}
         onTypeChange={(id) => setFilter('type', id)}
         onMediumChange={(id) => setFilter('medium', id)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        sortOrder={sortOrder}
+        onSortChange={setSortOrder}
       />
 
       {/* État vide — UI-SPEC section 12 */}

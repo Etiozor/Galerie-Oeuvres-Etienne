@@ -62,7 +62,13 @@ export function ArtworkCard({
     >
       <Link href={`/artworks/${id}`} style={{ textDecoration: 'none', display: 'block' }}>
         {/* Zone image + overlay hover */}
-        <div style={{ position: 'relative', overflow: 'hidden' }}>
+        {/*
+         * width: 100% OBLIGATOIRE ici.
+         * Dans un layout CSS columns, sans width explicite sur ce div intermédiaire,
+         * le navigateur peut ignorer la contrainte de colonne et laisser l'image
+         * dépasser au lieu de la réduire. (Bug observé en Phase 3.)
+         */}
+        <div style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}

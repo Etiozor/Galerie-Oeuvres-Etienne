@@ -31,6 +31,12 @@ interface FilterBarProps {
   activeMediumId: string
   onTypeChange: (id: string) => void
   onMediumChange: (id: string) => void
+  /** Texte de recherche (titre + description) */
+  searchQuery: string
+  onSearchChange: (q: string) => void
+  /** Tri par date de création de l'œuvre */
+  sortOrder: 'date-desc' | 'date-asc'
+  onSortChange: (order: 'date-desc' | 'date-asc') => void
 }
 
 /**
@@ -78,98 +84,165 @@ export function FilterBar({
   activeMediumId,
   onTypeChange,
   onMediumChange,
+  searchQuery,
+  onSearchChange,
+  sortOrder,
+  onSortChange,
 }: FilterBarProps) {
   return (
+    /*
+     * Barre en 2 lignes :
+     * - Ligne 1 (44px) : champ de recherche + boutons tri
+     * - Ligne 2 (44px) : filtres type + médium avec scroll horizontal
+     * Total : 88px. Sticky sous SiteNav (top: 56px, z-index: 9).
+     */
     <div
       style={{
         position: 'sticky',
-        top: '56px',    // Hauteur exacte de SiteNav (UI-SPEC section 2)
-        zIndex: 9,      // Sous SiteNav (z-index 10) mais au-dessus de la grille
-        backgroundColor: 'var(--color-surface)', // #ede0b8 — fond surface
-        height: '44px', // Touch target minimum (UI-SPEC)
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 8px',
-        gap: '6px',
-        // Scroll horizontal sur mobile si trop de médiums — pas de wrap qui casserait la hauteur
-        overflowX: 'auto',
-        // Masquer la scrollbar sur mobile pour ne pas gêner visuellement
-        scrollbarWidth: 'none' as const,
+        top: '56px',
+        zIndex: 9,
+        backgroundColor: 'var(--color-surface)',
       }}
     >
-      {/* Label "TYPE :" — repère visuel pour le groupe de filtres type */}
-      <span
+
+      {/* ── Ligne 1 : Recherche + Tri ──────────────────────────────── */}
+      <div
         style={{
-          fontFamily: 'var(--font-space-mono)',
-          fontSize: '10px',
-          color: 'var(--color-ink-muted)', // #5a5244
-          letterSpacing: '0.05em',
-          flexShrink: 0,
-          marginRight: '2px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '0 8px',
+          height: '44px',
+          borderBottom: '1px solid rgba(90,82,68,0.15)',
         }}
       >
-        TYPE :
-      </span>
+        {/* Champ de recherche : filtre titre + description */}
+        <input
+          type="search"
+          placeholder="Rechercher une œuvre…"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          aria-label="Rechercher une œuvre par titre ou description"
+          style={{
+            flex: 1,
+            fontFamily: 'var(--font-space-mono)',
+            fontSize: '11px',
+            color: 'var(--color-ink)',
+            backgroundColor: 'transparent',
+            border: '1px solid rgba(90,82,68,0.4)',
+            padding: '0 10px',
+            height: '28px',
+            outline: 'none',
+            // D-03 : pas de border-radius
+          }}
+        />
 
-      {/* Boutons filtres par type (ex: Dessin, Peinture) */}
-      {types.map((type) => {
-        const isActive = activeTypeId === String(type.id)
-        return (
-          <button
-            key={type.id}
-            onClick={() => onTypeChange(isActive ? '' : String(type.id))}
-            style={filterButtonStyle(isActive)}
-            // aria-pressed indique l'état toggle aux lecteurs d'écran
-            aria-pressed={isActive}
-            aria-label={`Filtrer par type : ${type.name}`}
-          >
-            {type.name}
-          </button>
-        )
-      })}
+        {/* Boutons tri — toggle pair (un seul actif à la fois) */}
+        <button
+          onClick={() => onSortChange('date-desc')}
+          aria-pressed={sortOrder === 'date-desc'}
+          aria-label="Trier par date de création décroissante"
+          style={filterButtonStyle(sortOrder === 'date-desc')}
+          title="Plus récentes en premier"
+        >
+          ↓ Date
+        </button>
+        <button
+          onClick={() => onSortChange('date-asc')}
+          aria-pressed={sortOrder === 'date-asc'}
+          aria-label="Trier par date de création croissante"
+          style={filterButtonStyle(sortOrder === 'date-asc')}
+          title="Plus anciennes en premier"
+        >
+          ↑ Date
+        </button>
+      </div>
 
-      {/* Séparateur vertical entre les deux groupes de filtres */}
-      <span
-        aria-hidden="true"
+      {/* ── Ligne 2 : Filtres type + médium ───────────────────────── */}
+      <div
         style={{
-          width: '1px',
-          height: '20px',
-          backgroundColor: 'var(--color-ink-muted)', // #5a5244
-          opacity: 0.3,
-          flexShrink: 0,
-          margin: '0 6px',
-        }}
-      />
-
-      {/* Label "MÉDIUM :" — repère visuel pour le groupe de filtres médium */}
-      <span
-        style={{
-          fontFamily: 'var(--font-space-mono)',
-          fontSize: '10px',
-          color: 'var(--color-ink-muted)',
-          letterSpacing: '0.05em',
-          flexShrink: 0,
-          marginRight: '2px',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 8px',
+          gap: '6px',
+          height: '44px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none' as const,
         }}
       >
-        MÉDIUM :
-      </span>
+        {/* Label "TYPE :" */}
+        <span
+          style={{
+            fontFamily: 'var(--font-space-mono)',
+            fontSize: '10px',
+            color: 'var(--color-ink-muted)',
+            letterSpacing: '0.05em',
+            flexShrink: 0,
+            marginRight: '2px',
+          }}
+        >
+          TYPE :
+        </span>
 
-      {/* Boutons filtres par médium (ex: Crayon, Encre, Acrylique, Huile) */}
-      {mediums.map((medium) => {
-        const isActive = activeMediumId === String(medium.id)
-        return (
-          <button
-            key={medium.id}
-            onClick={() => onMediumChange(isActive ? '' : String(medium.id))}
-            style={filterButtonStyle(isActive)}
-            aria-pressed={isActive}
-            aria-label={`Filtrer par médium : ${medium.name}`}
-          >
-            {medium.name}
-          </button>
-        )
-      })}
+        {/* Boutons filtres par type */}
+        {types.map((type) => {
+          const isActive = activeTypeId === String(type.id)
+          return (
+            <button
+              key={type.id}
+              onClick={() => onTypeChange(isActive ? '' : String(type.id))}
+              style={filterButtonStyle(isActive)}
+              aria-pressed={isActive}
+              aria-label={`Filtrer par type : ${type.name}`}
+            >
+              {type.name}
+            </button>
+          )
+        })}
+
+        {/* Séparateur vertical */}
+        <span
+          aria-hidden="true"
+          style={{
+            width: '1px',
+            height: '20px',
+            backgroundColor: 'var(--color-ink-muted)',
+            opacity: 0.3,
+            flexShrink: 0,
+            margin: '0 6px',
+          }}
+        />
+
+        {/* Label "MÉDIUM :" */}
+        <span
+          style={{
+            fontFamily: 'var(--font-space-mono)',
+            fontSize: '10px',
+            color: 'var(--color-ink-muted)',
+            letterSpacing: '0.05em',
+            flexShrink: 0,
+            marginRight: '2px',
+          }}
+        >
+          MÉDIUM :
+        </span>
+
+        {/* Boutons filtres par médium */}
+        {mediums.map((medium) => {
+          const isActive = activeMediumId === String(medium.id)
+          return (
+            <button
+              key={medium.id}
+              onClick={() => onMediumChange(isActive ? '' : String(medium.id))}
+              style={filterButtonStyle(isActive)}
+              aria-pressed={isActive}
+              aria-label={`Filtrer par médium : ${medium.name}`}
+            >
+              {medium.name}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
