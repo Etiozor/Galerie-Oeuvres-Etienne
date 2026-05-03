@@ -6,9 +6,9 @@ Six phases take the project from a bare database schema to a publicly deployed a
 
 ## Phases
 
-- [ ] **Phase 1: Foundation** - Database schema, artist authentication, storage abstraction, and local dev environment
-- [ ] **Phase 2: Image Pipeline** - Upload endpoint, Sharp auto-correction, pipeline state machine, and artist validation screen
-- [ ] **Phase 3: Public Gallery** - Responsive gallery, artwork detail pages, filters, and the about page
+- [x] **Phase 1: Foundation** - Database schema, artist authentication, storage abstraction, and local dev environment
+- [x] **Phase 2: Image Pipeline** - Upload endpoint, Sharp auto-correction, pipeline state machine, and artist validation screen
+- [x] **Phase 3: Public Gallery** - Responsive gallery, artwork detail pages, filters, and the about page
 - [ ] **Phase 4: Visitor Profiles & Offers** - Lightweight visitor accounts, offer submission, offer history, and email notifications
 - [ ] **Phase 5: Admin Back-office** - Artwork CRUD, status management, and offer review dashboard
 - [ ] **Phase 6: Production Readiness** - R2 storage swap, Railway deployment, and end-to-end smoke test
@@ -64,10 +64,10 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: Gallery page layout — vertical scroll (mobile) + CSS masonry (desktop), lazy loading, srcset, availability badge
-- [ ] 03-02: Filter bar (type + medium), client-side filter state, URL param persistence
-- [ ] 03-03: Artwork detail page — URL routing, metadata display, zoom component, prev/next navigation, Open Graph tags
-- [ ] 03-04: About page, global navigation, 404 and empty-state handling
+- [x] 03-01: Gallery page layout — vertical scroll (mobile) + CSS masonry (desktop), lazy loading, srcset, availability badge
+- [x] 03-02: Filter bar (type + medium), client-side filter state, URL param persistence
+- [x] 03-03: Artwork detail page — URL routing, metadata display, zoom component, prev/next navigation, Open Graph tags
+- [x] 03-04: About page, global navigation, 404 and empty-state handling
 **UI hint**: yes
 
 ### Phase 4: Visitor Profiles & Offers
@@ -126,9 +126,9 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/4 | Not started | - |
-| 2. Image Pipeline | 3/4 | In progress | - |
-| 3. Public Gallery | 0/4 | Not started | - |
+| 1. Foundation | 4/4 | Complete | 2026-04-22 |
+| 2. Image Pipeline | 4/4 | Complete | 2026-04-26 |
+| 3. Public Gallery | 4/4 | Complete | 2026-05-02 |
 | 4. Visitor Profiles & Offers | 0/4 | Not started | - |
 | 5. Admin Back-office | 0/3 | Not started | - |
 | 6. Production Readiness | 0/3 | Not started | - |

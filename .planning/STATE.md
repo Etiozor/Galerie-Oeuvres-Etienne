@@ -5,33 +5,35 @@
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Une vitrine centralisée où chaque œuvre est mise en valeur et peut trouver preneur — remplacement définitif du "chercher dans ses photos de téléphone".
-**Current focus:** Phase 2 — Image Pipeline
+**Current focus:** Phase 4 — Visitor Profiles & Offers
 
 ## Current Position
 
-Phase: 2 of 6 (Image Pipeline)
-Plan: 4 of 4 in current phase (all plans complete — awaiting human verification checkpoint)
-Status: Checkpoint — human-verify
-Last activity: 2026-04-26 — Plan 02-04 complete: shadcn/ui + 3 validation Server Actions + /admin/artworks/[id]/validate page (side-by-side, 3 buttons, AlertDialog modal)
+Phase: 4 of 6 (Visitor Profiles & Offers)
+Plan: 0 of 4 in current phase
+Status: Ready — Phase 3 verified, Phase 4 not yet started
+Last activity: 2026-05-02 — Phase 3 complete: galerie publique masonry, filtres, page détail Open Graph, page À propos, 404. 127 tests passants, 11/11 vérifications automatiques OK.
 
-Progress: [████░░░░░░] 20%
+Progress: [██████░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 6 min
-- Total execution time: 0.3 hours
+- Total plans completed: 12
+- Average duration: ~10 min
+- Total execution time: ~2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 2. Image Pipeline | 4 | 42 min | 10.5 min |
+| 1. Foundation | 4 | ~40 min | ~10 min |
+| 2. Image Pipeline | 4 | ~42 min | 10.5 min |
+| 3. Public Gallery | 4 | ~40 min | ~10 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min
-- Trend: —
+- Last 5 plans: ~10 min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -49,24 +51,33 @@ Recent decisions affecting current work:
 - Roadmap: StorageProvider interface abstracted from day one so R2 swap in Phase 6 is env-var-only
 - 02-01: Mock next/headers with vi.fn(() => new Headers()) in Vitest — headers() throws outside a Next.js request scope
 - 02-01: Buffer → new Uint8Array(buffer) cast for Response BodyInit compatibility in TypeScript 5 strict mode
-- 02-01: proxyClientMaxBodySize cast as NextConfig['experimental'] — present at runtime but absent from @types/next 15.x types
 - 02-02: processImage() separated from Server Action for testability (no Next.js/DB/Storage) and reuse by Retry action (D-09)
 - 02-02: rotate() must be first in Sharp chain — normalise() analyses pixels; rotating after gives wrong exposure correction
 - 02-02: normalise({ lower: 1, upper: 99 }) per-channel implicitly performs white balance by normalising R/G/B independently
 - 02-03: retryPipeline generates fresh UUID for processed/thumbnail keys on each retry — avoids CDN/HTTP cache on stale images
 - 02-03: PipelineBadge uses inline styles — spec-exact colors cannot be guaranteed via Tailwind utility cascade
-- 02-03: storage.delete mock must return Promise (.mockResolvedValue) — vi.fn() returns undefined, breaking .catch() chaining
 - 02-04: vi.hoisted() required when vi.mock() factory references variables declared in the same file — Vitest hoists vi.mock() above all declarations
 - 02-04: shadcn base-nova style @base-ui/react has incomplete ESM build on Windows/Node 24 — replaced with Radix UI-based equivalents (same API)
+- 03-01: parseDimension() casts Drizzle numeric string → number for aspect-ratio calculation
+- 03-01: ArtworkCard uses inline style for aspectRatio (not Tailwind) — computed from real DB dimensions
+- 03-02: FilterBar uses router.replace with scroll:false — no page reload, URL updated, browser history not polluted
+- 03-03: generateMetadata queries DB with pipelineState=published guard — unpublished artworks return notFound()
+- 03-04: "Faire une offre" button is disabled with cursor:not-allowed — intentional Phase 3 stub, wired in Phase 4
 
 ### Pending Todos
 
-None yet.
+Phase 4 human-verification items (before starting Phase 5):
+- Masonry grid responsive layout (visual browser test)
+- Artwork card hover overlay (visual browser test)
+- Infinite scroll IntersectionObserver (live behavior test)
+- Filter toggle + URL persistence (live behavior test)
+- Open Graph tags on detail page (curl or browser source test)
+- BackgroundDecor SVG pointer-events (visual browser test)
 
 ### Blockers/Concerns
 
-- Phase 2: Must validate Sharp ICC color profile handling with real iPhone photos (Display-P3 wide gamut)
 - Phase 4: Offer history display format (anonymization of visitor names) needs artist preference before building UI
+- Phase 3 human verification: 6 visual/behavioral tests require a running browser — see 03-VERIFICATION.md
 
 ## Deferred Items
 
@@ -80,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26
-Stopped at: Checkpoint human-verify 02-04 — Phase 2 complete, awaiting artist verification of full pipeline (upload → process → validate)
+Last session: 2026-05-02
+Stopped at: Phase 3 complete — verified 11/11, 127 tests pass, ROADMAP + STATE updated. Ready to start Phase 4 (Visitor Profiles & Offers).
 Resume file: None
