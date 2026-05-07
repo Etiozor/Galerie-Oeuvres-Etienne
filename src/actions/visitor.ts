@@ -123,7 +123,7 @@ export async function createOrLoginVisitor(
     let visitorId: number
     let visitorDisplayName: string
 
-    if (existingVisitors.length > 0) {
+    if (existingVisitors.length > 0 && existingVisitors[0]) {
       // Visiteur existant — on utilise son ID sans créer de doublon (AUTH-03)
       const existing = existingVisitors[0]
       visitorId = existing.id
@@ -142,6 +142,9 @@ export async function createOrLoginVisitor(
         .returning()
 
       const newVisitor = inserted[0]
+      if (!newVisitor) {
+        throw new Error('INSERT visiteur n\'a retourné aucune ligne — erreur DB inattendue')
+      }
       visitorId = newVisitor.id
       visitorDisplayName = newVisitor.displayName
     }

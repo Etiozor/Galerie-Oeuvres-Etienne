@@ -13,7 +13,7 @@
  * Un JWT signé serait lisible en clair côté client (données exposées). [T-04-01-05]
  */
 
-import { getIronSession, type IronSessionOptions } from 'iron-session'
+import { getIronSession, type SessionOptions } from 'iron-session'
 import { cookies } from 'next/headers'
 
 // ── Type de données stockées dans le cookie de session visiteur ──────────────
@@ -83,7 +83,7 @@ if (process.env.NODE_ENV !== 'test') {
  * sameSite: 'lax' — protection CSRF : le cookie est envoyé sur navigation
  * directe mais pas sur les requêtes cross-site silencieuses. [T-04-01-02]
  */
-export const sessionOptions: IronSessionOptions = {
+export const sessionOptions: SessionOptions = {
   // Utiliser un fallback vide en cas d'absence — l'erreur sera loguée ci-dessus
   // et levée si quelqu'un tente d'accéder à la session sans la clé.
   password: secret ?? 'fallback-invalide-remplacez-moi-en-production-32chars',
