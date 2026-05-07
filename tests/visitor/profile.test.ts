@@ -15,6 +15,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ── Mocks — isoler les dépendances externes ─────────────────────────────────
 
 /**
+ * vi.hoisted() : les variables définies ici sont disponibles dans les factories vi.mock().
+ * POURQUOI hoisted ? vi.mock() est hoisted avant les imports par Vitest, donc les variables
+ * normales (const mockSession = ...) ne sont pas encore initialisées quand le mock s'exécute.
+ * vi.hoisted() garantit que ces valeurs sont prêtes avant le hoisting. [Vitest docs]
+ */
+const { mockSession, mockSessionSave } = vi.hoisted(() => {
+  const mockSessionSave = vi.fn().mockResolvedValue(undefined)
+  const mockSession = {
+    visitorId: undefined as number | undefined,
+    displayName: undefined as string | undefined,
+    save: mockSessionSave,
+    destroy: vi.fn().mockResolvedValue(undefined),
+  }
+  return { mockSession, mockSessionSave }
+})
+
+/**
  * Mock de @/db — on ne touche jamais une vraie DB dans les tests unitaires.
  * Les résultats sont contrôlés par chaque test individuellement.
  */
@@ -29,14 +46,6 @@ vi.mock('@/db', () => ({
  * Mock de @/lib/session — on ne crée pas de vrais cookies en test.
  * getVisitorSession() retourne un objet session simulé avec un spy sur save().
  */
-const mockSessionSave = vi.fn().mockResolvedValue(undefined)
-const mockSession = {
-  visitorId: undefined as number | undefined,
-  displayName: undefined as string | undefined,
-  save: mockSessionSave,
-  destroy: vi.fn().mockResolvedValue(undefined),
-}
-
 vi.mock('@/lib/session', () => ({
   getVisitorSession: vi.fn().mockResolvedValue(mockSession),
 }))
