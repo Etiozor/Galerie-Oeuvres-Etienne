@@ -28,6 +28,7 @@ import { getStorage } from '@/lib/storage'
 import { ArtworkInfoPanel } from '@/components/artwork/ArtworkInfoPanel'
 import { SiteNav } from '@/components/layout/SiteNav'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
+import { getVisitorSession } from '@/lib/session'
 
 /** Type des props d'une page dynamique Next.js 15 (params est une Promise) */
 type Props = { params: Promise<{ id: string }> }
@@ -141,6 +142,18 @@ export default async function ArtworkDetailPage({ params }: Props) {
     ? `${processedUrl} 640w, ${processedUrl} 1024w, ${processedUrl} 1440w`
     : undefined
 
+  // ── Session visiteur — lecture côté serveur ───────────────────────────────
+  // POURQUOI ici et pas dans ArtworkInfoPanel ?
+  // ArtworkInfoPanel est un Server Component sans cookies() — il reçoit les données en props.
+  // La lecture de session doit se faire dans le Server Component de niveau page,
+  // qui a accès au contexte de requête Next.js (cookies disponibles).
+  //
+  // CRUCIAL : on lit seulement la session ici — on ne sauvegarde JAMAIS dans un Server Component.
+  // session.save() est réservé aux Server Actions (createOrLoginVisitor). [Piège 2, T-04-01-02]
+  //
+  // POURQUOI await getVisitorSession() ? Next.js 15 : cookies() est async. [Piège 1]
+  const visitorSession = await getVisitorSession()
+
   return (
     <>
       {/* Fond décoratif SVG (D-04 — position fixed, z-index 0, pointer-events none) */}
@@ -251,6 +264,8 @@ export default async function ArtworkDetailPage({ params }: Props) {
               basePrice={artwork.basePrice}
               prev={prevArtwork ?? null}
               next={nextArtwork ?? null}
+              visitorId={visitorSession.visitorId}
+              visitorName={visitorSession.displayName}
             />
           </div>
         </div>

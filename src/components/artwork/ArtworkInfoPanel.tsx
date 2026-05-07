@@ -40,6 +40,17 @@ interface ArtworkInfoPanelProps {
   basePrice: string | null
   prev: ArtworkNavItem | null
   next: ArtworkNavItem | null
+  /**
+   * ID du visiteur identifié — undefined si le visiteur n'a pas de session active.
+   * Transmis depuis la page détail qui lit le cookie côté serveur. [AUTH-02]
+   * SÉCURITÉ : on ne transmet jamais le téléphone côté client — uniquement l'ID. [T-04-01-06]
+   */
+  visitorId?: number
+  /**
+   * Pseudo du visiteur affiché dans le panel si une session est active.
+   * Vient de la session iron-session, pas de la DB (évite un aller-retour inutile).
+   */
+  visitorName?: string
 }
 
 /**
@@ -106,6 +117,8 @@ export function ArtworkInfoPanel({
   basePrice,
   prev,
   next,
+  visitorId,
+  visitorName,
 }: ArtworkInfoPanelProps) {
   // Extraire l'année depuis la date de création de l'œuvre
   const year = createdDate ? new Date(createdDate).getFullYear() : null
@@ -211,12 +224,15 @@ export function ArtworkInfoPanel({
         </p>
       )}
 
-      {/* 8. Section offres — placeholder Phase 3 (fonctionnel en Phase 4) */}
+      {/* 8. Section offres — câblage session visiteur (Plan 04-01) */}
       {status === 'available' && (
         <>
           <Separator />
 
-          {/* Bloc informatif teal — 1px solid teal, padding 12px (UI-SPEC section 9) */}
+          {/*
+           * Bloc informatif teal — 1px solid teal, padding 12px (UI-SPEC section 9).
+           * Affiche l'état d'identification du visiteur ou l'invitation à faire une offre.
+           */}
           <div
             style={{
               border: '1px solid var(--color-teal)',
@@ -225,27 +241,54 @@ export function ArtworkInfoPanel({
               // D-03 : pas de border-radius
             }}
           >
-            <p
-              style={{
-                fontFamily: 'var(--font-space-mono)',
-                fontSize: '12px',
-                color: 'var(--color-ink)',
-                margin: 0,
-              }}
-            >
-              {/*
-               * Placeholder Phase 3 : le nombre réel d'offres et la meilleure offre
-               * seront affichés en Phase 4 (profils visiteurs + offres).
-               */}
-              Soyez le premier à faire une offre.
-            </p>
+            {visitorId !== undefined ? (
+              /*
+               * Visiteur identifié — afficher son pseudo.
+               * POURQUOI Space Mono teal ? Cohérence avec les labels de méta-données.
+               * Le pseudo est lu depuis la session iron-session (pas de requête DB).
+               */
+              <p
+                style={{
+                  fontFamily: 'var(--font-space-mono)',
+                  fontSize: '11px',
+                  color: 'var(--color-teal)',
+                  margin: 0,
+                }}
+              >
+                Identifié en tant que{' '}
+                <strong>{visitorName ?? 'Visiteur'}</strong>
+              </p>
+            ) : (
+              /*
+               * Visiteur non identifié — invitation à s'identifier pour faire une offre.
+               * Placeholder Phase 3 : le nombre réel d'offres sera affiché en Plan 04-03.
+               */
+              <p
+                style={{
+                  fontFamily: 'var(--font-space-mono)',
+                  fontSize: '12px',
+                  color: 'var(--color-ink)',
+                  margin: 0,
+                }}
+              >
+                Soyez le premier à faire une offre.
+              </p>
+            )}
           </div>
 
           {/*
-           * Bouton "Faire une offre" — orange #f4a259, Oswald 14px uppercase, 44px hauteur.
-           * DÉSACTIVÉ en Phase 3 : fonctionnalité câblée en Phase 4.
-           * Affiché quand même pour que le visiteur comprenne la proposition de valeur.
-           * D-03 : pas de border-radius.
+           * Bouton "Faire une offre".
+           * - Si visiteur identifié : bouton actif (le formulaire d'offre sera câblé en 04-03)
+           * - Si visiteur non identifié : bouton disabled (le modal sera ouvert en 04-03)
+           *
+           * DÉCISION WAVE 1 : le bouton reste disabled pour les deux états.
+           * 04-01 et 04-02 touchent tous deux artworks/[id]/page.tsx en Wave 1.
+           * Le câblage du VisitorProfileModal est reporté en Plan 04-03 (Wave 2)
+           * pour éviter un conflit de merge sur ce fichier.
+           *
+           * TODO Phase 04-03 : câbler VisitorProfileModal ici
+           * - Si visitorId undefined → ouvrir VisitorProfileModal au clic
+           * - Si visitorId défini → ouvrir le formulaire d'offre
            */}
           <button
             disabled
@@ -260,11 +303,10 @@ export function ArtworkInfoPanel({
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
               border: 'none',
-              cursor: 'not-allowed', // Non fonctionnel — Phase 4
+              cursor: 'not-allowed',
               opacity: 0.9,
               // D-03 : pas de border-radius
             }}
-            title="Fonctionnalité disponible bientôt — Phase 4"
           >
             Faire une offre
           </button>
