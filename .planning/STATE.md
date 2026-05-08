@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 4 of 6 (Visitor Profiles & Offers)
-Plan: 1 of 4 in current phase
-Status: In progress — Plan 04-01 complete
-Last activity: 2026-05-07 — Plan 04-01 complete: iron-session cookie visiteur, createOrLoginVisitor Server Action (z.e164, upsert AUTH-03), VisitorProfileModal, lecture session dans page détail. 7 tests passants.
+Plan: 2 of 4 in current phase
+Status: In progress — Plan 04-02 complete
+Last activity: 2026-05-08 — Plan 04-02 complete: 6 colonnes price_* ajoutées au schéma artworks + migration Docker, PriceBreakdown Server Component (TDD 8/8), câblage ArtworkInfoPanel + page détail. D-03 respecté.
 
-Progress: [██████░░░░] 54%
+Progress: [███████░░░] 58%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 14
 - Average duration: ~10 min
 - Total execution time: ~2 hours
 
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - 04-01: Session stores only visitorId + displayName, never phone number (T-04-01-06 mitigation)
 - 04-01: VisitorProfileModal wiring deferred to 04-03 (Wave 2) to avoid wave-1 merge conflict on artworks/[id]/page.tsx
 - 04-01: vi.hoisted() required for mockSession in vi.mock() factory — same pattern as 02-04
+- 04-02: PriceBreakdownData as lightweight type separate from Artwork — avoids strong coupling in ArtworkInfoPanel tests
+- 04-02: smallint for priceTechnicality/priceAttachment (scores 1-5) — 2 bytes vs 4 for integer
+- 04-02: @vitest-environment jsdom per-file directive (vitest v4) instead of environmentMatchGlobs (invalid API)
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ Phase 4 human-verification items (before starting Phase 5):
 
 ## Session Continuity
 
-Last session: 2026-05-07
-Stopped at: Plan 04-01 complete — visitor session layer done (iron-session, createOrLoginVisitor, VisitorProfileModal, detail page wired). Ready for Plan 04-02 (offers model + Server Action).
+Last session: 2026-05-08
+Stopped at: Plan 04-02 complete — price breakdown schema + PriceBreakdown component + wiring done. Ready for Plan 04-03 (offer submission form + VisitorProfileModal wiring).
 Resume file: None
