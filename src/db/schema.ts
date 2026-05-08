@@ -27,6 +27,7 @@ import {
   timestamp,
   primaryKey,
   index,
+  smallint,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -236,6 +237,35 @@ export const artworks = pgTable('artworks', {
   // === Prix ===
   // Prix de base (plancher souple) — les offres sous ce montant affichent un avertissement
   basePrice: numeric('base_price', { precision: 10, scale: 2 }),
+
+  // === Décomposition du prix de base (MARKET-01) ===
+  // Ces 6 facteurs expliquent comment l'artiste a calculé le base_price.
+  // Toutes nullables : l'artiste les renseigne depuis l'admin (Phase 5).
+  // Affichage côté visiteur sur la page détail (Phase 4 — plan 04-02).
+
+  // Rémunération du temps passé : heures × taux horaire de l'artiste
+  // Ex : 8 heures à 25 €/h = 200 € → stocker 200.00
+  priceHoursSpent: numeric('price_hours_spent', { precision: 8, scale: 2 }),
+
+  // Bonus lié au format ou aux dimensions de l'œuvre
+  // Ex : grande toile (120×80 cm) = +80 € par rapport au format A4
+  priceFormat: numeric('price_format', { precision: 8, scale: 2 }),
+
+  // Coût de l'encadrement si l'œuvre est livrée encadrée
+  // 0 ou null si l'œuvre est vendue sans cadre
+  priceFraming: numeric('price_framing', { precision: 8, scale: 2 }),
+
+  // Coût des matériaux (pigments, papier, toile, crayons, etc.)
+  priceMaterials: numeric('price_materials', { precision: 8, scale: 2 }),
+
+  // Niveau de technicité de l'œuvre : 1 (simple) à 5 (très complexe)
+  // POURQUOI smallint ? Valeurs 1-5 seulement — integer serait surdimensionné (2 octets suffisent)
+  priceTechnicality: smallint('price_technicality'),
+
+  // Attachement sentimental de l'artiste à l'œuvre : 1 à 5
+  // Influe sur le prix plancher — l'artiste peut fixer un prix plus élevé
+  // pour une œuvre à laquelle il tient particulièrement
+  priceAttachment: smallint('price_attachment'),
 
   // === Chemins de stockage [C1 - CRITIQUE] ===
   // TROIS chemins DISTINCTS pour ne jamais perdre l'original.
@@ -499,3 +529,33 @@ export type NewVisitor = typeof visitors.$inferInsert
 
 export type Offer = typeof offers.$inferSelect
 export type NewOffer = typeof offers.$inferInsert
+
+// ============================================================
+// TYPE : PriceBreakdownData — Décomposition du prix de base
+// ============================================================
+
+/**
+ * Type partiel pour la décomposition du prix.
+ *
+ * POURQUOI un type séparé et pas passer l'objet Artwork complet ?
+ * ArtworkInfoPanel ne doit pas dépendre du type Artwork entier —
+ * cela crée un couplage fort et rend les tests plus complexes.
+ * Ce type léger ne contient que les 6 colonnes nécessaires au composant PriceBreakdown.
+ *
+ * Les colonnes numeric Drizzle arrivent comme `string | null` en TypeScript.
+ * Les colonnes smallint arrivent comme `number | null`.
+ */
+export type PriceBreakdownData = {
+  // Rémunération du temps de travail (en euros, format "200.00")
+  priceHoursSpent: string | null
+  // Bonus lié au format ou aux dimensions (en euros)
+  priceFormat: string | null
+  // Coût de l'encadrement (en euros, 0 si sans cadre)
+  priceFraming: string | null
+  // Coût des matériaux (en euros)
+  priceMaterials: string | null
+  // Score de technicité : 1 à 5 (null si non renseigné)
+  priceTechnicality: number | null
+  // Score d'attachement sentimental : 1 à 5 (null si non renseigné)
+  priceAttachment: number | null
+}
