@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 4 of 6 (Visitor Profiles & Offers)
-Plan: 0 of 4 in current phase
-Status: Ready — Phase 3 verified, Phase 4 not yet started
-Last activity: 2026-05-02 — Phase 3 complete: galerie publique masonry, filtres, page détail Open Graph, page À propos, 404. 127 tests passants, 11/11 vérifications automatiques OK.
+Plan: 1 of 4 in current phase
+Status: In progress — Plan 04-01 complete
+Last activity: 2026-05-07 — Plan 04-01 complete: iron-session cookie visiteur, createOrLoginVisitor Server Action (z.e164, upsert AUTH-03), VisitorProfileModal, lecture session dans page détail. 7 tests passants.
 
-Progress: [██████░░░░] 50%
+Progress: [██████░░░░] 54%
 
 ## Performance Metrics
 
@@ -63,6 +63,10 @@ Recent decisions affecting current work:
 - 03-02: FilterBar uses router.replace with scroll:false — no page reload, URL updated, browser history not polluted
 - 03-03: generateMetadata queries DB with pipelineState=published guard — unpublished artworks return notFound()
 - 03-04: "Faire une offre" button is disabled with cursor:not-allowed — intentional Phase 3 stub, wired in Phase 4
+- 04-01: iron-session cookie 'pof_visitor_session' separate from Better Auth cookie — no conflict on same domain
+- 04-01: Session stores only visitorId + displayName, never phone number (T-04-01-06 mitigation)
+- 04-01: VisitorProfileModal wiring deferred to 04-03 (Wave 2) to avoid wave-1 merge conflict on artworks/[id]/page.tsx
+- 04-01: vi.hoisted() required for mockSession in vi.mock() factory — same pattern as 02-04
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ Phase 4 human-verification items (before starting Phase 5):
 
 ## Session Continuity
 
-Last session: 2026-05-02
-Stopped at: Phase 3 complete — verified 11/11, 127 tests pass, ROADMAP + STATE updated. Ready to start Phase 4 (Visitor Profiles & Offers).
+Last session: 2026-05-07
+Stopped at: Plan 04-01 complete — visitor session layer done (iron-session, createOrLoginVisitor, VisitorProfileModal, detail page wired). Ready for Plan 04-02 (offers model + Server Action).
 Resume file: None
