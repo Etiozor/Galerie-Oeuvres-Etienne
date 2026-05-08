@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Tests unitaires pour le composant PriceBreakdown.
  *
