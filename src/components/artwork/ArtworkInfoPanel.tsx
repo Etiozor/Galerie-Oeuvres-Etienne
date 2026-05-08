@@ -21,6 +21,8 @@
 import Link from 'next/link'
 import { ArtworkStatusBadge } from './ArtworkStatusBadge'
 import { ArtworkNav } from './ArtworkNav'
+import { PriceBreakdown } from './PriceBreakdown'
+import type { PriceBreakdownData } from '@/db/schema'
 
 /** Données minimales pour les liens de navigation */
 interface ArtworkNavItem {
@@ -51,6 +53,12 @@ interface ArtworkInfoPanelProps {
    * Vient de la session iron-session, pas de la DB (évite un aller-retour inutile).
    */
   visitorName?: string
+  /**
+   * Décomposition du prix de base — 6 facteurs expliqués au visiteur (MARKET-01).
+   * undefined ou null = ne pas afficher PriceBreakdown.
+   * Renseignée par l'artiste via l'admin (Phase 5) — affichage Phase 4.
+   */
+  priceBreakdown?: PriceBreakdownData | null
 }
 
 /**
@@ -119,6 +127,7 @@ export function ArtworkInfoPanel({
   next,
   visitorId,
   visitorName,
+  priceBreakdown, // Ajouté dans ce plan (04-02)
 }: ArtworkInfoPanelProps) {
   // Extraire l'année depuis la date de création de l'œuvre
   const year = createdDate ? new Date(createdDate).getFullYear() : null
@@ -204,6 +213,17 @@ export function ArtworkInfoPanel({
         {dimensions && <MetaRow label="Format" value={dimensions} />}
         {formattedPrice && <MetaRow label="Prix de base" value={formattedPrice} />}
       </dl>
+
+      {/* 5.5 Décomposition du prix de base (MARKET-01 — Plan 04-02) */}
+      {/* Affiché uniquement si l'artiste a renseigné au moins un facteur */}
+      {/* POURQUOI après la méta-grille ? L'ordre de lecture logique est : */}
+      {/* titre → date → technique/médium/format/prix → comment ce prix a été calculé → description */}
+      {priceBreakdown && (
+        <>
+          <Separator />
+          <PriceBreakdown data={priceBreakdown} />
+        </>
+      )}
 
       {/* 6. Séparateur — affiché uniquement si une description suit */}
       {description && <Separator />}

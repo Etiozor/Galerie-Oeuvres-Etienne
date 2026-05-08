@@ -24,6 +24,7 @@ import type { Metadata } from 'next'
 import { db } from '@/db'
 import { gt, lt, asc, desc, and, eq } from 'drizzle-orm'
 import { artworks } from '@/db/schema'
+import type { PriceBreakdownData } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
 import { ArtworkInfoPanel } from '@/components/artwork/ArtworkInfoPanel'
 import { SiteNav } from '@/components/layout/SiteNav'
@@ -141,6 +142,23 @@ export default async function ArtworkDetailPage({ params }: Props) {
   const srcset = processedUrl
     ? `${processedUrl} 640w, ${processedUrl} 1024w, ${processedUrl} 1440w`
     : undefined
+
+  // ── Décomposition du prix de base (MARKET-01 — Plan 04-02) ──────────────
+  // POURQUOI un objet séparé et pas passer l'artwork entier ?
+  // ArtworkInfoPanel ne doit pas dépendre du type Artwork complet —
+  // cela crée un couplage fort et rend les tests plus complexes.
+  // Ce type léger ne contient que les 6 colonnes nécessaires à PriceBreakdown.
+  //
+  // Drizzle avec findFirst() + 'with' retourne TOUTES les colonnes de artworks,
+  // les 6 nouvelles colonnes price_* sont donc déjà présentes dans `artwork`.
+  const priceBreakdown: PriceBreakdownData = {
+    priceHoursSpent: artwork.priceHoursSpent ?? null,
+    priceFormat: artwork.priceFormat ?? null,
+    priceFraming: artwork.priceFraming ?? null,
+    priceMaterials: artwork.priceMaterials ?? null,
+    priceTechnicality: artwork.priceTechnicality ?? null,
+    priceAttachment: artwork.priceAttachment ?? null,
+  }
 
   // ── Session visiteur — lecture côté serveur ───────────────────────────────
   // POURQUOI ici et pas dans ArtworkInfoPanel ?
@@ -266,6 +284,7 @@ export default async function ArtworkDetailPage({ params }: Props) {
               next={nextArtwork ?? null}
               visitorId={visitorSession.visitorId}
               visitorName={visitorSession.displayName}
+              priceBreakdown={priceBreakdown}
             />
           </div>
         </div>

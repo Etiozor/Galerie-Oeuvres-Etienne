@@ -10,10 +10,14 @@
  * ce qui permet d'importer @/actions/upload dans les tests exactement
  * comme dans le code applicatif.
  *
- * Deux environnements :
- * - "node" : tests Server Actions (pas de DOM — accès cookies, DB, etc.)
- * - "jsdom" : tests composants React (rendu DOM simulé pour @testing-library)
- *   Appliqué automatiquement via environmentMatchGlobs sur les dossiers concernés.
+ * Deux environnements coexistent :
+ * - "node" (défaut) : tests Server Actions, logique métier — pas de DOM
+ * - "jsdom" : tests composants React — déclaré par directive en tête de fichier
+ *   Exemple : // @vitest-environment jsdom (voir tests/offers/pricebreakdown.test.ts)
+ *
+ * POURQUOI @vitejs/plugin-react ?
+ * Nécessaire pour transformer le JSX dans les tests de composants React.
+ * Sans ce plugin, Vitest ne comprend pas la syntaxe JSX/TSX dans les tests.
  */
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
@@ -22,16 +26,10 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
-    // Environnement par défaut : Node.js (Server Actions, logique métier)
+    // Environnement par défaut : Node.js (Server Actions, accès cookies, DB)
     environment: 'node',
-    // Globals true = pas besoin d'importer describe/it/expect dans chaque fichier de test
+    // Globals true = pas besoin d'importer describe/it/expect dans chaque fichier
     globals: true,
-    // Environnement jsdom pour les fichiers de test de composants React
-    // POURQUOI environmentMatchGlobs ? Permet d'avoir Node pour les Server Actions
-    // et jsdom pour les composants — sans créer deux configs séparées.
-    environmentMatchGlobs: [
-      ['tests/offers/**', 'jsdom'],
-    ],
   },
   resolve: {
     alias: {
