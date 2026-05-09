@@ -22,6 +22,7 @@ import Link from 'next/link'
 import { ArtworkStatusBadge } from './ArtworkStatusBadge'
 import { ArtworkNav } from './ArtworkNav'
 import { PriceBreakdown } from './PriceBreakdown'
+import { OfferSection } from './OfferSection'
 import type { PriceBreakdownData } from '@/db/schema'
 
 /** Données minimales pour les liens de navigation */
@@ -59,6 +60,11 @@ interface ArtworkInfoPanelProps {
    * Renseignée par l'artiste via l'admin (Phase 5) — affichage Phase 4.
    */
   priceBreakdown?: PriceBreakdownData | null
+  /**
+   * ID de l'œuvre — nécessaire pour submitOffer dans OfferSection/OfferForm.
+   * Passé à OfferSection qui le transmet à OfferForm via un champ caché.
+   */
+  artworkId: number
 }
 
 /**
@@ -128,6 +134,7 @@ export function ArtworkInfoPanel({
   visitorId,
   visitorName,
   priceBreakdown, // Ajouté dans ce plan (04-02)
+  artworkId,      // Ajouté dans ce plan (04-03) — nécessaire pour OfferSection
 }: ArtworkInfoPanelProps) {
   // Extraire l'année depuis la date de création de l'œuvre
   const year = createdDate ? new Date(createdDate).getFullYear() : null
@@ -244,92 +251,27 @@ export function ArtworkInfoPanel({
         </p>
       )}
 
-      {/* 8. Section offres — câblage session visiteur (Plan 04-01) */}
+      {/* 8. Section offres — câblée en Phase 4 (Plan 04-03) */}
+      {/*
+       * OfferSection est un Client Component — il contient toute l'interactivité :
+       * - useState pour le modal VisitorProfileModal (visiteur non identifié)
+       * - useActionState via OfferForm pour la soumission d'offre (visiteur identifié)
+       *
+       * POURQUOI pas convertir tout ArtworkInfoPanel en Client Component ?
+       * ArtworkInfoPanel contient titre, année, méta-grille, description — tout en SSR.
+       * Isoler OfferSection en Client Component préserve le rendu serveur du reste.
+       * C'est le pattern "composition Server+Client" recommandé par Next.js 15. [D-13]
+       */}
       {status === 'available' && (
         <>
           <Separator />
-
-          {/*
-           * Bloc informatif teal — 1px solid teal, padding 12px (UI-SPEC section 9).
-           * Affiche l'état d'identification du visiteur ou l'invitation à faire une offre.
-           */}
-          <div
-            style={{
-              border: '1px solid var(--color-teal)',
-              padding: '12px',
-              marginBottom: '12px',
-              // D-03 : pas de border-radius
-            }}
-          >
-            {visitorId !== undefined ? (
-              /*
-               * Visiteur identifié — afficher son pseudo.
-               * POURQUOI Space Mono teal ? Cohérence avec les labels de méta-données.
-               * Le pseudo est lu depuis la session iron-session (pas de requête DB).
-               */
-              <p
-                style={{
-                  fontFamily: 'var(--font-space-mono)',
-                  fontSize: '11px',
-                  color: 'var(--color-teal)',
-                  margin: 0,
-                }}
-              >
-                Identifié en tant que{' '}
-                <strong>{visitorName ?? 'Visiteur'}</strong>
-              </p>
-            ) : (
-              /*
-               * Visiteur non identifié — invitation à s'identifier pour faire une offre.
-               * Placeholder Phase 3 : le nombre réel d'offres sera affiché en Plan 04-03.
-               */
-              <p
-                style={{
-                  fontFamily: 'var(--font-space-mono)',
-                  fontSize: '12px',
-                  color: 'var(--color-ink)',
-                  margin: 0,
-                }}
-              >
-                Soyez le premier à faire une offre.
-              </p>
-            )}
-          </div>
-
-          {/*
-           * Bouton "Faire une offre".
-           * - Si visiteur identifié : bouton actif (le formulaire d'offre sera câblé en 04-03)
-           * - Si visiteur non identifié : bouton disabled (le modal sera ouvert en 04-03)
-           *
-           * DÉCISION WAVE 1 : le bouton reste disabled pour les deux états.
-           * 04-01 et 04-02 touchent tous deux artworks/[id]/page.tsx en Wave 1.
-           * Le câblage du VisitorProfileModal est reporté en Plan 04-03 (Wave 2)
-           * pour éviter un conflit de merge sur ce fichier.
-           *
-           * TODO Phase 04-03 : câbler VisitorProfileModal ici
-           * - Si visitorId undefined → ouvrir VisitorProfileModal au clic
-           * - Si visitorId défini → ouvrir le formulaire d'offre
-           */}
-          <button
-            disabled
-            style={{
-              width: '100%',
-              height: '44px',
-              backgroundColor: 'var(--color-orange)',
-              color: 'var(--color-ink)',
-              fontFamily: 'var(--font-oswald)',
-              fontSize: '14px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              border: 'none',
-              cursor: 'not-allowed',
-              opacity: 0.9,
-              // D-03 : pas de border-radius
-            }}
-          >
-            Faire une offre
-          </button>
+          <OfferSection
+            visitorId={visitorId}
+            visitorName={visitorName}
+            artworkId={artworkId}
+            basePrice={basePrice}
+            status={status}
+          />
         </>
       )}
 

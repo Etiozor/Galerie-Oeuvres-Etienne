@@ -285,6 +285,7 @@ export default async function ArtworkDetailPage({ params }: Props) {
               visitorId={visitorSession.visitorId}
               visitorName={visitorSession.displayName}
               priceBreakdown={priceBreakdown}
+              artworkId={artworkId}
             />
           </div>
         </div>
