@@ -93,18 +93,19 @@ created: 2026-04-29
 ## Typographie
 
 > Sources : D-02, D-09, D-10, D-14, D-16 (CONTEXT.md verrouillés).
+> Correction checker : 4 tailles max (Label + Meta small fusionnés à 11px) ; 2 poids max (700 + 400 uniquement, poids 600 supprimé).
 
 | Rôle | Police | Taille | Poids | Line Height | Usage |
 |------|--------|--------|-------|-------------|-------|
 | Display | Oswald | 32px | 700 | 1.1 | Titre de l'œuvre sur page détail |
-| Heading | Oswald | 20px | 600 | 1.2 | Titre dans l'info strip de la grille |
-| Label | Space Mono | 11px | 400 | 1.4 | Badge statut, méta (format, médium, année), navigation, filtres |
+| Heading | Oswald | 20px | 700 | 1.2 | Titre dans l'info strip de la grille — distinction visuelle par taille (20px vs 32px), pas par poids |
 | Body | Cormorant Garamond | 17px italic | 400 | 1.6 | Description de l'œuvre (page détail) |
-| Meta small | Space Mono | 10px | 400 | 1.3 | Dimensions, date dans la méta-grille |
+| Label | Space Mono | 11px | 400 | 1.4 | Badge statut, méta (format, médium, année, dimensions, date), navigation, filtres — distinction entre badges et méta-données par `letter-spacing` ou `opacity`, pas par taille |
 
 **Règles d'application :**
 - Oswald : UPPERCASE imposé pour les titres de section et navigation (letter-spacing: 0.05em)
 - Space Mono : UPPERCASE imposé pour les badges et labels de filtre (letter-spacing: 0.08em)
+- Space Mono méta-données (dimensions, dates) : lettre-spacing neutre (0em), `color: #5a5244` pour la distinction visuelle avec les badges
 - Cormorant Garamond : toujours en italique pour les descriptions
 - Pas de mixing de polices au sein d'un même composant atomic
 
@@ -176,7 +177,7 @@ created: 2026-04-29
 **Info strip :**
 - Fond : `#f2e8cf` (même que le fond de page, pas de séparation visuellement marquée)
 - Padding : 8px 8px 4px 8px
-- Titre : Oswald 16px, weight 600, `#1a1a1a`, tronqué à 1 ligne (`text-overflow: ellipsis`)
+- Titre : Oswald 16px, weight 700, `#1a1a1a`, tronqué à 1 ligne (`text-overflow: ellipsis`)
 - Badge statut à droite du titre (voir section Badges)
 
 ### 6. Badges statut "funky" (ArtworkStatusBadge)
@@ -240,16 +241,16 @@ Ordre de lecture vertical (du haut vers le bas) :
 
 1. Badge statut (ArtworkStatusBadge — même composant que la grille)
 2. Titre — Oswald 32px, weight 700, uppercase, `#1a1a1a`
-3. Année — Space Mono 12px, `#5a5244`
+3. Année — Space Mono 11px, `#5a5244`
 4. Séparateur horizontal : `1px solid #5a5244`, opacity 0.3, margin 16px 0
 5. Méta-grille (2 colonnes) :
-   - Label : Space Mono 10px, uppercase, `#5a5244`
-   - Valeur : Space Mono 12px, `#1a1a1a`
+   - Label : Space Mono 11px, uppercase, letter-spacing 0.08em, `#5a5244`
+   - Valeur : Space Mono 11px, letter-spacing 0em, `#1a1a1a`
    - Lignes : Technique, Format (WxH cm), Prix de base, Médium
 6. Séparateur
 7. Description — Cormorant Garamond 17px italic, `#1a1a1a`, line-height 1.6
 8. Section offres (placeholder Phase 3) :
-   - Si `available` : bloc teal `#5b8e7d` `1px solid`, padding 12px, "X offres · Meilleure : Y €" — Space Mono 12px
+   - Si `available` : bloc teal `#5b8e7d` `1px solid`, padding 12px, "X offres · Meilleure : Y €" — Space Mono 11px
    - Bouton "Faire une offre" — orange `#f4a259`, fond plein, texte `#1a1a1a`, Oswald 14px uppercase, hauteur 44px, largeur 100% (affiché mais non fonctionnel en Phase 3 — sera câblé en Phase 4)
 9. Navigation précédent/suivant (ArtworkNav)
 
@@ -278,7 +279,7 @@ Ordre de lecture vertical (du haut vers le bas) :
 - Empilé : photo pleine largeur, puis texte
 
 **Contenu placeholder (à remplacer par l'artiste) :**
-- Titre : Oswald 28px, "À propos de l'artiste"
+- Titre : Oswald 28px, weight 700, "À propos de l'artiste"
 - Texte : "Bio et démarche artistique à venir."
 - Note : ne pas mettre de Lorem ipsum — texte intentionnel en français
 
@@ -286,15 +287,15 @@ Ordre de lecture vertical (du haut vers le bas) :
 
 - Centré dans la grille
 - Icône : aucune (style minimaliste)
-- Titre : Oswald 20px, "Aucune œuvre publiée pour l'instant."
-- Sous-titre : Space Mono 12px, `#5a5244`, "Revenez bientôt."
+- Titre : Oswald 20px, weight 700, "Aucune œuvre publiée pour l'instant."
+- Sous-titre : Space Mono 11px, `#5a5244`, "Revenez bientôt."
 - Si filtres actifs : "Aucun résultat pour ces filtres. Essayez une autre combinaison."
 
 ### 13. Page 404 (NotFoundPage)
 
-- Titre : Oswald 48px, "404"
-- Sous-titre : Space Mono 14px, "Cette page n'existe pas."
-- Lien retour : "← Retour à la galerie" — Space Mono 12px, `#5b8e7d`
+- Titre : Oswald 48px, weight 700, "404"
+- Sous-titre : Space Mono 11px, "Cette page n'existe pas."
+- Lien retour : "← Retour à la galerie" — Space Mono 11px, `#5b8e7d`
 
 ---
 

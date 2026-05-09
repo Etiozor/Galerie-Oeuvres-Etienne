@@ -107,10 +107,13 @@ export default async function AdminArtworksPage() {
                 flexWrap: 'wrap',
               }}
             >
-              {/* Titre de l'œuvre ('Sans titre' par défaut jusqu'à Phase 5) */}
-              <span style={{ flex: 1, fontSize: '16px', minWidth: '120px' }}>
+              {/* Titre de l'œuvre — cliquable pour ouvrir le détail */}
+              <Link
+                href={`/admin/artworks/${artwork.id}`}
+                style={{ flex: 1, fontSize: '16px', minWidth: '120px', color: '#171717', textDecoration: 'none', fontWeight: 500 }}
+              >
                 {artwork.title}
-              </span>
+              </Link>
 
               {/* Badge d'état pipeline — couleur EXACTE selon UI-SPEC.md */}
               <PipelineBadge state={artwork.pipelineState} />

@@ -187,6 +187,6 @@ export class LocalStorageAdapter implements StorageProvider {
   getUrl(key: string): string {
     // Normaliser les séparateurs de chemin Windows → les URLs utilisent toujours /
     const normalizedKey = key.replace(/\\/g, '/')
-    return `${this.baseUrl}/uploads/${normalizedKey}`
+    return `${this.baseUrl}/api/uploads/${normalizedKey}`
   }
 }

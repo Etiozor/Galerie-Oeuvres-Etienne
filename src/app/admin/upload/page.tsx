@@ -23,6 +23,7 @@ import { uploadArtwork } from '@/actions/upload'
 export default function AdminUploadPage() {
   const router = useRouter()
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   // useActionState (React 19) — remplace useFormState de React-DOM 18.
   // state    = dernier résultat retourné par uploadArtwork (null si pas encore soumis)
@@ -81,6 +82,9 @@ export default function AdminUploadPage() {
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 setSelectedFileName(f ? f.name : null)
+                // Libérer l'ancienne URL blob avant d'en créer une nouvelle
+                if (previewUrl) URL.revokeObjectURL(previewUrl)
+                setPreviewUrl(f ? URL.createObjectURL(f) : null)
               }}
               style={{
                 display: 'block',
@@ -99,6 +103,23 @@ export default function AdminUploadPage() {
             <p style={{ fontSize: '16px', color: '#737373', marginTop: '4px' }}>
               {selectedFileName ? selectedFileName : 'JPEG ou PNG, 20 MB maximum'}
             </p>
+
+            {/* Aperçu de l'image sélectionnée — blob URL local, aucun upload */}
+            {previewUrl && (
+              <img
+                src={previewUrl}
+                alt="Aperçu de la photo sélectionnée"
+                style={{
+                  marginTop: '12px',
+                  width: '100%',
+                  maxHeight: '320px',
+                  objectFit: 'contain',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e5e5',
+                  backgroundColor: '#f5f5f5',
+                }}
+              />
+            )}
           </div>
 
           {/* Message d'erreur — Alert rouge (UI-SPEC couleur Destructif) */}
