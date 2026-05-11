@@ -25,8 +25,23 @@ import { Resend } from 'resend'
  *
  * SÉCURITÉ : RESEND_API_KEY est une variable d'environnement côté serveur.
  * Next.js ne l'inclut JAMAIS dans le bundle client. (T-04-04-02)
+ *
+ * POURQUOI null et pas new Resend(undefined) ?
+ * Le constructeur Resend lève une exception si la clé est absente — ce qui plante
+ * le module entier au chargement et empêche la page d'œuvre de s'afficher.
+ * On préfère désactiver silencieusement les emails et laisser les offres fonctionner.
  */
-const resend = new Resend(process.env.RESEND_API_KEY)
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+
+if (!RESEND_API_KEY && process.env.NODE_ENV !== 'test') {
+  console.warn(
+    '[email.ts] RESEND_API_KEY absent — les notifications email sont désactivées. ' +
+    'Ajouter RESEND_API_KEY dans .env.local pour activer les emails (Phase 6 pour la prod).'
+  )
+}
+
+// null si la clé est absente — sendNewOfferEmail vérifie avant d'envoyer
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null
 
 // ── Constantes d'email ──────────────────────────────────────────────────────
 
@@ -108,6 +123,13 @@ export async function sendNewOfferEmail(params: {
     ``,
     `Connectez-vous à votre back-office pour gérer cette offre.`,
   ].filter(Boolean) as string[]
+
+  // Si la clé API est absente, on ne peut pas envoyer — log et retour silencieux.
+  // L'offre est déjà en DB, c'est l'essentiel. L'email est optionnel en dev.
+  if (!resend) {
+    console.warn('[sendNewOfferEmail] Resend non initialisé (RESEND_API_KEY absent) — email ignoré.')
+    return
+  }
 
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
