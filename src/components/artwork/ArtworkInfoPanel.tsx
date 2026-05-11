@@ -23,7 +23,9 @@ import { ArtworkStatusBadge } from './ArtworkStatusBadge'
 import { ArtworkNav } from './ArtworkNav'
 import { PriceBreakdown } from './PriceBreakdown'
 import { OfferSection } from './OfferSection'
+import { OfferHistory } from './OfferHistory'
 import type { PriceBreakdownData } from '@/db/schema'
+import type { OfferHistoryItem } from './OfferHistory'
 
 /** Données minimales pour les liens de navigation */
 interface ArtworkNavItem {
@@ -65,6 +67,24 @@ interface ArtworkInfoPanelProps {
    * Passé à OfferSection qui le transmet à OfferForm via un champ caché.
    */
   artworkId: number
+  /**
+   * Nombre total d'offres reçues pour cette œuvre.
+   * Si 0 → OfferHistory retourne null (pas de section vide).
+   * Calculé via COUNT() côté serveur dans page.tsx.
+   */
+  offerCount: number
+  /**
+   * Meilleure offre (MAX(amount)) en string Drizzle ou null.
+   * Calculé côté serveur — le client ne peut pas manipuler cette valeur (T-04-04-06).
+   * Affiché dans le résumé OfferHistory sans opt-in.
+   */
+  bestOffer: string | null
+  /**
+   * Liste complète des offres pour l'historique opt-in.
+   * Chargée côté serveur, passée en prop pour éviter un round-trip au toggle (RESEARCH.md Pattern 5).
+   * Ne contient JAMAIS le numéro de téléphone du visiteur (T-04-04-01).
+   */
+  allOffers: OfferHistoryItem[]
 }
 
 /**
@@ -135,6 +155,9 @@ export function ArtworkInfoPanel({
   visitorName,
   priceBreakdown, // Ajouté dans ce plan (04-02)
   artworkId,      // Ajouté dans ce plan (04-03) — nécessaire pour OfferSection
+  offerCount,     // Ajouté dans ce plan (04-04) — nombre total d'offres
+  bestOffer,      // Ajouté dans ce plan (04-04) — meilleure offre pour le résumé
+  allOffers,      // Ajouté dans ce plan (04-04) — liste complète pour l'opt-in
 }: ArtworkInfoPanelProps) {
   // Extraire l'année depuis la date de création de l'œuvre
   const year = createdDate ? new Date(createdDate).getFullYear() : null
@@ -251,27 +274,45 @@ export function ArtworkInfoPanel({
         </p>
       )}
 
-      {/* 8. Section offres — câblée en Phase 4 (Plan 04-03) */}
+      {/* 8. Section offres — historique + formulaire (Plan 04-04) */}
       {/*
-       * OfferSection est un Client Component — il contient toute l'interactivité :
-       * - useState pour le modal VisitorProfileModal (visiteur non identifié)
-       * - useActionState via OfferForm pour la soumission d'offre (visiteur identifié)
+       * COMPOSITION DE LA SECTION OFFRES :
+       * a. OfferHistory — résumé toujours visible + liste opt-in (Client Component)
+       *    Affiché dès qu'il y a au moins 1 offre, même si l'œuvre n'est plus disponible.
+       *    POURQUOI même pour les œuvres vendues/données ?
+       *    Le visiteur peut voir l'historique des offres pour une œuvre passée —
+       *    transparence sur le marché de l'artiste.
        *
-       * POURQUOI pas convertir tout ArtworkInfoPanel en Client Component ?
-       * ArtworkInfoPanel contient titre, année, méta-grille, description — tout en SSR.
-       * Isoler OfferSection en Client Component préserve le rendu serveur du reste.
-       * C'est le pattern "composition Server+Client" recommandé par Next.js 15. [D-13]
+       * b. OfferSection — formulaire de soumission (Client Component)
+       *    Affiché UNIQUEMENT si l'œuvre est encore disponible (status === 'available').
+       *    Contient VisitorProfileModal et OfferForm.
+       *
+       * PATTERN Server+Client (D-13) :
+       * ArtworkInfoPanel (Server) délègue l'interactivité à des Client Components.
+       * Le SSR du panel (titre, description, méta) est préservé.
        */}
-      {status === 'available' && (
+      {(status === 'available' || offerCount > 0) && (
         <>
           <Separator />
-          <OfferSection
-            visitorId={visitorId}
-            visitorName={visitorName}
-            artworkId={artworkId}
-            basePrice={basePrice}
-            status={status}
+
+          {/* Résumé des offres — visible pour toutes les œuvres ayant reçu des offres */}
+          {/* OfferHistory retourne null si offerCount === 0 — pas de section vide */}
+          <OfferHistory
+            offerCount={offerCount}
+            bestOffer={bestOffer}
+            allOffers={allOffers}
           />
+
+          {/* Formulaire d'offre — uniquement si l'œuvre est encore disponible */}
+          {status === 'available' && (
+            <OfferSection
+              visitorId={visitorId}
+              visitorName={visitorName}
+              artworkId={artworkId}
+              basePrice={basePrice}
+              status={status}
+            />
+          )}
         </>
       )}
 

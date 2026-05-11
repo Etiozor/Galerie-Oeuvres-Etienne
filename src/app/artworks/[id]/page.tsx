@@ -22,14 +22,15 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { db } from '@/db'
-import { gt, lt, asc, desc, and, eq } from 'drizzle-orm'
-import { artworks } from '@/db/schema'
+import { gt, lt, asc, desc, and, eq, count, max } from 'drizzle-orm'
+import { artworks, offers, visitors } from '@/db/schema'
 import type { PriceBreakdownData } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
 import { ArtworkInfoPanel } from '@/components/artwork/ArtworkInfoPanel'
 import { SiteNav } from '@/components/layout/SiteNav'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 import { getVisitorSession } from '@/lib/session'
+import type { OfferHistoryItem } from '@/components/artwork/OfferHistory'
 
 /** Type des props d'une page dynamique Next.js 15 (params est une Promise) */
 type Props = { params: Promise<{ id: string }> }
@@ -160,6 +161,63 @@ export default async function ArtworkDetailPage({ params }: Props) {
     priceAttachment: artwork.priceAttachment ?? null,
   }
 
+  // ── Chargement des offres pour l'historique (MARKET-04) ──────────────────
+  //
+  // POURQUOI charger toute la liste côté serveur même si elle est cachée ?
+  // Le toggle est côté client (useState dans OfferHistory) — pas de round-trip serveur.
+  // L'utilisateur voit instantanément la liste au clic sans attendre une requête réseau.
+  // Pour une œuvre avec des centaines d'offres, envisager la pagination en Phase 5.
+  //
+  // SÉCURITÉ (T-04-04-01) : la requête SELECT exclut visitors.phone — displayName uniquement.
+  // Le téléphone n'est JAMAIS sélectionné, jamais passé en props côté client.
+  //
+  // PARALLÉLISME : Promise.all exécute les deux requêtes simultanément —
+  // agrégats COUNT/MAX et liste complète partent en même temps. Gain ~50%.
+  const [offerAggregates, allOffersRaw] = await Promise.all([
+    // Requête 1 : agrégats COUNT total + MAX montant pour le résumé
+    // COUNT() retourne le nombre d'offres, MAX() retourne la meilleure offre
+    db
+      .select({
+        total: count(),
+        best: max(offers.amount),
+      })
+      .from(offers)
+      .where(eq(offers.artworkId, artworkId)),
+
+    // Requête 2 : liste complète triée par montant décroissant pour l'opt-in
+    // LEFT JOIN visitors pour récupérer le displayName
+    // SÉCURITÉ : on sélectionne UNIQUEMENT visitors.displayName — jamais visitors.phone (T-04-04-01)
+    db
+      .select({
+        id: offers.id,
+        amount: offers.amount,
+        message: offers.message,
+        visitorName: visitors.displayName,
+        createdAt: offers.createdAt,
+      })
+      .from(offers)
+      .leftJoin(visitors, eq(offers.visitorId, visitors.id))
+      .where(eq(offers.artworkId, artworkId))
+      .orderBy(desc(offers.amount)), // Meilleure offre en premier
+  ])
+
+  // Extraire les agrégats — count() retourne un number en Drizzle v0.45+
+  const offerCount = Number(offerAggregates[0]?.total ?? 0)
+  const bestOffer = offerAggregates[0]?.best ?? null
+
+  // Mapper les résultats vers le type OfferHistoryItem
+  // Filtrer les lignes où le visiteur aurait été supprimé (LEFT JOIN → visitorName peut être null)
+  // SÉCURITÉ : .filter() garantit que visitorName est non-null avant l'affichage
+  const allOffers: OfferHistoryItem[] = allOffersRaw
+    .filter((o) => o.visitorName !== null)
+    .map((o) => ({
+      id: o.id,
+      amount: o.amount,
+      message: o.message,
+      visitorName: o.visitorName!,
+      createdAt: o.createdAt,
+    }))
+
   // ── Session visiteur — lecture côté serveur ───────────────────────────────
   // POURQUOI ici et pas dans ArtworkInfoPanel ?
   // ArtworkInfoPanel est un Server Component sans cookies() — il reçoit les données en props.
@@ -286,6 +344,9 @@ export default async function ArtworkDetailPage({ params }: Props) {
               visitorName={visitorSession.displayName}
               priceBreakdown={priceBreakdown}
               artworkId={artworkId}
+              offerCount={offerCount}
+              bestOffer={bestOffer}
+              allOffers={allOffers}
             />
           </div>
         </div>
