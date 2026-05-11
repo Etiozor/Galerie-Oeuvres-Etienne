@@ -104,7 +104,13 @@ Plans:
 - [ ] 05-01: Admin artwork list page — table with status badges, quick-status-change controls, delete with confirmation
 - [ ] 05-02: Artwork create/edit form — all metadata fields, base price breakdown sub-form, shadcn/ui components
 - [ ] 05-03: Offer management dashboard — per-artwork offer list with full visitor contact details, sortable by amount
+- [ ] 05-04: Visitor profile page (/mon-profil) — informations du compte, historique de toutes les offres du visiteur, acquisitions (offres acceptées), œuvres enregistrées (favoris) ; accès sécurisé via session iron-session
+- [ ] 05-05: Icône de compte dans SiteNav — indicateur de connexion visiteur (initiale du pseudo ou icône générique) avec lien vers /mon-profil ; état non-connecté → lien vers le modal d'identification
 **UI hint**: yes
+
+**Demandes artiste (session 2026-05-10) :**
+- Page profil visiteur (/mon-profil) : infos du compte, mes offres, mes acquisitions, mes œuvres enregistrées
+- Indicateur de connexion dans la nav : rien n'indique qu'on est connecté sur la page d'accueil → icône/initiale dans SiteNav avec lien vers /mon-profil
 
 ### Phase 6: Production Readiness
 **Goal**: The application runs on Railway with Cloudflare R2 for image storage, a managed PostgreSQL database, and verified end-to-end functionality in the production environment.

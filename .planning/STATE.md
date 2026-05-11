@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: 4 of 6 (Visitor Profiles & Offers)
 Plan: 4 of 4 in current phase
-Status: In progress — Plan 04-04 complete
-Last activity: 2026-05-10 — Plan 04-04 complete: OfferHistory (résumé + liste opt-in toggle), email Resend fire-and-forget, requête COUNT/MAX offres, câblage ArtworkInfoPanel. 37/37 tests verts. Phase 4 complète.
+Status: Phase 4 validée par l'artiste — prêt pour Phase 5
+Last activity: 2026-05-10 — Phase 4 validée en browser : offres postées, historique visible, identification visiteur fonctionnelle. 2 bugs corrigés en session (revalidatePath manquant, RESEND_API_KEY null guard). 2 nouvelles demandes enregistrées pour Phase 5 (plans 05-04 et 05-05).
 
 Progress: [████████░░] 67%
 
@@ -73,7 +73,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 human-verification items (before starting Phase 5):
+Phase 5 — demandes artiste à planifier :
+- 05-04 : Page /mon-profil visiteur (infos compte, mes offres, acquisitions, œuvres enregistrées)
+- 05-05 : Indicateur de connexion dans SiteNav (initiale du pseudo ou icône, lien vers /mon-profil)
+
+Phase 3 human-verification items (toujours en attente — navigateur requis) :
 - Masonry grid responsive layout (visual browser test)
 - Artwork card hover overlay (visual browser test)
 - Infinite scroll IntersectionObserver (live behavior test)
@@ -98,6 +102,6 @@ Phase 4 human-verification items (before starting Phase 5):
 
 ## Session Continuity
 
-Last session: 2026-05-08
-Stopped at: Plan 04-02 complete — price breakdown schema + PriceBreakdown component + wiring done. Ready for Plan 04-03 (offer submission form + VisitorProfileModal wiring).
+Last session: 2026-05-10
+Stopped at: Phase 4 complète et validée par l'artiste. 2 demandes ajoutées au roadmap Phase 5 (05-04 profil visiteur, 05-05 icône nav). Prochaine session : /gsd-discuss-phase 5 ou /gsd-plan-phase 5.
 Resume file: None
