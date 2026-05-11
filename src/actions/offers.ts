@@ -20,9 +20,10 @@
 import { z } from 'zod'
 import { eq, and, count } from 'drizzle-orm'
 import { db } from '@/db'
-import { offers, artworks } from '@/db/schema'
+import { offers, artworks, visitors } from '@/db/schema'
 import { getVisitorSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { sendNewOfferEmail } from '@/lib/email'
 
 // ── Schéma de validation Zod ─────────────────────────────────────────────────
 
@@ -132,7 +133,9 @@ export async function submitOffer(
     // le chargement de la page et la soumission du formulaire. (T-04-03-05)
     const artwork = await db.query.artworks.findFirst({
       where: eq(artworks.id, artworkId),
-      columns: { status: true, basePrice: true },
+      // POURQUOI ajouter title ici ? Nécessaire pour l'email de notification à l'artiste.
+      // On évite une seconde requête DB en récupérant le titre en même temps que le statut.
+      columns: { status: true, basePrice: true, title: true },
     })
 
     if (!artwork || artwork.status !== 'available') {
@@ -193,7 +196,36 @@ export async function submitOffer(
       belowFloor,
     })
 
-    // ── g. revalidatePath : Invalider le cache Next.js ────────────────────
+    // ── g.1. Notification email à l'artiste — FIRE-AND-FORGET ─────────────
+    // POURQUOI fire-and-forget (pas d'await) ?
+    // On ne bloque PAS la réponse sur l'envoi d'email. Si Resend est lent ou
+    // indisponible, le visiteur ne doit pas attendre ni recevoir une erreur.
+    // L'offre est déjà en DB — c'est le seul résultat critique.
+    //
+    // POURQUOI récupérer le visiteur ici et pas dans la garde 1 ?
+    // On a besoin du téléphone pour l'email — cette donnée est PRIVÉE (T-04-04-01).
+    // On ne la lit que pour l'email artiste, jamais pour le retour client.
+    const visitor = await db.query.visitors.findFirst({
+      where: eq(visitors.id, visitorId),
+      // SÉCURITÉ : sélectionner UNIQUEMENT les colonnes nécessaires à l'email
+      // JAMAIS passer phone dans un retour client ou des props (T-04-04-01)
+      columns: { displayName: true, phone: true },
+    })
+
+    // Pattern fire-and-forget : pas d'await — la Promise est lancée sans bloquer
+    // .catch() capture les exceptions non prévues dans sendNewOfferEmail elle-même
+    // (les erreurs Resend sont déjà loggées à l'intérieur de sendNewOfferEmail)
+    sendNewOfferEmail({
+      artworkTitle: artwork.title,
+      visitorName: visitor?.displayName ?? 'Visiteur',
+      visitorPhone: visitor?.phone ?? '',
+      amount,
+      message: message ?? null,
+    }).catch((err) =>
+      console.error('[submitOffer] sendNewOfferEmail exception inattendue :', err)
+    )
+
+    // ── g.2. revalidatePath : Invalider le cache Next.js ─────────────────
     // POURQUOI revalider ? La page détail affiche le nombre d'offres et la meilleure.
     // Sans revalidation, un visiteur verrait l'ancienne valeur pendant maxAge secondes.
     // revalidatePath() force Next.js à regénérer la page au prochain accès.

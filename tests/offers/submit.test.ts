@@ -42,6 +42,14 @@ vi.mock('@/db', () => ({
       artworks: {
         findFirst: vi.fn(),
       },
+      // Mock visiteurs — nécessaire pour la requête email dans submitOffer (Plan 04-04)
+      // sendNewOfferEmail est mockée séparément donc le résultat ici n'est pas critique
+      visitors: {
+        findFirst: vi.fn().mockResolvedValue({
+          displayName: 'Alice Test',
+          phone: '+33600000000',
+        }),
+      },
     },
   },
 }))
@@ -60,6 +68,21 @@ vi.mock('@/lib/session', () => ({
  */
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
+}))
+
+/**
+ * Mock de @/lib/email — on ne teste pas l'envoi réel d'email ici.
+ *
+ * POURQUOI nécessaire ?
+ * email.ts instancie new Resend(process.env.RESEND_API_KEY) au niveau module.
+ * Sans RESEND_API_KEY dans l'environnement de test, Resend lance une erreur.
+ * Ce mock évite le crash et isole submitOffer de l'envoi email.
+ *
+ * Le comportement fire-and-forget de submitOffer reste testé indirectement :
+ * l'action doit retourner success:true même si sendNewOfferEmail est simulée.
+ */
+vi.mock('@/lib/email', () => ({
+  sendNewOfferEmail: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Import après les mocks (ordre critique en ESM)
