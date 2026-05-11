@@ -16,6 +16,7 @@
 
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import { db } from '@/db'
 import { visitors } from '@/db/schema'
 import { getVisitorSession } from '@/lib/session'
@@ -163,6 +164,19 @@ export async function createOrLoginVisitor(
     // session.save() UNIQUEMENT dans une Server Action — jamais dans un Server Component
     // POURQUOI ? Les Server Components ne doivent pas muter l'état des cookies. [Piège 2]
     await session.save()
+
+    // Revalider toutes les pages d'œuvres pour que la session visiteur soit relue côté serveur.
+    // POURQUOI revalidatePath('/artworks', 'layout') ?
+    // Sans revalidation, le Server Component page.tsx lit session.visitorId = undefined même
+    // après un login réussi (il a été rendu avant la soumission). revalidatePath force Next.js
+    // à re-exécuter le Server Component avec les cookies mis à jour → OfferSection reçoit
+    // visitorId défini → affiche OfferForm au lieu du bouton "S'identifier". (WR-03)
+    //
+    // EXCEPTION tests : revalidatePath nécessite le contexte de requête Next.js (static store).
+    // En Vitest il n'existe pas — même guard que session.ts pour le secret.
+    if (process.env.NODE_ENV !== 'test') {
+      revalidatePath('/artworks', 'layout')
+    }
 
     return { success: true }
   } catch (error) {
