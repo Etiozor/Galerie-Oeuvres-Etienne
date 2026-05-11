@@ -98,14 +98,14 @@ Plans:
   2. The artist can edit any field on an existing artwork and can permanently delete an artwork (removing its files and database record)
   3. The artist can change an artwork's status from Available to Sold, Given, or Reserved from either the artwork list or the detail page
   4. The artist can view a list of all offers received for any artwork, including visitor pseudo/name, phone number, email (if provided), offer amount, and message
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 05-01: Admin artwork list page — table with status badges, quick-status-change controls, delete with confirmation
-- [ ] 05-02: Artwork create/edit form — all metadata fields, base price breakdown sub-form, shadcn/ui components
-- [ ] 05-03: Offer management dashboard — per-artwork offer list with full visitor contact details, sortable by amount
-- [ ] 05-04: Visitor profile page (/mon-profil) — informations du compte, historique de toutes les offres du visiteur, acquisitions (offres acceptées), œuvres enregistrées (favoris) ; accès sécurisé via session iron-session
-- [ ] 05-05: Icône de compte dans SiteNav — indicateur de connexion visiteur (initiale du pseudo ou icône générique) avec lien vers /mon-profil ; état non-connecté → lien vers le modal d'identification
+- [ ] 05-01-PLAN.md — Status badges on artwork list, StatusChangeForm + DeleteArtworkButton on detail page, Server Actions updateArtworkStatus + deleteArtwork
+- [ ] 05-02-PLAN.md — ArtworkEditForm (15 fields, useActionState), Server Action updateArtwork with Zod validation and numeric→string conversion
+- [ ] 05-03-PLAN.md — Offers dashboard section in /admin/artworks/[id] — full visitor contact details (phone, email), sorted by amount desc
+- [ ] 05-04-PLAN.md — Page /mon-profil (4 sections), saved_artworks schema + db:push, toggleSavedArtwork Server Action, SaveButton heart on artwork detail
+- [ ] 05-05-PLAN.md — SiteNav async Server Component with visitor connection indicator, ModalTrigger Client Component with Suspense in layout
 **UI hint**: yes
 
 **Demandes artiste (session 2026-05-10) :**
@@ -136,5 +136,5 @@ Plans:
 | 2. Image Pipeline | 4/4 | Complete | 2026-04-26 |
 | 3. Public Gallery | 4/4 | Complete | 2026-05-02 |
 | 4. Visitor Profiles & Offers | 4/4 | Complete | 2026-05-10 |
-| 5. Admin Back-office | 0/3 | Not started | - |
+| 5. Admin Back-office | 0/5 | Not started | - |
 | 6. Production Readiness | 0/3 | Not started | - |
