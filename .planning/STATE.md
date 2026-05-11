@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 4 of 6 (Visitor Profiles & Offers)
-Plan: 2 of 4 in current phase
-Status: In progress — Plan 04-02 complete
-Last activity: 2026-05-08 — Plan 04-02 complete: 6 colonnes price_* ajoutées au schéma artworks + migration Docker, PriceBreakdown Server Component (TDD 8/8), câblage ArtworkInfoPanel + page détail. D-03 respecté.
+Plan: 4 of 4 in current phase
+Status: In progress — Plan 04-04 complete
+Last activity: 2026-05-10 — Plan 04-04 complete: OfferHistory (résumé + liste opt-in toggle), email Resend fire-and-forget, requête COUNT/MAX offres, câblage ArtworkInfoPanel. 37/37 tests verts. Phase 4 complète.
 
-Progress: [███████░░░] 58%
+Progress: [████████░░] 67%
 
 ## Performance Metrics
 

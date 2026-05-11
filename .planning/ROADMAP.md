@@ -85,8 +85,8 @@ Plans:
 Plans:
 - [x] 04-01: Visitor profile model (pseudo/name, phone required, email optional), phone-based account retrieval flow, session management separate from artist auth
 - [x] 04-02: Base price model and breakdown UI component (time, format, framing, materials, technicality, artist attachment)
-- [ ] 04-03: Offer submission form with soft floor warning, Server Action, rate limiting (3 offers per visitor per artwork), Zod validation
-- [ ] 04-04: Offer history display (count + highest offer default, full list opt-in toggle), Resend email notification on new offer
+- [x] 04-03: Offer submission form with soft floor warning, Server Action, rate limiting (3 offers per visitor per artwork), Zod validation
+- [x] 04-04: Offer history display (count + highest offer default, full list opt-in toggle), Resend email notification on new offer
 **UI hint**: yes
 
 ### Phase 5: Admin Back-office
@@ -129,6 +129,6 @@ Plans:
 | 1. Foundation | 4/4 | Complete | 2026-04-22 |
 | 2. Image Pipeline | 4/4 | Complete | 2026-04-26 |
 | 3. Public Gallery | 4/4 | Complete | 2026-05-02 |
-| 4. Visitor Profiles & Offers | 2/4 | In progress | - |
+| 4. Visitor Profiles & Offers | 4/4 | Complete | 2026-05-10 |
 | 5. Admin Back-office | 0/3 | Not started | - |
 | 6. Production Readiness | 0/3 | Not started | - |
