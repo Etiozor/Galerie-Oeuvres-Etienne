@@ -435,6 +435,31 @@ export const offers = pgTable('offers', {
 ])
 
 // ============================================================
+// TABLE : saved_artworks — Favoris des visiteurs (D-14 Phase 5)
+// ============================================================
+
+/**
+ * Œuvres enregistrées par les visiteurs (favoris).
+ *
+ * POURQUOI une clé primaire composite et pas un id serial ?
+ * La contrainte (visitorId, artworkId) est unique par nature — un visiteur
+ * ne peut enregistrer la même œuvre qu'une seule fois. La PK composite
+ * garantit cette unicité au niveau DB sans index supplémentaire.
+ * [D-14 Phase 5]
+ */
+export const savedArtworks = pgTable('saved_artworks', {
+  visitorId: integer('visitor_id')
+    .notNull()
+    .references(() => visitors.id, { onDelete: 'cascade' }),
+  artworkId: integer('artwork_id')
+    .notNull()
+    .references(() => artworks.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.visitorId, table.artworkId] }),
+])
+
+// ============================================================
 // RELATIONS Drizzle — pour les requêtes avec jointures automatiques
 // ============================================================
 
@@ -494,6 +519,22 @@ export const offerRelations = relations(offers, ({ one }) => ({
   visitor: one(visitors, {
     fields: [offers.visitorId],
     references: [visitors.id],
+  }),
+}))
+
+/**
+ * Relations Drizzle pour saved_artworks.
+ * Permet d'utiliser db.query.savedArtworks.findMany({ with: { artwork: true } })
+ * si nécessaire dans les requêtes futures.
+ */
+export const savedArtworkRelations = relations(savedArtworks, ({ one }) => ({
+  visitor: one(visitors, {
+    fields: [savedArtworks.visitorId],
+    references: [visitors.id],
+  }),
+  artwork: one(artworks, {
+    fields: [savedArtworks.artworkId],
+    references: [artworks.id],
   }),
 }))
 
