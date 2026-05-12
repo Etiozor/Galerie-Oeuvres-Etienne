@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Une vitrine centralisée où chaque œuvre est mise en valeur et peut trouver preneur — remplacement définitif du "chercher dans ses photos de téléphone".
-**Current focus:** Phase 4 — Visitor Profiles & Offers
+**Current focus:** Phase 5 — Admin Back-office
 
 ## Current Position
 
-Phase: 4 of 6 (Visitor Profiles & Offers)
-Plan: 4 of 4 in current phase
-Status: Phase 4 validée par l'artiste — prêt pour Phase 5
-Last activity: 2026-05-10 — Phase 4 validée en browser : offres postées, historique visible, identification visiteur fonctionnelle. 2 bugs corrigés en session (revalidatePath manquant, RESEND_API_KEY null guard). 2 nouvelles demandes enregistrées pour Phase 5 (plans 05-04 et 05-05).
+Phase: 5 of 6 (Admin Back-office)
+Plan: 0 of 5 in current phase
+Status: Phase 5 planifiée — prête à exécuter
+Last activity: 2026-05-11 — Phase 5 planifiée : 5 plans en 2 vagues (Wave 1 : 05-01 status+delete, 05-02 edit form, 05-03 offer dashboard ; Wave 2 : 05-04 /mon-profil+favoris, 05-05 SiteNav indicator). UI-SPEC, RESEARCH, PATTERNS, VALIDATION créés. Vérification 12/12 dimensions passée.
 
 Progress: [████████░░] 67%
 
@@ -73,9 +73,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 5 — demandes artiste à planifier :
-- 05-04 : Page /mon-profil visiteur (infos compte, mes offres, acquisitions, œuvres enregistrées)
-- 05-05 : Indicateur de connexion dans SiteNav (initiale du pseudo ou icône, lien vers /mon-profil)
+Phase 5 — planifiée, prête à exécuter :
+- 05-01 : Badges statut + StatusChangeForm + DeleteArtworkButton dans /admin/artworks/[id]
+- 05-02 : Formulaire édition métadonnées + updateArtwork Server Action (15 champs)
+- 05-03 : Dashboard offres (section inline /admin/artworks/[id], coords visiteurs complètes)
+- 05-04 : /mon-profil visiteur + table saved_artworks + SaveButton + db:push
+- 05-05 : SiteNav async + ModalTrigger (Suspense) + indicateur connexion visiteur
 
 Phase 3 human-verification items (toujours en attente — navigateur requis) :
 - Masonry grid responsive layout (visual browser test)
@@ -102,6 +105,6 @@ Phase 3 human-verification items (toujours en attente — navigateur requis) :
 
 ## Session Continuity
 
-Last session: 2026-05-10
-Stopped at: Phase 4 complète et validée par l'artiste. 2 demandes ajoutées au roadmap Phase 5 (05-04 profil visiteur, 05-05 icône nav). Prochaine session : /gsd-discuss-phase 5 ou /gsd-plan-phase 5.
+Last session: 2026-05-11
+Stopped at: Phase 5 planifiée et vérifiée. 5 plans en 2 vagues, UI-SPEC approuvée, RESEARCH + PATTERNS + VALIDATION créés. Prochaine session : /gsd-execute-phase 5.
 Resume file: None

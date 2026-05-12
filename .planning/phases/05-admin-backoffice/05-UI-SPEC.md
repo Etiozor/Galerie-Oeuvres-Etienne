@@ -60,9 +60,10 @@ Exceptions :
 | Display (titre de page h1) | 28px | 600 | 1.2 | Geist Sans |
 | Heading (titre de section h2) | 20px | 600 | 1.3 | Geist Sans |
 | Body (texte courant, cellules tableau) | 16px | 400 | 1.5 | Geist Sans |
-| Label (champs, colonnes, méta) | 14px | 600 | 1.4 | Geist Sans |
-| Meta (date, info secondaire) | 14px | 400 | 1.4 | Geist Sans |
-| Tiny (info très secondaire) | 12px | 400 | 1.4 | Geist Sans |
+| Label (champs, colonnes, méta importante) | 14px | 600 | 1.4 | Geist Sans |
+| Meta (date, info secondaire, tiny) | 14px | 400 | 1.4 | Geist Sans |
+
+**Note :** Les informations très secondaires (dates, compteurs, métadonnées discrètes) utilisent 14px/400 avec `color: var(--color-ink-muted)` pour la distinction visuelle. La hiérarchie Label vs Meta est portée par la graisse (600 vs 400), pas par la taille.
 
 ### Site public — SiteNav (extension Phase 5)
 
@@ -77,7 +78,7 @@ Exceptions :
 
 | Rôle | Taille | Graisse | Interligne | Police |
 |------|--------|---------|------------|--------|
-| Titre de page h1 | 28px | 700 | 1.2 | Oswald, uppercase |
+| Titre de page h1 | 28px | 600 | 1.2 | Oswald, uppercase |
 | Titre de section h2 | 16px | 400 | 1.4 | Space Mono, uppercase, letter-spacing 0.08em |
 | Corps texte (informations) | 16px | 400 | 1.5 | Geist Sans (ou System UI) |
 | Label masqué (téléphone) | 14px | 400 | 1.4 | Space Mono |
@@ -85,9 +86,13 @@ Exceptions :
 | Montant offre | 16px | 600 | 1.5 | Space Mono |
 | Date offre | 13px | 400 | 1.4 | Space Mono, color ink-muted |
 
+**Note typographie /mon-profil :** La hiérarchie du h1 est portée par sa taille (28px), sa famille (Oswald) et son casing (uppercase) — la graisse 600 suffit, le 700 n'est pas nécessaire.
+
 ---
 
 ## Couleurs
+
+**Répartition proportionnelle : `#f2e8cf` dominant (60%) — `#ede0b8` surfaces (30%) — accents chromatiques réservés (10%)**
 
 | Rôle | Valeur | Usage |
 |------|--------|-------|
@@ -208,7 +213,7 @@ Style AlertDialog : `borderRadius: 0` sur `AlertDialogContent`, `AlertDialogActi
 | Input nombre (priceHoursSpent, priceFormat, priceFraming, priceMaterials) | Client | shadcn/ui Input type="number" | `borderRadius: 0`, unité "€" |
 | Input score 1-5 (priceTechnicality, priceAttachment) | Client | shadcn/ui Input type="number" min=1 max=5 | `borderRadius: 0`, hint "1 à 5" |
 | Bouton "Enregistrer les modifications" | Client | shadcn/ui Button | Fond `#1a1a1a`, texte blanc, `borderRadius: 0` |
-| Message d'erreur champ | Client | Inline | 12px, color `#bc4b51`, pas d'icône |
+| Message d'erreur champ | Client | Inline | 14px/400, color `#bc4b51`, `color: var(--color-ink-muted)` pour contexte, pas d'icône |
 
 **Structure du formulaire (ordre des sections) :**
 1. Titre de la section "Métadonnées" (h2 20px/600)
@@ -237,7 +242,7 @@ Style AlertDialog : `borderRadius: 0` sur `AlertDialogContent`, `AlertDialogActi
 3. Email — 14px/400 (affiché si fourni, sinon "—")
 4. Montant — 16px/600 Space Mono, aligné à droite
 5. Message — 14px/400, tronqué à 80 caractères avec ellipsis
-6. Date — 13px/400 Space Mono ink-muted
+6. Date — 14px/400 Space Mono, `color: var(--color-ink-muted)`
 
 ### 05-04 : Page `/mon-profil` (visiteur)
 
@@ -253,7 +258,7 @@ Style AlertDialog : `borderRadius: 0` sur `AlertDialogContent`, `AlertDialogActi
 | Card acquisition | Server | Nouveau | Thumbnail 80×80px + titre + mention "Acquis (offre soumise)" |
 | Section "Mes œuvres enregistrées" | Server | Nouveau | Grid 2 colonnes sur mobile, 3 sur desktop |
 | Card artwork enregistrée | Server | Nouveau | Thumbnail + titre + lien vers détail |
-| Bouton cœur (page détail) | Client | Nouveau | Icône lucide `Heart`, filled si enregistré, outline sinon. Couleur `#bc4b51` si actif, `var(--color-ink-muted)` sinon. Taille 20px. Visible uniquement si visiteur connecté. |
+| Bouton cœur (page détail) | Client | Nouveau | Icône lucide `Heart`, filled si enregistré, outline sinon. Couleur `#bc4b51` si actif, `var(--color-ink-muted)` sinon. Taille 20px. Visible uniquement si visiteur connecté. `aria-label="Enregistrer l'œuvre"` quand non enregistré ; `aria-label="Retirer des enregistrements"` quand enregistré. |
 | État vide (chaque section) | Server | Nouveau | Voir copywriting ci-dessus |
 
 **Structure de la page `/mon-profil` :**
@@ -340,6 +345,8 @@ Composants à installer si nécessaire : `input`, `textarea`, `select`, `label` 
 | Code existant (`PriceBreakdown.tsx`) | Labels des 6 facteurs prix (référence exacte pour le formulaire admin) |
 | Code existant (`globals.css`) | Variables CSS `--color-*` et `--font-*` |
 | REQUIREMENTS.md | ADMIN-01 à ADMIN-05 — critères de succès |
+| UI checker revision (2026-05-11) | Suppression taille 12px (Tiny) — absorbée par 14px/400 + ink-muted ; aria-label bouton cœur ajouté |
+| UI checker revision 2 (2026-05-11) | /mon-profil h1 graisse 700→600 (2 graisses max) ; ligne de proportion 60/30/10 ajoutée en section Couleurs |
 | User input (session 2026-05-11) | Aucune question nécessaire — tout pré-rempli depuis les artefacts amont |
 
 ---
