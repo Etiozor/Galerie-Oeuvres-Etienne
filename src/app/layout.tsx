@@ -9,9 +9,21 @@
  * metadataBase est OBLIGATOIRE pour que og:image soit une URL absolue —
  * les crawlers sociaux (Facebook, WhatsApp, etc.) ne résolvent pas les URLs relatives.
  * (Voir piège 1 dans 03-RESEARCH.md)
+ *
+ * ModalTrigger (Phase 5, Plan 05-05) :
+ * Ce composant Client écoute le paramètre URL ?identify=1 et ouvre VisitorProfileModal.
+ * Il est placé dans le layout racine pour être présent sur TOUTES les pages — ainsi,
+ * le lien "S'identifier" dans SiteNav fonctionne depuis n'importe quelle route.
+ *
+ * PIÈGE Suspense obligatoire (D-17, RESEARCH.md Pitfall 4) :
+ * ModalTrigger utilise useSearchParams() — ce hook exige un <Suspense> parent.
+ * Sans Suspense, `next build` échoue avec "Missing Suspense boundary with useSearchParams".
+ * fallback={null} : rien de visible pendant la résolution initiale (modal fermé par défaut).
  */
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Oswald, Space_Mono, Cormorant_Garamond } from 'next/font/google'
+import { ModalTrigger } from '@/components/layout/ModalTrigger'
 import './globals.css'
 
 // POURQUOI next/font/google ?
@@ -55,7 +67,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="fr"
       className={`${oswald.variable} ${spaceMono.variable} ${cormorantGaramond.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        {/*
+          ModalTrigger déclenche VisitorProfileModal quand ?identify=1 est dans l'URL.
+          Placé après {children} pour être rendu sur toutes les pages sans perturber
+          la structure du DOM principal.
+
+          PIÈGE Suspense obligatoire : useSearchParams() dans ModalTrigger exige un
+          boundary Suspense — sans lui, next build échoue.
+          fallback={null} : pas de contenu visible pendant le chargement initial
+          (le modal est fermé par défaut — aucun skeleton nécessaire).
+          [D-17 — RESEARCH.md Pitfall 4, T-05-05-05]
+        */}
+        <Suspense fallback={null}>
+          <ModalTrigger />
+        </Suspense>
+      </body>
     </html>
   )
 }
