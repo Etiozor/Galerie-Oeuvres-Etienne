@@ -68,6 +68,138 @@ export async function updateArtworkStatus(
   return { success: true }
 }
 
+// ============================================================
+// Schéma Zod pour la mise à jour des métadonnées d'une œuvre
+// ============================================================
+
+/**
+ * Schéma Zod pour l'édition complète des métadonnées d'une œuvre.
+ *
+ * POURQUOI z.coerce sur les champs numériques ?
+ * FormData retourne TOUJOURS des strings — z.coerce.number() convertit automatiquement
+ * "42.5" → 42.5 avant la validation. Sans coerce, Zod rejetterait toutes les valeurs.
+ *
+ * POURQUOI optional() et pas nullable() ?
+ * L'artiste peut laisser un champ vide — undefined signifie "non renseigné".
+ * null en Zod représente une valeur explicitement absente.
+ * FormData envoie "" pour les champs vides, z.coerce.number() rejette "" → on utilise
+ * .optional() combiné avec une gestion null côté DB.
+ */
+const updateArtworkSchema = z.object({
+  title: z.string().min(1, 'Le titre est obligatoire.').max(255, 'Titre trop long.'),
+  description: z.string().max(2000, 'Description trop longue.').optional(),
+  // Date ISO string "YYYY-MM-DD" — retournée par input type="date" ou vide
+  createdDate: z.string().optional(),
+  typeId: z.coerce.number().int().positive().optional(),
+  mediumId: z.coerce.number().int().positive().optional(),
+  // Colonnes numeric Drizzle — z.coerce convertit "42.5" → 42.5
+  widthCm: z.coerce.number().positive().optional(),
+  heightCm: z.coerce.number().positive().optional(),
+  basePrice: z.coerce.number().positive().optional(),
+  priceHoursSpent: z.coerce.number().min(0).optional(),
+  priceFormat: z.coerce.number().min(0).optional(),
+  priceFraming: z.coerce.number().min(0).optional(),
+  priceMaterials: z.coerce.number().min(0).optional(),
+  // Scores 1-5 smallint — entiers, validation stricte de plage
+  priceTechnicality: z.coerce.number().int().min(1).max(5).optional(),
+  priceAttachment: z.coerce.number().int().min(1).max(5).optional(),
+})
+
+/** Type de retour de updateArtwork — compatible avec useActionState */
+type UpdateArtworkResult =
+  | { success: true }
+  | { success: false; errors: Record<string, string[]> }
+
+/**
+ * Met à jour les métadonnées d'une œuvre (titre, date, dimensions, prix, etc.).
+ *
+ * POURQUOI artworkId est passé par .bind(null, artworkId) et non en input caché ?
+ * Un input caché côté client peut être falsifié. Binder l'ID côté serveur dans le
+ * Server Component parent garantit que seul l'artiste authentifié peut modifier ses œuvres.
+ *
+ * POURQUOI la signature (artworkId, prevState, formData) ?
+ * useActionState exige cette signature — artworkId est bindé comme 1er argument,
+ * il arrive donc avant prevState (2e argument useActionState).
+ *
+ * CRITIQUE numeric → string : les colonnes numeric Drizzle (widthCm, heightCm, basePrice,
+ * priceHoursSpent, priceFormat, priceFraming, priceMaterials) attendent une string en
+ * écriture malgré leur représentation TypeScript — d'où les .toString().
+ * Les colonnes smallint (priceTechnicality, priceAttachment) attendent un number direct.
+ *
+ * Sécurité (T-05-02) :
+ * - T-05-02-01 : auth.api.getSession() EN PREMIERE LIGNE
+ * - T-05-02-02 : Zod valide avant tout accès DB (anti-injection)
+ * - T-05-02-03 : artworkId bindé côté serveur, jamais en input client
+ * - T-05-02-04 : z.string().max(2000) limite la description
+ *
+ * @param artworkId  ID de l'œuvre à modifier (bindé côté serveur)
+ * @param prevState  État précédent de useActionState (ignoré ici)
+ * @param formData   Données du formulaire (15 champs)
+ * @returns          { success: true } ou { success: false; errors: Record<string, string[]> }
+ */
+export async function updateArtwork(
+  artworkId: number,
+  prevState: unknown,
+  formData: FormData
+): Promise<UpdateArtworkResult> {
+  // ── 1. Vérification de session — DOIT être la première instruction (T-05-02-01) ──
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return { success: false, errors: { _form: ['Non autorisé.'] } }
+
+  // ── 2. Validation Zod — rejette toute donnée invalide avant accès DB (T-05-02-02) ──
+  // Object.fromEntries(formData) convertit le FormData en objet plain pour safeParse
+  const parseResult = updateArtworkSchema.safeParse(Object.fromEntries(formData))
+  if (!parseResult.success) {
+    return {
+      success: false,
+      errors: parseResult.error.flatten().fieldErrors as Record<string, string[]>,
+    }
+  }
+  const data = parseResult.data
+
+  try {
+    await db.update(artworks)
+      .set({
+        title: data.title,
+        description: data.description ?? null,
+        // Date ISO "YYYY-MM-DD" → Date object ; null si champ laissé vide
+        createdDate: data.createdDate ? new Date(data.createdDate) : null,
+        typeId: data.typeId ?? null,
+        mediumId: data.mediumId ?? null,
+        // CRITIQUE : colonnes numeric Drizzle → .toString() OBLIGATOIRE
+        // Drizzle attend une string pour les colonnes numeric PostgreSQL,
+        // même si le type TypeScript semble être "number | string | null"
+        widthCm: data.widthCm?.toString() ?? null,
+        heightCm: data.heightCm?.toString() ?? null,
+        basePrice: data.basePrice?.toString() ?? null,
+        priceHoursSpent: data.priceHoursSpent?.toString() ?? null,
+        priceFormat: data.priceFormat?.toString() ?? null,
+        priceFraming: data.priceFraming?.toString() ?? null,
+        priceMaterials: data.priceMaterials?.toString() ?? null,
+        // Colonnes smallint : number direct, PAS de .toString()
+        // smallint PostgreSQL attend un entier, pas une string
+        priceTechnicality: data.priceTechnicality ?? null,
+        priceAttachment: data.priceAttachment ?? null,
+      })
+      .where(eq(artworks.id, artworkId))
+
+    // ── 4. Invalider le cache des deux routes concernées ──
+    // /admin/artworks/[id] : la page détail affiche les métadonnées mises à jour
+    // /artworks/[id] : la page publique affiche aussi les métadonnées (ADMIN-01)
+    revalidatePath(`/admin/artworks/${artworkId}`)
+    revalidatePath(`/artworks/${artworkId}`)
+
+    return { success: true }
+  } catch (error) {
+    // Ne jamais exposer les détails de l'infrastructure au client (T-05-02-05)
+    console.error('[updateArtwork] Erreur serveur inattendue :', error)
+    return {
+      success: false,
+      errors: { _form: ['Une erreur serveur est survenue. Veuillez réessayer.'] },
+    }
+  }
+}
+
 /**
  * Supprime une œuvre : fichiers storage PUIS entrée DB (ordre critique).
  *
