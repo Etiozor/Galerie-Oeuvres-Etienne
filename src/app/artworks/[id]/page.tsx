@@ -23,7 +23,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { db } from '@/db'
 import { gt, lt, asc, desc, and, eq, count, max } from 'drizzle-orm'
-import { artworks, offers, visitors } from '@/db/schema'
+import { artworks, offers, visitors, savedArtworks } from '@/db/schema'
 import type { PriceBreakdownData } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
 import { ArtworkInfoPanel } from '@/components/artwork/ArtworkInfoPanel'
@@ -31,6 +31,7 @@ import { SiteNav } from '@/components/layout/SiteNav'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 import { getVisitorSession } from '@/lib/session'
 import type { OfferHistoryItem } from '@/components/artwork/OfferHistory'
+import { SaveButton } from '@/components/visitor/SaveButton'
 
 /** Type des props d'une page dynamique Next.js 15 (params est une Promise) */
 type Props = { params: Promise<{ id: string }> }
@@ -230,6 +231,21 @@ export default async function ArtworkDetailPage({ params }: Props) {
   // POURQUOI await getVisitorSession() ? Next.js 15 : cookies() est async. [Piège 1]
   const visitorSession = await getVisitorSession()
 
+  // ── Vérifier si l'œuvre est dans les favoris du visiteur connecté ─────────
+  // Initialise l'état du SaveButton côté serveur pour éviter un flash visuel
+  // (le bouton serait ♡ pendant un court instant si l'état était chargé côté client).
+  // SÉCURITÉ : session.visitorId ne peut pas être forgé — cookie chiffré iron-session.
+  const isSaved = visitorSession.visitorId
+    ? (await db
+        .select({ visitorId: savedArtworks.visitorId })
+        .from(savedArtworks)
+        .where(and(
+          eq(savedArtworks.visitorId, visitorSession.visitorId),
+          eq(savedArtworks.artworkId, artworkId),
+        ))
+        .limit(1)).length > 0
+    : false
+
   return (
     <>
       {/* Fond décoratif SVG (D-04 — position fixed, z-index 0, pointer-events none) */}
@@ -328,6 +344,16 @@ export default async function ArtworkDetailPage({ params }: Props) {
               top: 0,
             }}
           >
+            {/*
+             * Bouton cœur — visible uniquement si le visiteur est connecté (D-14).
+             * Positionné en haut du panel, à droite, avant le titre de l'œuvre.
+             * initialSaved est calculé côté serveur pour éviter un flash ♡→♥.
+             */}
+            {visitorSession.visitorId && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                <SaveButton artworkId={artwork.id} initialSaved={isSaved} />
+              </div>
+            )}
             <ArtworkInfoPanel
               title={artwork.title}
               status={artwork.status}
