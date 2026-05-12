@@ -4,6 +4,16 @@
  * Affiche toutes les métadonnées d'une œuvre : dimensions, médium, type,
  * statut, état pipeline, chemins de stockage, dates, et aperçu des images.
  *
+ * En Phase 5, cette page devient le point central de gestion d'une œuvre :
+ * - Informations et images (existant Phase 2)
+ * - Changement de statut via StatusChangeForm (nouveau Plan 05-01)
+ * - Suppression avec confirmation via DeleteArtworkButton (nouveau Plan 05-01)
+ *
+ * POURQUOI les actions sont bindées ici et pas dans les composants enfants ?
+ * Les composants client ne peuvent pas appeler directement des Server Actions avec
+ * un artworkId inconnu. Binder l'ID ici garantit que seul le Server Component
+ * authentifié expose des actions pré-liées à l'œuvre courante (T-05-01-01).
+ *
  * Server Component : données lues depuis la DB, auth vérifiée côté serveur.
  */
 import { auth } from '@/lib/auth'
@@ -15,6 +25,9 @@ import { eq } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
 import Link from 'next/link'
 import { PipelineBadge } from '../_components/PipelineBadge'
+import { updateArtworkStatus, deleteArtwork } from '@/actions/artworkAdmin'
+import { StatusChangeForm } from './_components/StatusChangeForm'
+import { DeleteArtworkButton } from './_components/DeleteArtworkButton'
 
 /**
  * Formate une date en français lisible.
@@ -67,12 +80,19 @@ export default async function ArtworkDetailPage({
   const processedUrl = artwork.processedPath ? storage.getUrl(artwork.processedPath) : null
   const thumbnailUrl = artwork.thumbnailPath ? storage.getUrl(artwork.thumbnailPath) : null
 
+  // ── 5. Binder les Server Actions avec l'artworkId ──
+  // POURQUOI .bind(null, artwork.id) ?
+  // L'ID est bindé côté serveur — jamais exposé en input client (T-05-01-01).
+  // Le composant client reçoit une action déjà pré-liée à cet artwork spécifique.
+  const updateStatusWithId = updateArtworkStatus.bind(null, artwork.id)
+  const deleteWithId = deleteArtwork.bind(null, artwork.id)
+
   // Libellés affichés pour les statuts
   const statusLabels: Record<string, string> = {
     available: 'Disponible',
-    sold: 'Vendue',
-    given: 'Donnée',
-    reserved: 'Réservée',
+    sold: 'Vendu',
+    given: 'Donné',
+    reserved: 'Réservé',
   }
 
   return (
@@ -97,7 +117,7 @@ export default async function ArtworkDetailPage({
           fontSize: '13px',
           fontWeight: 600,
           padding: '4px 10px',
-          borderRadius: '12px',
+          borderRadius: 0,  // D-03 : zéro coins arrondis
           backgroundColor: artwork.status === 'available' ? '#dcfce7' : '#f5f5f5',
           color: artwork.status === 'available' ? '#15803d' : '#525252',
         }}>
@@ -199,7 +219,7 @@ export default async function ArtworkDetailPage({
               <img
                 src={thumbnailUrl}
                 alt={`Miniature de ${artwork.title}`}
-                style={{ width: '100%', height: 'auto', borderRadius: '6px', border: '1px solid #e5e5e5' }}
+                style={{ width: '100%', height: 'auto', borderRadius: 0, border: '1px solid #e5e5e5' }}
               />
             </section>
           )}
@@ -212,7 +232,7 @@ export default async function ArtworkDetailPage({
               <img
                 src={processedUrl}
                 alt={`Version corrigée de ${artwork.title}`}
-                style={{ width: '100%', height: 'auto', borderRadius: '6px', border: '1px solid #e5e5e5' }}
+                style={{ width: '100%', height: 'auto', borderRadius: 0, border: '1px solid #e5e5e5' }}
               />
             </section>
           )}
@@ -225,22 +245,34 @@ export default async function ArtworkDetailPage({
               <img
                 src={originalUrl}
                 alt={`Original de ${artwork.title}`}
-                style={{ width: '100%', height: 'auto', borderRadius: '6px', border: '1px solid #e5e5e5' }}
+                style={{ width: '100%', height: 'auto', borderRadius: 0, border: '1px solid #e5e5e5' }}
               />
             </section>
           )}
 
           {!originalUrl && !processedUrl && !thumbnailUrl && (
-            <div style={{ padding: '32px', backgroundColor: '#f5f5f5', borderRadius: '8px', color: '#737373', textAlign: 'center', fontSize: '14px' }}>
+            <div style={{ padding: '32px', backgroundColor: '#f5f5f5', borderRadius: 0, color: '#737373', textAlign: 'center', fontSize: '14px' }}>
               Aucune image disponible
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Actions ── */}
+      {/* ── Gestion statut ── */}
+      <section style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e5e5e5' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px', fontFamily: 'var(--font-geist-sans)' }}>
+          Statut de l&apos;œuvre
+        </h2>
+        {/* StatusChangeForm reçoit l'action pré-bindée avec artwork.id */}
+        <StatusChangeForm
+          currentStatus={artwork.status}
+          updateStatusAction={updateStatusWithId}
+        />
+      </section>
+
+      {/* ── Lien validation pipeline si en attente ── */}
       {artwork.pipelineState === 'awaiting_validation' && (
-        <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e5e5e5' }}>
+        <div style={{ marginTop: '16px' }}>
           <Link
             href={`/admin/artworks/${artwork.id}/validate`}
             style={{
@@ -248,7 +280,7 @@ export default async function ArtworkDetailPage({
               padding: '12px 24px',
               backgroundColor: '#171717',
               color: '#fff',
-              borderRadius: '6px',
+              borderRadius: 0,  // D-03 : zéro coins arrondis
               textDecoration: 'none',
               fontSize: '16px',
               fontWeight: 600,
@@ -258,6 +290,18 @@ export default async function ArtworkDetailPage({
           </Link>
         </div>
       )}
+
+      {/* ── Zone dangereuse : suppression ── */}
+      <section style={{ marginTop: '48px', paddingTop: '24px', borderTop: '2px solid #bc4b51' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px', color: '#bc4b51', fontFamily: 'var(--font-geist-sans)' }}>
+          Zone dangereuse
+        </h2>
+        <p style={{ fontSize: '14px', color: '#737373', marginBottom: '16px', fontFamily: 'var(--font-geist-sans)' }}>
+          La suppression est irréversible. Les images et toutes les offres seront effacées.
+        </p>
+        {/* DeleteArtworkButton reçoit l'action pré-bindée avec artwork.id */}
+        <DeleteArtworkButton deleteAction={deleteWithId} />
+      </section>
     </main>
   )
 }

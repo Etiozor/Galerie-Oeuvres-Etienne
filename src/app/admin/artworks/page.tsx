@@ -27,6 +27,47 @@ import { PipelineBadge } from './_components/PipelineBadge'
 import { PipelinePoller } from './_components/PipelinePoller'
 import { RetryButton } from './_components/RetryButton'
 
+/**
+ * Badge de statut de vente d'une œuvre.
+ *
+ * POURQUOI des couleurs inline et pas des classes Tailwind ?
+ * Les couleurs exactes du design system (UI-SPEC.md Phase 5) ne peuvent pas être
+ * garanties via la cascade Tailwind sur ce projet (décision 02-03 pattern établi).
+ * D-03 : borderRadius: 0 sur tous les badges sans exception.
+ *
+ * Couleurs conformes UI-SPEC.md Phase 5 :
+ * - available → vert léger (bg rgba(91,142,125,0.12), texte #5b8e7d)
+ * - reserved  → orange léger (bg rgba(244,162,89,0.15), texte #a05a20)
+ * - sold      → rouge léger (bg rgba(188,75,81,0.12), texte #bc4b51)
+ * - given     → vert olive léger (bg rgba(140,179,105,0.15), texte #5a7a3a)
+ */
+function StatusBadge({ status }: { status: string }) {
+  // Configuration couleur et libellé par statut
+  const config: Record<string, { bg: string; text: string; label: string }> = {
+    available: { bg: 'rgba(91,142,125,0.12)',  text: '#5b8e7d', label: 'Disponible' },
+    reserved:  { bg: 'rgba(244,162,89,0.15)',  text: '#a05a20', label: 'Réservé' },
+    sold:      { bg: 'rgba(188,75,81,0.12)',   text: '#bc4b51', label: 'Vendu' },
+    given:     { bg: 'rgba(140,179,105,0.15)', text: '#5a7a3a', label: 'Donné' },
+  }
+  // Fallback pour un statut inconnu (sécurité défensive)
+  const c = config[status] ?? { bg: '#f5f5f5', text: '#737373', label: status }
+
+  return (
+    <span style={{
+      fontSize: '12px',
+      fontWeight: 600,
+      padding: '3px 8px',
+      backgroundColor: c.bg,
+      color: c.text,
+      borderRadius: 0,  // D-03 : zéro coins arrondis
+      fontFamily: 'var(--font-geist-sans)',
+      whiteSpace: 'nowrap',
+    }}>
+      {c.label}
+    </span>
+  )
+}
+
 export default async function AdminArtworksPage() {
   // ── Auth : même pattern que src/app/admin/page.tsx ──
   // Double vérification : le middleware a déjà bloqué les non-connectés,
@@ -66,7 +107,7 @@ export default async function AdminArtworksPage() {
             padding: '10px 20px',
             backgroundColor: '#171717',
             color: '#ffffff',
-            borderRadius: '6px',
+            borderRadius: 0,  // D-03 : zéro coins arrondis
             fontSize: '14px',
             fontWeight: 600,
             textDecoration: 'none',
@@ -103,7 +144,7 @@ export default async function AdminArtworksPage() {
                 gap: '16px',
                 padding: '12px 16px',
                 backgroundColor: '#f5f5f5',
-                borderRadius: '8px',
+                borderRadius: 0,  // D-03 : zéro coins arrondis
                 flexWrap: 'wrap',
               }}
             >
@@ -118,6 +159,9 @@ export default async function AdminArtworksPage() {
               {/* Badge d'état pipeline — couleur EXACTE selon UI-SPEC.md */}
               <PipelineBadge state={artwork.pipelineState} />
 
+              {/* Badge statut de vente — couleurs exactes UI-SPEC.md Phase 5, D-03 */}
+              <StatusBadge status={artwork.status} />
+
               {/* Date d'upload */}
               <span style={{ fontSize: '14px', color: '#737373', whiteSpace: 'nowrap' }}>
                 {new Date(artwork.createdAt).toLocaleDateString('fr-FR')}
@@ -131,7 +175,7 @@ export default async function AdminArtworksPage() {
                     padding: '6px 14px',
                     backgroundColor: '#fefce8',
                     color: '#a16207',
-                    borderRadius: '4px',
+                    borderRadius: 0,  // D-03 : zéro coins arrondis
                     fontSize: '14px',
                     fontWeight: 600,
                     textDecoration: 'none',

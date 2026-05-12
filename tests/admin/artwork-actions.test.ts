@@ -12,7 +12,6 @@
  * Toutes les dépendances externes sont mockées.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { Session } from 'better-auth'
 
 // ── Mocks — isoler les dépendances externes ─────────────────────────────────
 
@@ -21,9 +20,15 @@ import type { Session } from 'better-auth'
  * POURQUOI hoisted ? vi.mock() est hoisted avant les imports par Vitest, donc les variables
  * normales ne sont pas encore initialisées quand le mock s'exécute.
  * vi.hoisted() garantit que ces valeurs sont prêtes avant le hoisting. [Vitest docs]
+ *
+ * POURQUOI unknown cast ? Better Auth retourne une valeur complexe (session + user) ;
+ * nos tests ne testent que si la session est truthy/falsy — un objet minimal suffit.
  */
 const { mockArtistSession } = vi.hoisted(() => ({
-  mockArtistSession: { user: { id: 'artist-1', role: 'ARTIST' } } as unknown as Session | null,
+  mockArtistSession: {
+    session: { id: 'session-1', userId: 'artist-1', expiresAt: new Date(), createdAt: new Date(), updatedAt: new Date(), token: 'tok' },
+    user: { id: 'artist-1', role: 'ARTIST', name: 'Artiste', email: 'a@a.com', emailVerified: true, createdAt: new Date(), updatedAt: new Date() },
+  } as unknown as null,
 }))
 
 /**
@@ -133,7 +138,8 @@ describe('updateArtworkStatus', () => {
 
   it('Test 2 — statut invalide → retourne { error: "Statut invalide." } (Zod reject)', async () => {
     // Scénario : artiste connecté mais statut hors enum
-    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession as any)
 
     const result = await updateArtworkStatus(1, null, makeFormData({ status: 'INVALID_STATUS' }))
 
@@ -144,7 +150,8 @@ describe('updateArtworkStatus', () => {
 
   it('Test 3 — session valide + statut "sold" → db.update appelé, revalidatePath appelé, retourne { success: true }', async () => {
     // Scénario : artiste connecté, statut valid
-    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession as any)
 
     const result = await updateArtworkStatus(42, null, makeFormData({ status: 'sold' }))
 
@@ -178,13 +185,34 @@ describe('deleteArtwork', () => {
 
   it('Test 5 — session valide → storage.delete appelé 3 fois, db.delete appelé, redirect(/admin/artworks) appelé', async () => {
     // Scénario : artiste connecté, œuvre existante avec 3 chemins
-    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(db.query.artworks.findFirst).mockResolvedValue({
       id: 10,
+      title: 'Test Artwork',
+      description: null,
+      createdDate: null,
+      widthCm: null,
+      heightCm: null,
+      basePrice: null,
+      priceHoursSpent: null,
+      priceFormat: null,
+      priceFraming: null,
+      priceMaterials: null,
+      priceTechnicality: null,
+      priceAttachment: null,
+      typeId: null,
+      mediumId: null,
+      status: 'available' as const,
+      pipelineState: 'published' as const,
       originalPath: 'uploads/original-10.jpg',
       processedPath: 'uploads/processed-10.webp',
       thumbnailPath: 'uploads/thumbnail-10.webp',
-    })
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      publishedAt: null,
+    } as any)
 
     await deleteArtwork(10)
 
@@ -204,7 +232,8 @@ describe('deleteArtwork', () => {
 
   it('Test 6 — œuvre introuvable → retourne { error: "Œuvre introuvable." }', async () => {
     // Scénario : artiste connecté mais ID inexistant en DB
-    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession as any)
     vi.mocked(db.query.artworks.findFirst).mockResolvedValue(undefined)
 
     const result = await deleteArtwork(999)
