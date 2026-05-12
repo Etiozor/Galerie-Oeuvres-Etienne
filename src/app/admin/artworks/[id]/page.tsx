@@ -20,8 +20,8 @@ import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { db } from '@/db'
-import { artworks, artworkTypes, mediums } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { artworks, artworkTypes, mediums, offers, visitors } from '@/db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
 import Link from 'next/link'
 import { PipelineBadge } from '../_components/PipelineBadge'
@@ -59,10 +59,10 @@ export default async function ArtworkDetailPage({
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/admin/login')
 
-  // ── 3. Charger l'œuvre + les options des selects en parallèle ──
-  // POURQUOI Promise.all ? Les trois requêtes sont indépendantes — les exécuter
-  // en parallèle réduit le temps de chargement d'environ 50% (gain DB round-trips).
-  const [rows, allTypes, allMediums] = await Promise.all([
+  // ── 3. Charger l'œuvre + les options des selects + les offres en parallèle ──
+  // POURQUOI Promise.all ? Les quatre requêtes sont indépendantes — les exécuter
+  // en parallèle réduit le temps de chargement d'environ 66% (gain DB round-trips).
+  const [rows, allTypes, allMediums, offerRows] = await Promise.all([
     db
       .select({
         artwork: artworks,
@@ -77,6 +77,24 @@ export default async function ArtworkDetailPage({
     // Options pour les selects du formulaire d'édition
     db.select().from(artworkTypes).orderBy(artworkTypes.sortOrder),
     db.select().from(mediums).orderBy(mediums.sortOrder),
+    // Offres reçues pour cette œuvre — PRIVÉ admin uniquement (D-11, T-05-03-01)
+    // POURQUOI leftJoin visitors ? On veut les coordonnées complètes (phone, email)
+    // qui sont des données PII stockées dans la table visitors — jamais exposées en public.
+    db
+      .select({
+        id: offers.id,
+        amount: offers.amount,           // string (type numeric Drizzle)
+        message: offers.message,
+        belowFloor: offers.belowFloor,
+        createdAt: offers.createdAt,
+        visitorName: visitors.displayName,
+        visitorPhone: visitors.phone,    // PRIVÉ — admin uniquement (D-11, T-05-03)
+        visitorEmail: visitors.email,
+      })
+      .from(offers)
+      .leftJoin(visitors, eq(offers.visitorId, visitors.id))
+      .where(eq(offers.artworkId, artworkId))
+      .orderBy(desc(offers.amount)),     // Montant décroissant (D-10) — meilleure offre en premier
   ])
 
   if (rows.length === 0) notFound()
@@ -353,6 +371,151 @@ export default async function ArtworkDetailPage({
         </p>
         {/* DeleteArtworkButton reçoit l'action pré-bindée avec artwork.id */}
         <DeleteArtworkButton deleteAction={deleteWithId} />
+      </section>
+
+      {/* ── Section offres reçues (ADMIN-05) ── */}
+      {/*
+       * POURQUOI cette section est visible uniquement ici ?
+       * Cette page (/admin/artworks/[id]) est protégée par auth artiste (lignes 59-60 ci-dessus).
+       * Le téléphone et l'email du visiteur (visitorPhone, visitorEmail) sont des données PII
+       * accessibles UNIQUEMENT ici — jamais dans les pages publiques (D-11, T-05-03-01).
+       */}
+      <section style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e5e5e5' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '4px', fontFamily: 'var(--font-geist-sans)' }}>
+          Offres reçues
+        </h2>
+        <p style={{ fontSize: '14px', color: '#737373', marginBottom: '24px', fontFamily: 'var(--font-geist-sans)' }}>
+          {offerRows.length} offre{offerRows.length !== 1 ? 's' : ''} — triées par montant décroissant
+        </p>
+
+        {offerRows.length === 0 ? (
+          /* État vide : aucune offre encore reçue */
+          <div style={{
+            padding: '32px',
+            backgroundColor: '#f5f5f5',
+            textAlign: 'center',
+            fontSize: '14px',
+            color: '#737373',
+            fontFamily: 'var(--font-geist-sans)',
+          }}>
+            Aucune offre reçue pour cette œuvre.
+          </div>
+        ) : (
+          /* Tableau des offres — scroll horizontal sur mobile */
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontFamily: 'var(--font-geist-sans)',
+              fontSize: '14px',
+            }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e5e5e5' }}>
+                  {['Visiteur', 'Téléphone', 'Email', 'Montant', 'Message', 'Date'].map(col => (
+                    <th
+                      key={col}
+                      style={{
+                        padding: '12px 16px',
+                        textAlign: col === 'Montant' ? 'right' : 'left',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {offerRows.map((offer, index) => (
+                  <tr key={offer.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+
+                    {/* Colonne Visiteur — badge "Meilleure offre" sur la 1ère ligne (montant max) */}
+                    <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontWeight: 500 }}>{offer.visitorName ?? '—'}</span>
+                        {index === 0 && (
+                          /* POURQUOI index === 0 ? Les offres sont triées desc(amount) — la
+                           * première ligne est toujours le montant maximum (D-10). */
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '2px 6px',
+                            backgroundColor: 'rgba(91,142,125,0.12)',
+                            color: '#5b8e7d',
+                            borderRadius: 0,  // D-03 : zéro coins arrondis
+                            alignSelf: 'flex-start',
+                            fontFamily: 'var(--font-space-mono)',
+                          }}>
+                            Meilleure offre
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Colonne Téléphone — PRIVÉ — visible uniquement admin (D-11, T-05-03-01) */}
+                    <td style={{
+                      padding: '12px 16px',
+                      fontFamily: 'var(--font-space-mono)',
+                      verticalAlign: 'top',
+                    }}>
+                      {offer.visitorPhone ?? '—'}
+                    </td>
+
+                    {/* Colonne Email — optionnel, peut être null */}
+                    <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                      {offer.visitorEmail ?? '—'}
+                    </td>
+
+                    {/* Colonne Montant — aligné à droite, Space Mono 16px/600 */}
+                    <td style={{
+                      padding: '12px 16px',
+                      textAlign: 'right',
+                      fontFamily: 'var(--font-space-mono)',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      verticalAlign: 'top',
+                    }}>
+                      {parseFloat(offer.amount).toLocaleString('fr-FR')} €
+                    </td>
+
+                    {/* Colonne Message — tronqué à 80 caractères pour ne pas écraser le tableau */}
+                    <td style={{
+                      padding: '12px 16px',
+                      maxWidth: '200px',
+                      verticalAlign: 'top',
+                      color: '#525252',
+                    }}>
+                      {offer.message
+                        ? (offer.message.length > 80
+                          ? offer.message.slice(0, 80) + '…'
+                          : offer.message)
+                        : <span style={{ color: '#a3a3a3' }}>—</span>}
+                    </td>
+
+                    {/* Colonne Date — Space Mono, ink-muted */}
+                    <td style={{
+                      padding: '12px 16px',
+                      fontFamily: 'var(--font-space-mono)',
+                      fontSize: '13px',
+                      color: 'var(--color-ink-muted)',
+                      whiteSpace: 'nowrap',
+                      verticalAlign: 'top',
+                    }}>
+                      {new Date(offer.createdAt).toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })}
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </main>
   )
