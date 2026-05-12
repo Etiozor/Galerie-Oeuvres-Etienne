@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 5 planifiée et vérifiée. 5 plans en 2 vagues, UI-SPEC approuvée, RESEARCH + PATTERNS + VALIDATION créés. Prochaine session : /gsd-execute-phase 5."
-last_updated: "2026-05-12T02:25:01.400Z"
+stopped_at: "Completed 05-01-PLAN.md — updateArtworkStatus + deleteArtwork + StatusChangeForm + DeleteArtworkButton + StatusBadge. 6 tests passent, TypeScript OK. Prochaine étape : 05-02 (formulaire édition métadonnées)."
+last_updated: "2026-05-12T02:33:36.315Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 21
-  completed_plans: 17
-  percent: 81
+  completed_plans: 18
+  percent: 86
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 5 of 6 (Admin Back-office)
-Plan: 1 of 5 in current phase
-Status: Executing — 05-01 completed
+Plan: 3 of 5 in current phase
+Status: Executing — 05-02 completed
 Last activity: 2026-05-12
 
-Progress: [████████░░] 81%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -91,13 +91,17 @@ Recent decisions affecting current work:
 - 05-01: useActionState pour updateArtworkStatus (retour état visible), startTransition pour deleteArtwork (redirect — incompatible useActionState)
 - 05-01: mockArtistSession casté as any dans les tests — Better Auth Session type est complexe ({ session, user }), le cast évite les erreurs TypeScript sur les mocks
 - 05-01: D-03 appliqué rétrospectivement aux pages modifiées — tous les borderRadius non-zero corrigés à 0
+- 05-02: Numeric Drizzle → .toString() obligatoire pour 7 colonnes (widthCm, heightCm, basePrice, priceHoursSpent, priceFormat, priceFraming, priceMaterials) ; smallint sans toString
+- 05-02: (db as any).set dans les tests de chaîne fluente Drizzle — TypeScript ne voit pas .set() sur le type DB directement
+- 05-02: (artwork.createdDate ? ... : null) ?? null pour éliminer undefined du type TypeScript ternaire
+- 05-02: Promise.all pour artwork + artworkTypes + mediums en parallèle dans la page détail admin
 
 ### Pending Todos
 
 Phase 5 — en cours d'exécution :
 
 - 05-01 : DONE — Badges statut + StatusChangeForm + DeleteArtworkButton (commits 95b7178, 2f2ce3b)
-- 05-02 : Formulaire édition métadonnées + updateArtwork Server Action (15 champs)
+- 05-02 : DONE — updateArtwork + ArtworkEditForm 15 champs (commits 8ef2f34, 294785b)
 - 05-03 : Dashboard offres (section inline /admin/artworks/[id], coords visiteurs complètes)
 - 05-04 : /mon-profil visiteur + table saved_artworks + SaveButton + db:push
 - 05-05 : SiteNav async + ModalTrigger (Suspense) + indicateur connexion visiteur
@@ -129,5 +133,5 @@ Phase 3 human-verification items (toujours en attente — navigateur requis) :
 ## Session Continuity
 
 Last session: 2026-05-12
-Stopped at: Completed 05-01-PLAN.md — updateArtworkStatus + deleteArtwork + StatusChangeForm + DeleteArtworkButton + StatusBadge. 6 tests passent, TypeScript OK. Prochaine étape : 05-02 (formulaire édition métadonnées).
+Stopped at: Completed 05-02-PLAN.md — updateArtwork Server Action + ArtworkEditForm (15 champs, useActionState, erreurs par champ). 6 tests TDD passent, TypeScript 0 erreur. Prochaine étape : 05-03 (dashboard offres admin).
 Resume file: None
