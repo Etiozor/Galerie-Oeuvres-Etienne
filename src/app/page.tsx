@@ -128,6 +128,28 @@ export default async function GalleryPage() {
           />
         </Suspense>
       </main>
+
+      {/* Contact — visible en bas de toutes les pages galerie */}
+      <footer style={{
+        position: 'relative',
+        zIndex: 1,
+        padding: '32px 24px',
+        textAlign: 'center',
+        borderTop: '1px solid rgba(0,0,0,0.08)',
+      }}>
+        <a
+          href="mailto:etienne.le.pironnec.1@gmail.com"
+          style={{
+            fontFamily: 'var(--font-space-mono)',
+            fontSize: '13px',
+            color: 'var(--color-ink-muted)',
+            textDecoration: 'none',
+            letterSpacing: '0.02em',
+          }}
+        >
+          etienne.le.pironnec.1@gmail.com
+        </a>
+      </footer>
     </>
   )
 }

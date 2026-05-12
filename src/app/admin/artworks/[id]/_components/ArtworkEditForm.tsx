@@ -30,41 +30,21 @@ import { useActionState } from 'react'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /**
- * Résultat retourné par la Server Action updateArtwork.
- * Compatible avec useActionState — state initial null.
+ * Résultat retourné par updateArtworkMeta — compatible avec useActionState.
  */
 type UpdateArtworkResult =
   | { success: true }
   | { success: false; errors: Record<string, string[]> }
 
 /**
- * Props du composant ArtworkEditForm.
- *
- * POURQUOI des props `initial*` et pas les données brutes de l'œuvre ?
- * Les colonnes numeric Drizzle arrivent comme string | null en TypeScript.
- * Passer directement les champs de l'œuvre permettrait des types incorrects.
- * En nommant explicitement `initialWidthCm: string | null`, le parent sait exactement
- * quel type il doit passer, et le formulaire sait exactement ce qu'il reçoit.
+ * Props de ArtworkEditForm — métadonnées secondaires uniquement.
+ * Titre et description sont gérés par InlineEditField dans la page parente.
  */
 interface ArtworkEditFormProps {
-  /**
-   * Server Action bindée avec artworkId depuis le parent.
-   * Exemple dans page.tsx : `const updateArtworkWithId = updateArtwork.bind(null, artwork.id)`
-   */
   updateAction: (prevState: unknown, formData: FormData) => Promise<UpdateArtworkResult>
-
-  // ── Valeurs initiales pour pré-remplir les champs ──
-
-  /** Titre de l'œuvre — obligatoire (au moins 1 caractère) */
-  initialTitle: string
-
-  /** Description longue — null si non renseignée */
-  initialDescription: string | null
 
   /**
    * Date de création au format YYYY-MM-DD pour input type="date".
-   * Le Server Component parent convertit le timestamp DB :
-   * `new Date(artwork.createdDate).toISOString().split('T')[0]`
    */
   initialCreatedDate: string | null
 
@@ -161,8 +141,6 @@ const fieldErrorStyle: React.CSSProperties = {
  */
 export function ArtworkEditForm({
   updateAction,
-  initialTitle,
-  initialDescription,
   initialCreatedDate,
   initialTypeId,
   initialMediumId,
@@ -178,112 +156,29 @@ export function ArtworkEditForm({
   artworkTypes,
   mediums,
 }: ArtworkEditFormProps) {
-  /**
-   * useActionState remplace l'ancien useFormState (déprécié React 19).
-   * - formAction : passer à <form action={...}>
-   * - state : résultat de updateAction ({ success: true } | { success: false; errors: {...} })
-   * - isPending : true pendant l'envoi (pour désactiver le bouton)
-   *
-   * État initial null = aucune soumission encore.
-   */
   const [state, formAction, isPending] = useActionState(updateAction, null)
 
   return (
     <form action={formAction}>
 
-      {/* ── Erreur globale _form (erreur serveur, non autorisé, etc.) ── */}
+      {/* ── Erreur globale ── */}
       {state && !state.success && state.errors?._form && (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: 'rgba(188, 75, 81, 0.1)',
-            border: '1px solid rgba(188, 75, 81, 0.4)',
-            padding: '8px 12px',
-            marginBottom: '16px',
-            borderRadius: 0,  // D-03
-          }}
-        >
+        <div role="alert" style={{ backgroundColor: 'rgba(188,75,81,0.1)', border: '1px solid rgba(188,75,81,0.4)', padding: '8px 12px', marginBottom: '16px', borderRadius: 0 }}>
           {state.errors._form.map((err, i) => (
-            <p
-              key={i}
-              style={{
-                fontFamily: 'var(--font-space-mono)',
-                fontSize: '11px',
-                color: '#bc4b51',
-                margin: 0,
-              }}
-            >
-              {err}
-            </p>
+            <p key={i} style={{ fontFamily: 'var(--font-space-mono)', fontSize: '11px', color: '#bc4b51', margin: 0 }}>{err}</p>
           ))}
         </div>
       )}
 
-      {/* ── Message de succès ── */}
+      {/* ── Succès ── */}
       {state?.success && (
-        <p
-          role="status"
-          style={{
-            fontFamily: 'var(--font-geist-sans)',
-            fontSize: '14px',
-            color: '#5b8e7d',
-            marginBottom: '16px',
-            padding: '8px 12px',
-            backgroundColor: 'rgba(91, 142, 125, 0.1)',
-            border: '1px solid rgba(91, 142, 125, 0.4)',
-            borderRadius: 0,  // D-03
-          }}
-        >
+        <p role="status" style={{ fontSize: '14px', color: '#5b8e7d', marginBottom: '16px', padding: '8px 12px', backgroundColor: 'rgba(91,142,125,0.1)', border: '1px solid rgba(91,142,125,0.4)', borderRadius: 0 }}>
           Modifications enregistrées.
         </p>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════
-          SECTION 1 : Métadonnées
-          ══════════════════════════════════════════════════════════════ */}
-      <h2
-        style={{
-          fontSize: '20px',
-          fontWeight: 600,
-          fontFamily: 'var(--font-geist-sans)',
-          color: '#171717',
-          marginBottom: '20px',
-          marginTop: 0,
-        }}
-      >
-        Métadonnées
-      </h2>
-
-      {/* Grille 2 colonnes sur desktop pour les champs courts */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px',
-          marginBottom: '16px',
-        }}
-      >
-        {/* ── Titre ── */}
-        <div>
-          <label htmlFor="title" style={labelStyle}>
-            Titre <span style={{ color: '#bc4b51' }}>*</span>
-          </label>
-          <input
-            id="title"
-            name="title"
-            type="text"
-            required
-            defaultValue={initialTitle}
-            placeholder="Sans titre"
-            style={inputStyle}
-          />
-          {/* Erreur Zod sur le champ title */}
-          {state && !state.success && state.errors?.title && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.title[0]}
-            </p>
-          )}
-        </div>
+      {/* Grille 2 colonnes */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '16px' }}>
 
         {/* ── Date de création ── */}
         <div>
@@ -298,9 +193,7 @@ export function ArtworkEditForm({
             style={inputStyle}
           />
           {state && !state.success && state.errors?.createdDate && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.createdDate[0]}
-            </p>
+            <p role="alert" style={fieldErrorStyle}>{state.errors.createdDate[0]}</p>
           )}
         </div>
 
@@ -417,60 +310,12 @@ export function ArtworkEditForm({
         </div>
       </div>
 
-      {/* ── Description (pleine largeur) ── */}
-      <div style={{ marginBottom: '24px' }}>
-        <label htmlFor="description" style={labelStyle}>
-          Description
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          rows={4}
-          defaultValue={initialDescription ?? ''}
-          placeholder="Description de l'œuvre (technique, histoire, anecdote...)"
-          style={{
-            width: '100%',
-            padding: '12px',
-            fontFamily: 'var(--font-geist-sans)',
-            fontSize: '13px',
-            color: '#171717',
-            backgroundColor: '#ffffff',
-            border: '1px solid #d4d4d4',
-            borderRadius: 0,  // D-03 : ZERO coins arrondis
-            boxSizing: 'border-box',
-            resize: 'vertical',
-            minHeight: '100px',
-          }}
-        />
-        {state && !state.success && state.errors?.description && (
-          <p role="alert" style={fieldErrorStyle}>
-            {state.errors.description[0]}
-          </p>
-        )}
-      </div>
-
-      {/* ── Séparateur visuel ── */}
-      <hr
-        style={{
-          border: 'none',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-          margin: '24px 0',
-        }}
-      />
+      <hr style={{ border: 'none', borderBottom: '1px solid rgba(0,0,0,0.1)', margin: '24px 0' }} />
 
       {/* ══════════════════════════════════════════════════════════════
-          SECTION 2 : Prix
+          Prix
           ══════════════════════════════════════════════════════════════ */}
-      <h2
-        style={{
-          fontSize: '20px',
-          fontWeight: 600,
-          fontFamily: 'var(--font-geist-sans)',
-          color: '#171717',
-          marginBottom: '20px',
-          marginTop: 0,
-        }}
-      >
+      <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#171717', marginBottom: '16px', marginTop: 0 }}>
         Prix de base
       </h2>
 

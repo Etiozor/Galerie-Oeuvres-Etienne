@@ -200,6 +200,115 @@ export async function updateArtwork(
   }
 }
 
+// ============================================================
+// Actions légères pour l'édition inline (titre et description)
+// ============================================================
+
+/**
+ * Met à jour uniquement le titre d'une œuvre — action légère pour l'édition inline.
+ * Appelée via startTransition depuis InlineEditField (pas useActionState).
+ */
+export async function updateArtworkTitle(
+  artworkId: number,
+  title: string
+): Promise<{ success: boolean; error?: string }> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return { success: false, error: 'Non autorisé.' }
+
+  const parsed = z.string().min(1, 'Le titre est obligatoire.').max(255).safeParse(title.trim())
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message }
+
+  await db.update(artworks).set({ title: parsed.data }).where(eq(artworks.id, artworkId))
+  revalidatePath(`/admin/artworks/${artworkId}`)
+  revalidatePath(`/artworks/${artworkId}`)
+  return { success: true }
+}
+
+/**
+ * Met à jour uniquement la description d'une œuvre — action légère pour l'édition inline.
+ */
+export async function updateArtworkDescription(
+  artworkId: number,
+  description: string
+): Promise<{ success: boolean; error?: string }> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return { success: false, error: 'Non autorisé.' }
+
+  const parsed = z.string().max(2000, 'Description trop longue.').safeParse(description)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message }
+
+  await db.update(artworks).set({ description: parsed.data || null }).where(eq(artworks.id, artworkId))
+  revalidatePath(`/admin/artworks/${artworkId}`)
+  revalidatePath(`/artworks/${artworkId}`)
+  return { success: true }
+}
+
+// ============================================================
+// Schéma et action pour le formulaire "métadonnées secondaires"
+// (date, type, médium, dimensions, prix — sans titre ni description)
+// ============================================================
+
+const updateArtworkMetaSchema = z.object({
+  createdDate: z.string().optional(),
+  typeId: z.coerce.number().int().positive().optional(),
+  mediumId: z.coerce.number().int().positive().optional(),
+  widthCm: z.coerce.number().positive().optional(),
+  heightCm: z.coerce.number().positive().optional(),
+  basePrice: z.coerce.number().positive().optional(),
+  priceHoursSpent: z.coerce.number().min(0).optional(),
+  priceFormat: z.coerce.number().min(0).optional(),
+  priceFraming: z.coerce.number().min(0).optional(),
+  priceMaterials: z.coerce.number().min(0).optional(),
+  priceTechnicality: z.coerce.number().int().min(1).max(5).optional(),
+  priceAttachment: z.coerce.number().int().min(1).max(5).optional(),
+})
+
+/**
+ * Met à jour les métadonnées secondaires d'une œuvre (sans titre ni description).
+ * Utilisé par le formulaire en bas de page — titre et description sont gérés
+ * par l'édition inline via updateArtworkTitle / updateArtworkDescription.
+ */
+export async function updateArtworkMeta(
+  artworkId: number,
+  prevState: unknown,
+  formData: FormData
+): Promise<{ success: true } | { success: false; errors: Record<string, string[]> }> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return { success: false, errors: { _form: ['Non autorisé.'] } }
+
+  const parseResult = updateArtworkMetaSchema.safeParse(Object.fromEntries(formData))
+  if (!parseResult.success) {
+    return { success: false, errors: parseResult.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+  const data = parseResult.data
+
+  try {
+    await db.update(artworks)
+      .set({
+        createdDate: data.createdDate ? new Date(data.createdDate) : null,
+        typeId: data.typeId ?? null,
+        mediumId: data.mediumId ?? null,
+        widthCm: data.widthCm?.toString() ?? null,
+        heightCm: data.heightCm?.toString() ?? null,
+        basePrice: data.basePrice?.toString() ?? null,
+        priceHoursSpent: data.priceHoursSpent?.toString() ?? null,
+        priceFormat: data.priceFormat?.toString() ?? null,
+        priceFraming: data.priceFraming?.toString() ?? null,
+        priceMaterials: data.priceMaterials?.toString() ?? null,
+        priceTechnicality: data.priceTechnicality ?? null,
+        priceAttachment: data.priceAttachment ?? null,
+      })
+      .where(eq(artworks.id, artworkId))
+
+    revalidatePath(`/admin/artworks/${artworkId}`)
+    revalidatePath(`/artworks/${artworkId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('[updateArtworkMeta] Erreur serveur :', error)
+    return { success: false, errors: { _form: ['Erreur serveur. Réessayez.'] } }
+  }
+}
+
 /**
  * Supprime une œuvre : fichiers storage PUIS entrée DB (ordre critique).
  *
