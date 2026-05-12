@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 05-01-PLAN.md — updateArtworkStatus + deleteArtwork + StatusChangeForm + DeleteArtworkButton + StatusBadge. 6 tests passent, TypeScript OK. Prochaine étape : 05-02 (formulaire édition métadonnées)."
-last_updated: "2026-05-12T02:33:36.315Z"
+stopped_at: "Completed 05-03-PLAN.md — section Offres reçues dans /admin/artworks/[id] avec visitorPhone/visitorEmail. 4 tests TDD passent, TypeScript 0 erreur. Prochaine étape : 05-04 (profil visiteur /mon-profil)."
+last_updated: "2026-05-12T02:37:00Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 21
-  completed_plans: 18
-  percent: 86
+  completed_plans: 19
+  percent: 90
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 5 of 6 (Admin Back-office)
-Plan: 3 of 5 in current phase
-Status: Executing — 05-02 completed
+Plan: 4 of 5 in current phase
+Status: Executing — 05-03 completed
 Last activity: 2026-05-12
 
 Progress: [█████████░] 86%
@@ -95,6 +95,8 @@ Recent decisions affecting current work:
 - 05-02: (db as any).set dans les tests de chaîne fluente Drizzle — TypeScript ne voit pas .set() sur le type DB directement
 - 05-02: (artwork.createdDate ? ... : null) ?? null pour éliminer undefined du type TypeScript ternaire
 - 05-02: Promise.all pour artwork + artworkTypes + mediums en parallèle dans la page détail admin
+- 05-03: Tests d'isolation PII via readFileSync — vérifie statiquement que visitorPhone/visitorEmail sont absents de la page publique sans serveur Next.js
+- 05-03: Promise.all étendu de 3 à 4 branches pour inclure la query offers JOIN visitors en parallèle
 
 ### Pending Todos
 
@@ -102,7 +104,7 @@ Phase 5 — en cours d'exécution :
 
 - 05-01 : DONE — Badges statut + StatusChangeForm + DeleteArtworkButton (commits 95b7178, 2f2ce3b)
 - 05-02 : DONE — updateArtwork + ArtworkEditForm 15 champs (commits 8ef2f34, 294785b)
-- 05-03 : Dashboard offres (section inline /admin/artworks/[id], coords visiteurs complètes)
+- 05-03 : DONE — Section "Offres reçues" dans /admin/artworks/[id] (commits 9582550, 3433739)
 - 05-04 : /mon-profil visiteur + table saved_artworks + SaveButton + db:push
 - 05-05 : SiteNav async + ModalTrigger (Suspense) + indicateur connexion visiteur
 
@@ -133,5 +135,5 @@ Phase 3 human-verification items (toujours en attente — navigateur requis) :
 ## Session Continuity
 
 Last session: 2026-05-12
-Stopped at: Completed 05-02-PLAN.md — updateArtwork Server Action + ArtworkEditForm (15 champs, useActionState, erreurs par champ). 6 tests TDD passent, TypeScript 0 erreur. Prochaine étape : 05-03 (dashboard offres admin).
+Stopped at: Completed 05-03-PLAN.md — section "Offres reçues" dans /admin/artworks/[id] avec jointure visitors (visitorPhone/visitorEmail). 4 tests TDD passent, TypeScript 0 erreur. Prochaine étape : 05-04 (profil visiteur /mon-profil).
 Resume file: None
