@@ -101,7 +101,7 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Status badges on artwork list, StatusChangeForm + DeleteArtworkButton on detail page, Server Actions updateArtworkStatus + deleteArtwork
+- [x] 05-01-PLAN.md — Status badges on artwork list, StatusChangeForm + DeleteArtworkButton on detail page, Server Actions updateArtworkStatus + deleteArtwork
 - [ ] 05-02-PLAN.md — ArtworkEditForm (15 fields, useActionState), Server Action updateArtwork with Zod validation and numeric→string conversion
 - [ ] 05-03-PLAN.md — Offers dashboard section in /admin/artworks/[id] — full visitor contact details (phone, email), sorted by amount desc
 - [ ] 05-04-PLAN.md — Page /mon-profil (4 sections), saved_artworks schema + db:push, toggleSavedArtwork Server Action, SaveButton heart on artwork detail
@@ -136,5 +136,5 @@ Plans:
 | 2. Image Pipeline | 4/4 | Complete | 2026-04-26 |
 | 3. Public Gallery | 4/4 | Complete | 2026-05-02 |
 | 4. Visitor Profiles & Offers | 4/4 | Complete | 2026-05-10 |
-| 5. Admin Back-office | 0/5 | Not started | - |
+| 5. Admin Back-office | 1/5 | In Progress|  |
 | 6. Production Readiness | 0/3 | Not started | - |

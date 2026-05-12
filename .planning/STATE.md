@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+stopped_at: "Phase 5 planifiée et vérifiée. 5 plans en 2 vagues, UI-SPEC approuvée, RESEARCH + PATTERNS + VALIDATION créés. Prochaine session : /gsd-execute-phase 5."
+last_updated: "2026-05-12T02:25:01.400Z"
+last_activity: 2026-05-12
+progress:
+  total_phases: 6
+  completed_phases: 4
+  total_plans: 21
+  completed_plans: 17
+  percent: 81
+---
+
 # Project State
 
 ## Project Reference
@@ -10,15 +26,16 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 5 of 6 (Admin Back-office)
-Plan: 0 of 5 in current phase
-Status: Phase 5 planifiée — prête à exécuter
-Last activity: 2026-05-11 — Phase 5 planifiée : 5 plans en 2 vagues (Wave 1 : 05-01 status+delete, 05-02 edit form, 05-03 offer dashboard ; Wave 2 : 05-04 /mon-profil+favoris, 05-05 SiteNav indicator). UI-SPEC, RESEARCH, PATTERNS, VALIDATION créés. Vérification 12/12 dimensions passée.
+Plan: 1 of 5 in current phase
+Status: Executing — 05-01 completed
+Last activity: 2026-05-12
 
-Progress: [████████░░] 67%
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 14
 - Average duration: ~10 min
 - Total execution time: ~2 hours
@@ -32,6 +49,7 @@ Progress: [████████░░] 67%
 | 3. Public Gallery | 4 | ~40 min | ~10 min |
 
 **Recent Trend:**
+
 - Last 5 plans: ~10 min
 - Trend: stable
 
@@ -70,17 +88,22 @@ Recent decisions affecting current work:
 - 04-02: PriceBreakdownData as lightweight type separate from Artwork — avoids strong coupling in ArtworkInfoPanel tests
 - 04-02: smallint for priceTechnicality/priceAttachment (scores 1-5) — 2 bytes vs 4 for integer
 - 04-02: @vitest-environment jsdom per-file directive (vitest v4) instead of environmentMatchGlobs (invalid API)
+- 05-01: useActionState pour updateArtworkStatus (retour état visible), startTransition pour deleteArtwork (redirect — incompatible useActionState)
+- 05-01: mockArtistSession casté as any dans les tests — Better Auth Session type est complexe ({ session, user }), le cast évite les erreurs TypeScript sur les mocks
+- 05-01: D-03 appliqué rétrospectivement aux pages modifiées — tous les borderRadius non-zero corrigés à 0
 
 ### Pending Todos
 
-Phase 5 — planifiée, prête à exécuter :
-- 05-01 : Badges statut + StatusChangeForm + DeleteArtworkButton dans /admin/artworks/[id]
+Phase 5 — en cours d'exécution :
+
+- 05-01 : DONE — Badges statut + StatusChangeForm + DeleteArtworkButton (commits 95b7178, 2f2ce3b)
 - 05-02 : Formulaire édition métadonnées + updateArtwork Server Action (15 champs)
 - 05-03 : Dashboard offres (section inline /admin/artworks/[id], coords visiteurs complètes)
 - 05-04 : /mon-profil visiteur + table saved_artworks + SaveButton + db:push
 - 05-05 : SiteNav async + ModalTrigger (Suspense) + indicateur connexion visiteur
 
 Phase 3 human-verification items (toujours en attente — navigateur requis) :
+
 - Masonry grid responsive layout (visual browser test)
 - Artwork card hover overlay (visual browser test)
 - Infinite scroll IntersectionObserver (live behavior test)
@@ -105,6 +128,6 @@ Phase 3 human-verification items (toujours en attente — navigateur requis) :
 
 ## Session Continuity
 
-Last session: 2026-05-11
-Stopped at: Phase 5 planifiée et vérifiée. 5 plans en 2 vagues, UI-SPEC approuvée, RESEARCH + PATTERNS + VALIDATION créés. Prochaine session : /gsd-execute-phase 5.
+Last session: 2026-05-12
+Stopped at: Completed 05-01-PLAN.md — updateArtworkStatus + deleteArtwork + StatusChangeForm + DeleteArtworkButton + StatusBadge. 6 tests passent, TypeScript OK. Prochaine étape : 05-02 (formulaire édition métadonnées).
 Resume file: None

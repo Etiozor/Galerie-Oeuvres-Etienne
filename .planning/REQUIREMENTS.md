@@ -48,9 +48,9 @@
 ### ADMIN — Back-office de l'artiste
 
 - [ ] **ADMIN-01** : L'artiste peut ajouter une nouvelle œuvre avec tous ses champs (titre, date, description, classification, dimensions) et la fiche de prix de base détaillée
-- [ ] **ADMIN-02** : L'artiste peut modifier ou supprimer une œuvre existante
+- [x] **ADMIN-02** : L'artiste peut modifier ou supprimer une œuvre existante
 - [ ] **ADMIN-03** : L'artiste accède à l'écran de validation pipeline (comparaison avant/après) et peut valider, rejeter ou publier sans correction
-- [ ] **ADMIN-04** : L'artiste peut changer le statut d'une œuvre (disponible → vendue / donnée / réservée)
+- [x] **ADMIN-04** : L'artiste peut changer le statut d'une œuvre (disponible → vendue / donnée / réservée)
 - [ ] **ADMIN-05** : L'artiste peut consulter toutes les offres reçues avec les informations complètes du visiteur (pseudo/nom, téléphone, email si fourni, montant, message)
 
 ### ABOUT — Page à propos
