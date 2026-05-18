@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { SiteNav } from '@/components/layout/SiteNav'
 import { getStorage } from '@/lib/storage'
 
-export function maskPhone(phone: string): string {
+function maskPhone(phone: string): string {
   return '••••' + phone.slice(-4)
 }
 

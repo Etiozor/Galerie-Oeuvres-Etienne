@@ -4,6 +4,8 @@
 
 Six phases take the project from a bare database schema to a publicly deployed art gallery with image pipeline, offer system, and artist back-office. Each phase delivers a complete, independently testable capability. Foundation first, then the image pipeline (the highest-risk component), then the public-facing gallery, then the marketplace layer, then the admin tools, and finally the production deployment swap.
 
+A seventh phase (UI/UX Refonte) iterates on the visual design of key pages using Claude Design prototypes as specs.
+
 ## Phases
 
 - [x] **Phase 1: Foundation** - Database schema, artist authentication, storage abstraction, and local dev environment
@@ -138,3 +140,12 @@ Plans:
 | 4. Visitor Profiles & Offers | 4/4 | Complete | 2026-05-10 |
 | 5. Admin Back-office | 3/5 | In Progress|  |
 | 6. Production Readiness | 0/3 | Not started | - |
+| 7. UI/UX Refonte | 1/? | In Progress | - |
+
+### Phase 7: UI/UX Refonte
+**Goal**: Refondre visuellement les pages clés du site en utilisant les prototypes Claude Design comme spec de référence. Chaque plan correspond à une page redesignée.
+**Depends on**: Phase 5
+**UI hint**: yes
+
+Plans:
+- [x] 07-01: Page /admin/upload — layout split image/formulaire, composants admin (AdminNav, TypeSegmented, StatusSegmented, TagInput, ImageDropZone, SaveBadge), Server Actions saveArtworkDraft + publishArtwork
