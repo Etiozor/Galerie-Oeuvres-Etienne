@@ -4,13 +4,12 @@
  * POURQUOI deux actions séparées ?
  * - saveArtworkDraft : enregistre uniquement les métadonnées (pas de fichier requis).
  *   Permet à l'artiste de sauvegarder un brouillon avant d'avoir la photo.
- * - publishArtwork   : sauvegarde les métadonnées + upload + pipeline Sharp.
- *   Déclenche le flux complet : métadonnées → image → awaiting_validation.
+ * - publishArtwork   : sauvegarde les métadonnées + upload de l'image originale.
+ *   L'œuvre est immédiatement visible dans la galerie après upload.
  *
  * Gestion du médium (find-or-create) :
  * L'artiste saisit le médium en texte libre. On cherche d'abord dans la table
  * `mediums` par correspondance insensible à la casse. Si absent, on crée l'entrée.
- * Cela préserve la structure relationnelle DB sans sacrifier l'ergonomie de saisie.
  *
  * Gestion des tags (find-or-create many-to-many) :
  * On supprime d'abord les liaisons existantes pour cette œuvre, puis on recrée
@@ -24,7 +23,6 @@ import { db } from '@/db'
 import { artworks, artworkTags, tags, mediums } from '@/db/schema'
 import { eq, ilike } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
-import { processImage } from '@/lib/pipeline/process'
 import { randomUUID } from 'crypto'
 
 const MAX_SIZE_BYTES = 20 * 1024 * 1024
@@ -42,7 +40,9 @@ async function parseMetadata(formData: FormData) {
   const typeIdRaw = formData.get('typeId') as string
   const typeId = typeIdRaw ? (parseInt(typeIdRaw) || null) : null
   const year = ((formData.get('year') as string) ?? '').trim()
-  const createdDate = year && /^\d{4}$/.test(year) ? new Date(parseInt(year), 0, 1) : null
+  // EXIF fournit l'année seulement — le mois n'est pas disponible dans les métadonnées EXIF standard
+  const createdYear = year && /^\d{4}$/.test(year) ? parseInt(year) : null
+  const createdMonth: number | null = null
   const medium = ((formData.get('medium') as string) ?? '').trim()
   const widthCm = ((formData.get('widthCm') as string) ?? '').trim() || null
   const heightCm = ((formData.get('heightCm') as string) ?? '').trim() || null
@@ -61,9 +61,8 @@ async function parseMetadata(formData: FormData) {
     if (existing) {
       mediumId = existing.id
     } else {
-      // Crée un nouveau médium avec un slug simple
       const slug = medium.toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '') // supprime les accents pour le slug
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
         .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 100)
       const [newMedium] = await db.insert(mediums)
         .values({ name: medium, slug, sortOrder: 99 })
@@ -73,13 +72,12 @@ async function parseMetadata(formData: FormData) {
     }
   }
 
-  return { title, typeId, createdDate, mediumId, widthCm, heightCm, status, basePrice, description, tagNames, artworkId }
+  return { title, typeId, createdYear, createdMonth, mediumId, widthCm, heightCm, status, basePrice, description, tagNames, artworkId }
 }
 
 // ── Sauvegarde des tags (many-to-many, find-or-create) ────────────────────────
 
 async function saveTags(artworkId: number, tagNames: string[]) {
-  // Supprime les liaisons actuelles puis recrée (upsert simplifié)
   await db.delete(artworkTags).where(eq(artworkTags.artworkId, artworkId))
   if (tagNames.length === 0) return
 
@@ -112,7 +110,7 @@ async function saveTags(artworkId: number, tagNames: string[]) {
 /**
  * Sauvegarde les métadonnées d'une œuvre sans image.
  * Crée l'entrée DB si artworkId est absent, sinon met à jour.
- * Retourne l'artworkId pour les sauvegardes successives.
+ * L'œuvre n'est pas visible dans la galerie tant que publishedAt est null.
  */
 export async function saveArtworkDraft(formData: FormData): Promise<DocumentResult> {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -123,7 +121,8 @@ export async function saveArtworkDraft(formData: FormData): Promise<DocumentResu
     title: meta.title,
     typeId: meta.typeId,
     mediumId: meta.mediumId,
-    createdDate: meta.createdDate,
+    createdYear: meta.createdYear,
+    createdMonth: meta.createdMonth,
     widthCm: meta.widthCm,
     heightCm: meta.heightCm,
     status: meta.status,
@@ -136,7 +135,7 @@ export async function saveArtworkDraft(formData: FormData): Promise<DocumentResu
     await db.update(artworks).set(values).where(eq(artworks.id, id))
   } else {
     const [inserted] = await db.insert(artworks)
-      .values({ ...values, pipelineState: 'pending' })
+      .values(values)
       .returning({ id: artworks.id })
     id = inserted?.id ?? null
   }
@@ -147,12 +146,11 @@ export async function saveArtworkDraft(formData: FormData): Promise<DocumentResu
   return { success: true, artworkId: id }
 }
 
-// ── Server Action : publier (métadonnées + upload + pipeline) ─────────────────
+// ── Server Action : publier (métadonnées + upload image) ──────────────────────
 
 /**
- * Sauvegarde les métadonnées, uploade la photo et lance le pipeline Sharp.
- * Après traitement réussi, l'œuvre passe en état awaiting_validation.
- * En cas d'échec pipeline, l'œuvre passe en état failed (récupérable via "Réessayer").
+ * Sauvegarde les métadonnées et uploade la photo.
+ * L'œuvre est immédiatement visible dans la galerie (publishedAt = maintenant).
  */
 export async function publishArtwork(formData: FormData): Promise<DocumentResult> {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -178,30 +176,30 @@ export async function publishArtwork(formData: FormData): Promise<DocumentResult
   const ext = file.type === 'image/png' ? 'png' : 'jpg'
   const uuid = randomUUID()
   const originalKey = `originals/${uuid}.${ext}`
-  const processedKey = `processed/${uuid}.webp`
-  const thumbnailKey = `thumbnails/${uuid}.webp`
   const storage = getStorage()
 
   const metaValues = {
     title: meta.title,
     typeId: meta.typeId,
     mediumId: meta.mediumId,
-    createdDate: meta.createdDate,
+    createdYear: meta.createdYear,
+    createdMonth: meta.createdMonth,
     widthCm: meta.widthCm,
     heightCm: meta.heightCm,
     status: meta.status,
     basePrice: meta.basePrice,
     description: meta.description,
     originalPath: originalKey,
+    publishedAt: new Date(),
   }
 
   // Crée ou met à jour l'entrée en DB
   let id = meta.artworkId
   if (id) {
-    await db.update(artworks).set({ ...metaValues, pipelineState: 'pending' }).where(eq(artworks.id, id))
+    await db.update(artworks).set(metaValues).where(eq(artworks.id, id))
   } else {
     const [inserted] = await db.insert(artworks)
-      .values({ ...metaValues, pipelineState: 'pending' })
+      .values(metaValues)
       .returning({ id: artworks.id })
     id = inserted?.id ?? null
   }
@@ -213,26 +211,5 @@ export async function publishArtwork(formData: FormData): Promise<DocumentResult
   // Upload de l'original
   await storage.put(originalKey, buffer, { contentType: file.type })
 
-  // Transition PENDING → PROCESSING
-  await db.update(artworks).set({ pipelineState: 'processing' }).where(eq(artworks.id, id))
-
-  // Pipeline Sharp
-  try {
-    const { processedBuffer, thumbnailBuffer } = await processImage(buffer)
-    await storage.put(processedKey, processedBuffer, { contentType: 'image/webp' })
-    await storage.put(thumbnailKey, thumbnailBuffer, { contentType: 'image/webp' })
-
-    await db.update(artworks).set({
-      pipelineState: 'awaiting_validation',
-      processedPath: processedKey,
-      thumbnailPath: thumbnailKey,
-    }).where(eq(artworks.id, id))
-
-    return { success: true, artworkId: id }
-  } catch {
-    await db.update(artworks).set({ pipelineState: 'failed' }).where(eq(artworks.id, id))
-    await storage.delete(processedKey).catch(() => {})
-    await storage.delete(thumbnailKey).catch(() => {})
-    return { success: false, error: "Le traitement de l'image a échoué. Réessayez depuis la liste." }
-  }
+  return { success: true, artworkId: id }
 }

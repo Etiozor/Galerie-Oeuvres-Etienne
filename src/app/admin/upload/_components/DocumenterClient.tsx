@@ -3,34 +3,27 @@
 /**
  * DocumenterClient — Interface principale de la page "Documenter une œuvre".
  *
- * Layout split :
- * - Colonne gauche : zone de dépôt de l'image + méta-fichier
- * - Colonne droite : formulaire en 4 sections + barre d'action sticky
+ * Layout split galerie (miroir d'ArtworkDetail) :
+ * - Colonne gauche : zone dépôt image + pipeline + méta-fichier, sur --color-bg
+ * - Colonne droite : formulaire 4 sections + barre d'action sticky, sur --color-surface
+ *
+ * Le style visuel suit le langage chaud de la galerie publique (cream + sand,
+ * Oswald uppercase, Cormorant italique, Space Mono méta) plutôt que l'admin gris,
+ * pour que l'artiste documente dans le même cadre que celui qu'aura le visiteur.
  *
  * Machine d'états :
  *   editing → saving → saved
  *   editing → publishing → published → reset (formulaire vide pour l'œuvre suivante)
- *
- * POURQUOI useTransition et pas useActionState ?
- * Deux boutons ("Enregistrer" et "Publier & suivante") soumettent le même
- * ensemble de champs. useActionState lie une action à un <form> unique.
- * useTransition avec appels directs aux Server Actions est plus flexible
- * quand plusieurs boutons déclenchent des actions différentes sur les mêmes données.
- *
- * POURQUOI les données sont-elles gérées en state React et pas via FormData natif ?
- * Le formulaire contient des composants contrôlés (TypeSegmented, StatusSegmented,
- * TagInput) qui ne sont pas des inputs HTML natifs. Il faut donc les collecter
- * manuellement via state React au moment du submit.
  */
 
 import { useRef, useState, useEffect, useTransition, useCallback } from 'react'
 import Link from 'next/link'
-import { AdminNav } from '@/components/admin/AdminNav'
+import { useRouter } from 'next/navigation'
+import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 import { TypeSegmented } from '@/components/admin/TypeSegmented'
 import { StatusSegmented } from '@/components/admin/StatusSegmented'
 import { TagInput } from '@/components/admin/TagInput'
 import { ImageDropZone, type ImageDropZoneHandle } from '@/components/admin/ImageDropZone'
-import { SaveBadge, type SaveStatus } from '@/components/admin/SaveBadge'
 import { saveArtworkDraft, publishArtwork } from '@/actions/document'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -44,24 +37,83 @@ interface DocumenterClientProps {
   userEmail?: string
 }
 
+type SaveStatus = 'editing' | 'saving' | 'saved' | 'publishing' | 'published'
 type Toast = { kind: 'ok' | 'error'; text: string } | null
 
-// ── Composants de mise en page ────────────────────────────────────────────────
+// ── Étapes pipeline d'une œuvre ───────────────────────────────────────────────
 
+const PIPELINE_STEPS = [
+  { id: 'upload',  label: 'Photo'      },
+  { id: 'process', label: 'Traitement' },
+  { id: 'review',  label: 'À valider'  },
+  { id: 'publish', label: 'Publiée'    },
+] as const
+
+type PipelineStage = (typeof PIPELINE_STEPS)[number]['id']
+
+// ── Sous-composants ───────────────────────────────────────────────────────────
+
+/** Indicateur des étapes de traitement de l'œuvre. */
+function PipelineStrip({ stage }: { stage: PipelineStage }) {
+  const order: PipelineStage[] = ['upload', 'process', 'review', 'publish']
+  const i = order.indexOf(stage)
+  return (
+    <div className="pipeline">
+      {PIPELINE_STEPS.map((s, idx) => (
+        <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 0 }}>
+          {idx > 0 && <span className="p-sep" style={{ marginRight: 12, marginLeft: 12 }}>—</span>}
+          <span className={`p-step${idx < i ? ' done' : idx === i ? ' current' : ''}`}>
+            <span className="p-num">{idx + 1}</span>
+            <span>{s.label}</span>
+          </span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** Badge d'état de sauvegarde dans le hero, adapté au langage galerie. */
+function GallerySaveBadge({ status }: { status: SaveStatus }) {
+  if (status === 'saving' || status === 'publishing') {
+    return (
+      <span className="save-pill" data-state="busy">
+        <span className="dot" />
+        {status === 'saving' ? 'Enregistrement…' : 'Publication…'}
+      </span>
+    )
+  }
+  if (status === 'editing') {
+    return (
+      <span className="save-pill" data-state="editing">
+        <span className="dot" />
+        Modifications non enregistrées
+      </span>
+    )
+  }
+  return (
+    <span className="save-pill">
+      <span className="dot" />
+      {status === 'published' ? 'Publiée' : 'Enregistré'}
+    </span>
+  )
+}
+
+/** Section du formulaire avec titre Oswald + numérotation. */
 function Section({ title, step, children }: { title: string; step: string; children: React.ReactNode }) {
   return (
-    <section className="form-section">
-      <div className="form-section-title">
-        <h3>{title}</h3>
-        <span className="eyebrow">{step}</span>
+    <section className="section">
+      <div className="section-head">
+        <h2>{title}</h2>
+        <span className="step-num">{step}</span>
       </div>
       {children}
     </section>
   )
 }
 
+/** Champ de formulaire avec label Space Mono, hint Cormorant, erreur rouge. */
 function Field({
-  label, hint, error, required, children
+  label, hint, error, required, children,
 }: {
   label: string; hint?: string; error?: string | null; required?: boolean; children: React.ReactNode
 }) {
@@ -69,21 +121,35 @@ function Field({
     <div>
       <label className="field-label">
         {label}
-        {required && <span style={{ color: 'var(--badge-failed-fg)', marginLeft: 4 }}>*</span>}
+        {required && <span style={{ color: 'var(--color-red)', marginLeft: 4 }}>*</span>}
       </label>
       {children}
       {error
-        ? <div className="field-hint" style={{ color: 'var(--badge-failed-fg)' }}>{error}</div>
+        ? <div className="field-error">{error}</div>
         : hint && <div className="field-hint">{hint}</div>
       }
     </div>
   )
 }
 
+/** Bouton de déconnexion intégré dans la nav galerie. */
+function GallerySignOutButton() {
+  const router = useRouter()
+  async function handleSignOut() {
+    await fetch('/api/auth/sign-out', { method: 'POST' })
+    router.refresh()
+    router.push('/admin/login')
+  }
+  return (
+    <button onClick={handleSignOut} className="nav-link">
+      Se déconnecter
+    </button>
+  )
+}
+
 // ── Composant principal ───────────────────────────────────────────────────────
 
 export function DocumenterClient({ artworkTypes, mediums, userEmail }: DocumenterClientProps) {
-  // État du formulaire
   const [artworkId, setArtworkId] = useState<number | null>(null)
   const [title, setTitle] = useState('')
   const [typeId, setTypeId] = useState<number | null>(null)
@@ -97,7 +163,6 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
   const [tags, setTags] = useState<string[]>([])
   const [hasImage, setHasImage] = useState(false)
 
-  // État de la machine d'état + feedback
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('editing')
   const [showErrors, setShowErrors] = useState(false)
   const [toast, setToast] = useState<Toast>(null)
@@ -105,30 +170,29 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
 
   const dropZoneRef = useRef<ImageDropZoneHandle>(null)
 
-  // Marquer "editing" à chaque modification des champs
   const markEditing = useCallback(() => {
     if (saveStatus === 'saved' || saveStatus === 'published') setSaveStatus('editing')
   }, [saveStatus])
 
-  // ── Toast auto-dismiss (3.2 s) ────────────────────────────────────────────
+  // Toast auto-dismiss (3.2 s)
   useEffect(() => {
     if (!toast) return
     const id = setTimeout(() => setToast(null), 3200)
     return () => clearTimeout(id)
   }, [toast])
 
-  // ── Validation simple ─────────────────────────────────────────────────────
+  // ── Validation ─────────────────────────────────────────────────────────────
   const errors = {
-    title: !title.trim() ? 'Donner un titre, même provisoire.' : null,
-    year: year && !/^\d{4}$/.test(year) ? 'Quatre chiffres.' : null,
+    title:   !title.trim() ? 'Donner un titre, même provisoire.' : null,
+    year:    year && !/^\d{4}$/.test(year) ? 'Quatre chiffres.' : null,
     widthCm: widthCm && !/^\d+([.,]\d+)?$/.test(widthCm) ? 'Nombre uniquement.' : null,
-    heightCm: heightCm && !/^\d+([.,]\d+)?$/.test(heightCm) ? 'Nombre uniquement.' : null,
-    image: !hasImage ? 'Une photo est requise pour publier.' : null,
+    heightCm:heightCm && !/^\d+([.,]\d+)?$/.test(heightCm) ? 'Nombre uniquement.' : null,
+    image:   !hasImage ? 'Une photo est requise pour publier.' : null,
   }
   const hasErrors = errors.title !== null || errors.year !== null || errors.widthCm !== null || errors.heightCm !== null
   const errFor = (key: keyof typeof errors) => showErrors ? errors[key] : null
 
-  // ── Collecte FormData à partir du state ───────────────────────────────────
+  // ── Collecte FormData ──────────────────────────────────────────────────────
   const buildFormData = (includeFile: boolean): FormData => {
     const fd = new FormData()
     fd.set('title', title)
@@ -149,7 +213,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
     return fd
   }
 
-  // ── Réinitialise le formulaire pour l'œuvre suivante ─────────────────────
+  // ── Réinitialisation ───────────────────────────────────────────────────────
   const resetForm = () => {
     setArtworkId(null)
     setTitle('')
@@ -168,7 +232,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
     setSaveStatus('editing')
   }
 
-  // ── Action : Enregistrer (brouillon sans image) ───────────────────────────
+  // ── Action : Enregistrer ───────────────────────────────────────────────────
   const handleSave = () => {
     setShowErrors(true)
     if (hasErrors) {
@@ -190,11 +254,11 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
     })
   }
 
-  // ── Action : Publier & passer à l'œuvre suivante ──────────────────────────
+  // ── Action : Publier ───────────────────────────────────────────────────────
   const handlePublish = () => {
     setShowErrors(true)
     if (!hasImage) {
-      setToast({ kind: 'error', text: 'Une photo et un titre suffisent — ajoutez une photo.' })
+      setToast({ kind: 'error', text: 'Ajoutez une photo avant de publier.' })
       return
     }
     if (hasErrors) {
@@ -218,85 +282,77 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
 
   const isBusy = isPending || saveStatus === 'saving' || saveStatus === 'publishing'
 
-  // ── Rendu ─────────────────────────────────────────────────────────────────
+  // ── Rendu ──────────────────────────────────────────────────────────────────
   return (
-    <div className="pof-admin" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="pof-gallery" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Chrome admin */}
-      <AdminNav tab="upload" userEmail={userEmail} />
+      <BackgroundDecor />
 
-      {/* Page hero */}
-      <div className="page-hero">
+      {/* Nav galerie (miroir SiteNav public, branche « admin ») */}
+      <header className="site-nav">
+        <Link href="/" className="brand">
+          Galerie POF
+          <span className="brand-sub">Administration</span>
+        </Link>
+        <nav>
+          <Link href="/admin/artworks" className="nav-link">Mes œuvres</Link>
+          <Link href="/admin/upload" className="nav-link is-active">Ajouter</Link>
+          <Link href="/admin/artworks" className="nav-link">Offres reçues</Link>
+          <GallerySignOutButton />
+        </nav>
+      </header>
+
+      {/* Hero : fil d'Ariane + titre Oswald + badge état */}
+      <div className="hero">
         <div>
-          <div className="eyebrow" style={{ marginBottom: 8 }}>
-            <Link href="/admin/artworks" style={{ color: 'var(--color-admin-mute)', textDecoration: 'none' }}>
-              ← Mes œuvres
-            </Link>
-            <span style={{ color: 'var(--color-admin-mute-2)' }}>&nbsp;/&nbsp;</span>
+          <div className="breadcrumb">
+            <Link href="/admin/artworks">← Mes œuvres</Link>
+            <span> &nbsp;/&nbsp; </span>
             <span>Nouvelle œuvre</span>
           </div>
-          <h1>Documenter une nouvelle œuvre</h1>
+          <h1>Documenter une œuvre</h1>
         </div>
-        <SaveBadge status={saveStatus} />
+        <GallerySaveBadge status={saveStatus} />
       </div>
 
-      {/* Layout split */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 460px',
-        flex: 1,
-        minHeight: 0,
-        borderTop: '1px solid var(--color-admin-divider)',
-      }}>
+      {/* Layout split 1fr / 460px */}
+      <div className="split">
 
-        {/* ── Colonne image ─────────────────────────────────────────── */}
-        <div style={{
-          padding: '28px 32px',
-          background: '#fcfcfa',
-          borderRight: '1px solid var(--color-admin-divider)',
-        }}>
-          <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        {/* ── Colonne image ──────────────────────────────────────────── */}
+        <div className="image-col">
+
+          <div className="stage-eyebrow">
             <span>Photographie de l&apos;œuvre</span>
-            <span style={{ color: 'var(--color-admin-mute-2)' }}>JPEG / PNG · 20 MB max · aucun recadrage</span>
+            <span>JPEG / PNG · 20 Mo max · aucun recadrage</span>
           </div>
 
+          {/* Zone de dépôt — styled via .pof-gallery .dropzone */}
           <ImageDropZone
             ref={dropZoneRef}
             onHasImage={setHasImage}
-            height={500}
+            height={480}
           />
 
-          {/* Méta fichier */}
-          <dl style={{
-            marginTop: 18,
-            display: 'grid', gridTemplateColumns: 'auto 1fr',
-            columnGap: 14, rowGap: 6,
-            font: '400 12px var(--font-space-mono)', letterSpacing: '0.02em',
-            color: 'var(--color-admin-mute-3)',
-          }}>
-            <dt style={{ color: 'var(--color-admin-mute)' }}>Fichier</dt>
-            <dd style={{ margin: 0, color: hasImage ? 'var(--color-admin-ink)' : 'var(--color-admin-mute-2)' }}>
+          {/* Pipeline : où en est l'œuvre dans le traitement */}
+          <PipelineStrip stage={hasImage ? 'process' : 'upload'} />
+
+          {/* Méta-données du fichier source */}
+          <dl className="file-meta">
+            <dt>Fichier</dt>
+            <dd className={hasImage ? '' : 'is-empty'}>
               {hasImage ? (dropZoneRef.current?.getFile()?.name ?? '—') : 'aucun fichier'}
             </dd>
-            <dt style={{ color: 'var(--color-admin-mute)' }}>Variantes</dt>
-            <dd style={{ margin: 0 }}>{hasImage ? '4096 / 2048 / 1024 / 320 px — WebP' : '—'}</dd>
+            <dt>Variantes</dt>
+            <dd className={hasImage ? '' : 'is-empty'}>
+              {hasImage ? '4096 / 2048 / 1024 / 320 px — WebP' : '—'}
+            </dd>
           </dl>
         </div>
 
-        {/* ── Colonne formulaire ────────────────────────────────────── */}
-        <div style={{
-          padding: '28px 32px',
-          background: '#fff',
-          maxHeight: 'calc(100vh - 120px)',
-          position: 'sticky',
-          top: 0,
-          alignSelf: 'start',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
+        {/* ── Colonne formulaire (info panel, sticky) ────────────────── */}
+        <div className="form-col">
 
-          {/* Section 01 — Identité */}
+          {/* 01 — Identité */}
           <Section title="Identité" step="01 / 04">
             <div style={{ display: 'grid', gap: 16 }}>
               <Field label="Titre" error={errFor('title')} required>
@@ -308,7 +364,6 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   aria-invalid={!!errFor('title')}
                 />
               </Field>
-
               <div className="row-2">
                 <Field label="Type">
                   <TypeSegmented
@@ -333,7 +388,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
             </div>
           </Section>
 
-          {/* Section 02 — Format & médium */}
+          {/* 02 — Format & médium */}
           <Section title="Format & médium" step="02 / 04">
             <div style={{ display: 'grid', gap: 16 }}>
               <Field label="Médium" hint="Saisie libre — un seul matériau principal suffit.">
@@ -350,11 +405,10 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   ))}
                 </datalist>
               </Field>
-
               <Field
                 label="Dimensions"
                 error={errFor('widthCm') ?? errFor('heightCm')}
-                hint="Largeur × hauteur, à plat."
+                hint="Largeur × hauteur, à plat. Pour un dessin sur cahier, prendre la feuille."
               >
                 <div className="dim-input">
                   <input
@@ -364,6 +418,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                     value={widthCm}
                     onChange={(e) => { setWidthCm(e.target.value); markEditing() }}
                     aria-label="Largeur en cm"
+                    aria-invalid={!!errFor('widthCm')}
                   />
                   <span className="x">×</span>
                   <input
@@ -373,6 +428,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                     value={heightCm}
                     onChange={(e) => { setHeightCm(e.target.value); markEditing() }}
                     aria-label="Hauteur en cm"
+                    aria-invalid={!!errFor('heightCm')}
                   />
                   <span className="unit">cm</span>
                 </div>
@@ -380,7 +436,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
             </div>
           </Section>
 
-          {/* Section 03 — Édition */}
+          {/* 03 — Édition */}
           <Section title="Édition" step="03 / 04">
             <div style={{ display: 'grid', gap: 16 }}>
               <Field label="Statut">
@@ -389,8 +445,10 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   onChange={(v) => { setSaleStatus(v); markEditing() }}
                 />
               </Field>
-
-              <Field label="Prix de base" hint="Plancher en dessous duquel l'offre est refusée. Modifiable plus tard.">
+              <Field
+                label="Prix de base"
+                hint="Plancher indicatif en dessous duquel une offre est signalée. Modifiable plus tard."
+              >
                 <div className="price-input">
                   <input
                     className="input input--mono"
@@ -402,7 +460,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                       markEditing()
                     }}
                     aria-label="Prix de base en euros"
-                    style={{ paddingRight: 28 }}
+                    style={{ paddingRight: 34 }}
                   />
                   <span className="suffix">€</span>
                 </div>
@@ -410,19 +468,25 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
             </div>
           </Section>
 
-          {/* Section 04 — Texte & classement */}
+          {/* 04 — Texte & classement */}
           <Section title="Texte & classement" step="04 / 04">
             <div style={{ display: 'grid', gap: 16 }}>
-              <Field label="Description" hint="Affichée en italique sur la page publique de l'œuvre.">
+              <Field
+                label="Description"
+                hint="Affichée en italique sur la page publique de l'œuvre. Garder bref."
+              >
                 <textarea
                   className="textarea"
                   rows={4}
                   value={description}
                   onChange={(e) => { setDescription(e.target.value); markEditing() }}
+                  placeholder="Quelques lignes pour le visiteur — où, quand, dans quel état d'esprit."
                 />
               </Field>
-
-              <Field label="Tags" hint="Entrée ou virgule pour valider. Sert au tri interne uniquement.">
+              <Field
+                label="Tags"
+                hint="Entrée ou virgule pour valider. Sert au tri interne uniquement."
+              >
                 <TagInput
                   tags={tags}
                   onChange={(v) => { setTags(v); markEditing() }}
@@ -431,12 +495,11 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
             </div>
           </Section>
 
-          {/* ── Barre d'action sticky ──────────────────────────────── */}
+          {/* Barre d'action sticky en bas de la colonne formulaire */}
           <div className="actionbar">
             <button type="button" className="btn btn--link" onClick={resetForm}>
               Réinitialiser
             </button>
-
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 type="button"
@@ -446,44 +509,29 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
               >
                 {saveStatus === 'saving' ? 'Enregistrement…' : 'Enregistrer'}
               </button>
-
               <button
                 type="button"
+                className="btn btn--primary"
                 onClick={handlePublish}
                 disabled={isBusy}
-                style={{
-                  appearance: 'none',
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 8, minHeight: 40, padding: '10px 16px',
-                  background: isBusy ? 'var(--color-admin-mute)' : 'var(--color-orange)',
-                  color: '#fff', border: 0, cursor: isBusy ? 'not-allowed' : 'pointer',
-                  font: '600 14px var(--font-geist-sans), sans-serif',
-                  transition: 'background .12s',
-                }}
               >
-                {saveStatus === 'publishing' ? 'Publication…' : 'Publier & suivante'}
+                {saveStatus === 'publishing' ? 'Publication…' : 'Publier'}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Toast ──────────────────────────────────────────────────── */}
+      {/* Footer */}
+      <footer className="site-footer">
+        <a href={`mailto:${userEmail ?? 'contact@galeriepof.fr'}`}>
+          {userEmail ?? 'contact@galeriepof.fr'}
+        </a>
+      </footer>
+
+      {/* Toast feedback */}
       {toast && (
-        <div
-          role="status"
-          style={{
-            position: 'fixed', bottom: 24, right: 24,
-            padding: '12px 16px',
-            background: toast.kind === 'error' ? 'var(--badge-failed-bg)' : 'var(--badge-published-bg)',
-            color: toast.kind === 'error' ? 'var(--badge-failed-fg)' : 'var(--badge-published-fg)',
-            border: `1px solid ${toast.kind === 'error' ? 'rgba(220,38,38,0.25)' : 'rgba(21,128,61,0.25)'}`,
-            font: '600 13px var(--font-geist-sans), sans-serif',
-            maxWidth: 360,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-            zIndex: 50,
-          }}
-        >
+        <div role="status" className={`toast toast--${toast.kind}`}>
           {toast.text}
         </div>
       )}

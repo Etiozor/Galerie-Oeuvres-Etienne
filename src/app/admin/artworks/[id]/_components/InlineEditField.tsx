@@ -8,28 +8,17 @@ interface InlineEditFieldProps {
   as: 'title' | 'description'
 }
 
-const btnBase: React.CSSProperties = {
-  padding: '6px 16px',
-  border: 'none',
-  borderRadius: 0,
-  cursor: 'pointer',
-  fontSize: '13px',
-  fontFamily: 'var(--font-geist-sans)',
-  fontWeight: 600,
-}
-
 /**
  * Champ éditable inline — cliquer sur le texte pour l'éditer en place.
- * Utilisé pour le titre (H1) et la description sur la page détail admin.
  *
- * POURQUOI pas useActionState ?
- * L'édition inline utilise startTransition avec une action directe — pas de FormData,
- * pas d'état intermédiaire à persister entre soumissions.
+ * - Titre (as="title") : Oswald 36px uppercase, édition inline sur blur ou Enter.
+ * - Description (as="description") : Cormorant italique 17px, textarea, boutons Enregistrer / Annuler.
  */
 export function InlineEditField({ initialValue, onSave, as }: InlineEditFieldProps) {
   const [value, setValue] = useState(initialValue)
   const [draft, setDraft] = useState(initialValue)
   const [editing, setEditing] = useState(false)
+  const [hover, setHover] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -66,67 +55,66 @@ export function InlineEditField({ initialValue, onSave, as }: InlineEditFieldPro
     })
   }
 
+  // ── Titre : Oswald 36px, sauvegarde sur blur ou Enter ──────────────────────
   if (as === 'title') {
+    const titleBase: React.CSSProperties = {
+      font: '700 36px/1.05 var(--font-oswald)',
+      letterSpacing: '0.04em',
+      textTransform: 'uppercase',
+      color: 'var(--color-ink)',
+      margin: 0,
+      display: 'block',
+    }
+
     if (editing) {
       return (
-        <div style={{ marginBottom: '8px' }}>
+        <div>
           <input
             ref={inputRef}
             value={draft}
             onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel() }}
+            onBlur={save}
+            onKeyDown={e => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+              if (e.key === 'Escape') { setDraft(value); setEditing(false) }
+            }}
             disabled={isPending}
             style={{
+              ...titleBase,
               width: '100%',
-              fontSize: '28px',
-              fontWeight: 600,
-              fontFamily: 'var(--font-geist-sans)',
-              color: '#171717',
-              border: '2px solid #171717',
-              padding: '4px 8px',
-              borderRadius: 0,
+              padding: 0,
+              background: 'transparent',
+              border: 0,
+              borderBottom: `2px solid var(--color-ink)`,
+              outline: 'none',
               boxSizing: 'border-box',
-              backgroundColor: '#fff',
             }}
           />
           {error && (
-            <p style={{ color: '#bc4b51', fontSize: '13px', margin: '4px 0 0', fontFamily: 'var(--font-space-mono)' }}>
+            <p style={{ color: 'var(--color-red)', fontSize: 13, margin: '4px 0 0', fontFamily: 'var(--font-space-mono)' }}>
               {error}
             </p>
           )}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-            <button onClick={save} disabled={isPending} style={{ ...btnBase, backgroundColor: '#171717', color: '#fff' }}>
-              {isPending ? 'Sauvegarde…' : 'Enregistrer'}
-            </button>
-            <button onClick={cancel} disabled={isPending} style={{ ...btnBase, backgroundColor: '#e5e5e5', color: '#171717' }}>
-              Annuler
-            </button>
-          </div>
         </div>
       )
     }
+
     return (
       <h1
         onClick={startEditing}
         title="Cliquer pour modifier le titre"
         style={{
-          fontSize: '28px',
-          fontWeight: 600,
-          color: '#171717',
-          marginBottom: '8px',
+          ...titleBase,
           cursor: 'text',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
+          borderBottom: '2px solid transparent',
         }}
       >
-        {value}
-        <span style={{ fontSize: '14px', color: '#a3a3a3', fontWeight: 400, flexShrink: 0 }}>✎</span>
+        {value || <span style={{ color: 'var(--color-ink-muted)' }}>Sans titre</span>}
       </h1>
     )
   }
 
-  // as === 'description'
+  // ── Description : Cormorant italique 17px, textarea avec boutons ────────────
   if (editing) {
     return (
       <div>
@@ -138,28 +126,46 @@ export function InlineEditField({ initialValue, onSave, as }: InlineEditFieldPro
           disabled={isPending}
           style={{
             width: '100%',
-            fontSize: '14px',
-            color: '#171717',
-            fontFamily: 'var(--font-geist-sans)',
-            lineHeight: '1.6',
-            border: '2px solid #171717',
-            padding: '8px 12px',
-            borderRadius: 0,
+            padding: '10px 12px',
+            background: '#fff',
+            border: '1px solid var(--color-ink)',
+            borderRadius: 'var(--radius-sm)',
+            font: 'italic 400 17px/1.55 var(--font-cormorant)',
+            color: 'var(--color-ink)',
             resize: 'vertical',
+            outline: 'none',
             boxSizing: 'border-box',
-            minHeight: '100px',
           }}
         />
         {error && (
-          <p style={{ color: '#bc4b51', fontSize: '13px', margin: '4px 0 0', fontFamily: 'var(--font-space-mono)' }}>
+          <p style={{ color: 'var(--color-red)', fontSize: 13, margin: '4px 0 0', fontFamily: 'var(--font-space-mono)' }}>
             {error}
           </p>
         )}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-          <button onClick={save} disabled={isPending} style={{ ...btnBase, backgroundColor: '#171717', color: '#fff' }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button
+            onClick={save}
+            disabled={isPending}
+            style={{
+              padding: '6px 16px', border: 'none', borderRadius: 'var(--radius-sm)',
+              cursor: isPending ? 'not-allowed' : 'pointer',
+              fontSize: 13, fontFamily: 'var(--font-geist-sans)', fontWeight: 600,
+              backgroundColor: isPending ? 'var(--color-ink-muted)' : 'var(--color-ink)',
+              color: '#fff',
+            }}
+          >
             {isPending ? 'Sauvegarde…' : 'Enregistrer'}
           </button>
-          <button onClick={cancel} disabled={isPending} style={{ ...btnBase, backgroundColor: '#e5e5e5', color: '#171717' }}>
+          <button
+            onClick={cancel}
+            disabled={isPending}
+            style={{
+              padding: '6px 16px', border: '1px solid rgba(0,0,0,0.14)',
+              borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+              fontSize: 13, fontFamily: 'var(--font-geist-sans)', fontWeight: 600,
+              backgroundColor: '#fff', color: 'var(--color-ink)',
+            }}
+          >
             Annuler
           </button>
         </div>
@@ -168,21 +174,25 @@ export function InlineEditField({ initialValue, onSave, as }: InlineEditFieldPro
   }
 
   return (
-    <div
+    <p
       onClick={startEditing}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       title="Cliquer pour modifier la description"
-      style={{ cursor: 'text' }}
+      style={{
+        margin: 0,
+        padding: '10px 12px',
+        font: 'italic 400 17px/1.55 var(--font-cormorant)',
+        color: value ? 'var(--color-ink)' : 'var(--color-ink-muted)',
+        background: 'transparent',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px dashed ' + (hover ? 'rgba(0,0,0,0.14)' : 'transparent'),
+        cursor: 'text',
+        minHeight: 64,
+        transition: 'border-color 120ms ease',
+      }}
     >
-      {value ? (
-        <p style={{ fontSize: '14px', color: '#525252', lineHeight: '1.6', margin: 0 }}>
-          {value}
-          <span style={{ marginLeft: '6px', color: '#a3a3a3', fontSize: '12px' }}>✎</span>
-        </p>
-      ) : (
-        <p style={{ fontSize: '14px', color: '#a3a3a3', lineHeight: '1.6', margin: 0, fontStyle: 'italic' }}>
-          Cliquer pour ajouter une description… ✎
-        </p>
-      )}
-    </div>
+      {value || 'Cliquer pour ajouter une description…'}
+    </p>
   )
 }

@@ -5,8 +5,7 @@
  * visuellement distinctifs selon le statut (décision D-10).
  *
  * POURQUOI des styles inline ?
- * Même décision que PipelineBadge en Phase 2 (02-03) : les styles inline
- * garantissent la conformité exacte avec la spec UI-SPEC section 6.
+ * Les styles inline garantissent la conformité exacte avec la spec UI-SPEC section 6.
  * Tailwind pourrait purger des classes arbitraires ou la cascade les écraser.
  *
  * POURQUOI pas de coins arrondis ?

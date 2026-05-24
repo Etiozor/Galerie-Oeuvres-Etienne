@@ -1,96 +1,93 @@
 /**
- * Navigation précédent/suivant entre les œuvres publiées.
+ * Navigation précédent/suivant entre les œuvres publiées — Variante A.
  *
- * Affiché en bas du panel info sur la page détail (/artworks/[id]).
- * L'ordre est chronologique inversé par published_at DESC :
- * - "Précédente" = l'œuvre publiée plus récemment (à gauche, ←)
- * - "Suivante" = l'œuvre publiée moins récemment (à droite, →)
+ * Format deux lignes (design "Cartel de musée") :
+ *   Ligne 1 : "← Précédent" / "Suivant →"  (Space Mono 11px uppercase muted)
+ *   Ligne 2 : titre de l'œuvre             (Cormorant italic 14px ink)
  *
- * POURQUOI des flèches Unicode et pas lucide-react ?
- * D-17 (verrouillé) : ← → Unicode sont plus sobres que les icônes
- * SVG qui tendent à être trop "rondes" pour ce design.
- *
- * Composant Server (pas de 'use client') — liens statiques, aucun état côté client.
+ * L'ordre chronologique reste inchangé :
+ * - "Précédente" = publiée plus récemment (à gauche, ←)
+ * - "Suivante"   = publiée moins récemment (à droite, →)
  */
 import Link from 'next/link'
 
-/** Données minimales pour un lien de navigation */
 interface ArtworkNavItem {
   id: number
   title: string
 }
 
 interface ArtworkNavProps {
-  /** Œuvre plus récente (publiée après) — affiché à gauche avec ← */
   prev: ArtworkNavItem | null
-  /** Œuvre plus ancienne (publiée avant) — affiché à droite avec → */
   next: ArtworkNavItem | null
 }
 
-/**
- * Affiche les liens de navigation vers l'œuvre précédente et suivante.
- *
- * Les slots sans destination affichent un <span> vide pour maintenir
- * le justifyContent: 'space-between' même si un seul lien est présent.
- */
 export function ArtworkNav({ prev, next }: ArtworkNavProps) {
+  const labelStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-space-mono)',
+    fontSize: '11px',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: 'var(--color-ink-muted)',
+  }
+
+  const titleStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-cormorant)',
+    fontStyle: 'italic',
+    fontSize: '14px',
+    color: 'var(--color-ink)',
+    display: 'block',
+    marginTop: 4,
+  }
+
   return (
     <nav
       aria-label="Navigation entre œuvres"
       style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: '32px',
-        paddingTop: '16px',
-        // Séparateur visuel discret au-dessus de la navigation (--color-ink-muted opacity 0.3)
-        borderTop: '1px solid rgba(90,82,68,0.3)',
+        gap: 12,
+        marginTop: 'auto',
+        paddingTop: 18,
+        borderTop: '1px solid rgba(0,0,0,0.08)',
       }}
     >
-      {/* Précédente = plus récente (publiée APRÈS l'œuvre courante dans le temps réel) */}
       {prev ? (
         <Link
           href={`/artworks/${prev.id}`}
           style={{
-            fontFamily: 'var(--font-space-mono)',
-            fontSize: '11px',
-            color: 'var(--color-ink-muted)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
             textDecoration: 'none',
-            // Limiter la largeur pour éviter le débordement sur les titres longs
-            maxWidth: '45%',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            maxWidth: '48%',
           }}
           title={`Œuvre précédente : ${prev.title}`}
         >
-          ← {prev.title}
+          <span style={labelStyle}>← Précédent</span>
+          <span style={titleStyle}>{prev.title}</span>
         </Link>
       ) : (
-        <span /> // Espace réservé pour maintenir l'alignement
+        <span />
       )}
 
-      {/* Suivante = plus ancienne (publiée AVANT l'œuvre courante dans le temps réel) */}
       {next ? (
         <Link
           href={`/artworks/${next.id}`}
           style={{
-            fontFamily: 'var(--font-space-mono)',
-            fontSize: '11px',
-            color: 'var(--color-ink-muted)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
             textDecoration: 'none',
-            maxWidth: '45%',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
             textAlign: 'right',
+            maxWidth: '48%',
           }}
           title={`Œuvre suivante : ${next.title}`}
         >
-          {next.title} →
+          <span style={labelStyle}>Suivant →</span>
+          <span style={titleStyle}>{next.title}</span>
         </Link>
       ) : (
-        <span /> // Espace réservé pour maintenir l'alignement
+        <span />
       )}
     </nav>
   )

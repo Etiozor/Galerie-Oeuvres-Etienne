@@ -6,23 +6,23 @@
  *
  * ARCHITECTURE :
  * - Ce composant charge TOUTES les œuvres publiées en une seule requête
- *   (stratégie validée pour une collection < 500 œuvres — hypothèse A1 RESEARCH.md)
- * - Il résout les URLs d'images CÔTÉ SERVEUR (jamais côté client — Piège 5 RESEARCH.md)
+ *   (stratégie validée pour une collection < 500 œuvres)
+ * - Il résout les URLs d'images CÔTÉ SERVEUR (jamais côté client)
  * - Il passe les données au Client Component GalleryClient pour le filtrage et le scroll
  *
- * SÉCURITÉ (T-03-01) :
- * Le filtre pipelineState = 'published' est OBLIGATOIRE.
- * Une œuvre en pending/processing/awaiting_validation/failed ne doit JAMAIS
- * apparaître dans la galerie publique.
+ * SÉCURITÉ :
+ * Le filtre publishedAt IS NOT NULL est obligatoire.
+ * Une œuvre sans publishedAt (brouillon) ne doit jamais apparaître dans la galerie publique.
  *
- * PIÈGE 2 (03-RESEARCH.md) :
  * GalleryClient utilise useSearchParams → il DOIT être enveloppé dans <Suspense>.
  * Sans cela, `next build` échoue avec "Missing Suspense boundary".
  */
 import { Suspense } from 'react'
+import { eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { artworkTypes, mediums } from '@/db/schema'
+import { artworkTypes, mediums, savedArtworks } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
+import { getVisitorSession } from '@/lib/session'
 import { GalleryClient } from '@/components/gallery/GalleryClient'
 import { SiteNav } from '@/components/layout/SiteNav'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
@@ -55,11 +55,11 @@ export default async function GalleryPage() {
    * ORDER BY published_at DESC → la plus récente publiée en premier.
    * with: { type, medium } → jointure automatique Drizzle (une seule requête SQL).
    *
-   * SÉCURITÉ : eq(artworks.pipelineState, 'published') est le garde obligatoire.
-   * Sans ce filtre, des œuvres en cours de traitement seraient visibles.
+   * SÉCURITÉ : isNotNull(publishedAt) est le garde obligatoire.
+   * Une œuvre sans publishedAt (brouillon) ne doit jamais apparaître en galerie.
    */
   const publishedArtworks = await db.query.artworks.findMany({
-    where: (artworks, { eq }) => eq(artworks.pipelineState, 'published'),
+    where: (artworks, { isNotNull }) => isNotNull(artworks.publishedAt),
     with: {
       type: true,
       medium: true,
@@ -85,24 +85,45 @@ export default async function GalleryPage() {
     status: a.status,
     typeId: a.typeId,
     mediumId: a.mediumId,
+    // Noms du type et du médium pour l'overlay de la carte galerie
+    typeName: a.type?.name ?? null,
+    mediumName: a.medium?.name ?? null,
     // parseFloat car Drizzle retourne numeric comme string
     widthCmNum: a.widthCm ? parseFloat(a.widthCm) || 1 : 1,
     heightCmNum: a.heightCm ? parseFloat(a.heightCm) || 1 : 1,
-    // Thumbnail pour la grille (400px), null si pas encore traité
-    thumbnailUrl: a.thumbnailPath ? storage.getUrl(a.thumbnailPath) : null,
-    // Processed pour la page détail, null si pas encore traité
-    processedUrl: a.processedPath ? storage.getUrl(a.processedPath) : null,
+    // Prix de base (numeric → number) pour l'overlay de la carte
+    basePriceNum: a.basePrice ? parseFloat(a.basePrice) || 0 : 0,
+    // Image originale pour la grille et la page détail
+    thumbnailUrl: a.originalPath ? storage.getUrl(a.originalPath) : null,
+    processedUrl: a.originalPath ? storage.getUrl(a.originalPath) : null,
     // Recherche texte : on passe un extrait de description (500 chars max)
     // pour limiter le poids des props tout en permettant la recherche côté client
     descriptionSnippet: a.description ? a.description.slice(0, 500) : null,
     // Tri par date de création : timestamp numérique pour comparaison côté client
-    // createdDate est un timestamp PostgreSQL → Date JS → .getTime() → number
-    createdTimestamp: a.createdDate ? a.createdDate.getTime() : 0,
+    // Clé de tri : année * 100 + mois → ex. 202403 > 202312 (tri chronologique correct)
+    createdTimestamp: a.createdYear ? a.createdYear * 100 + (a.createdMonth ?? 0) : 0,
   }))
 
   // Options de filtre : types et médiums triés par sortOrder
   const types = await db.select().from(artworkTypes).orderBy(artworkTypes.sortOrder)
   const allMediums = await db.select().from(mediums).orderBy(mediums.sortOrder)
+
+  /*
+   * Session visiteur + favoris — lus côté serveur pour initialiser l'état du cœur.
+   * Si le visiteur n'est pas identifié, visitorId est undefined et savedArtworkIds est [].
+   * L'état optimiste dans SaveButton prend le relais après l'hydratation.
+   */
+  const session = await getVisitorSession()
+  const visitorId = session.visitorId
+
+  let savedArtworkIds: number[] = []
+  if (visitorId) {
+    const rows = await db
+      .select({ artworkId: savedArtworks.artworkId })
+      .from(savedArtworks)
+      .where(eq(savedArtworks.visitorId, visitorId))
+    savedArtworkIds = rows.map(r => r.artworkId)
+  }
 
   return (
     <>
@@ -125,6 +146,8 @@ export default async function GalleryPage() {
             artworks={artworksWithUrls}
             types={types}
             mediums={allMediums}
+            visitorId={visitorId}
+            savedArtworkIds={savedArtworkIds}
           />
         </Suspense>
       </main>

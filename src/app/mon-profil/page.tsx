@@ -240,10 +240,10 @@ export default async function MonProfilPage() {
               {mySavedArtworks.map(({ artwork }, i) => artwork && (
                 <Link key={i} href={`/artworks/${artwork.id}`} style={{ textDecoration: 'none', color: 'var(--color-ink)', display: 'block' }}>
                   <div style={{ border: '1px solid rgba(0,0,0,0.08)', backgroundColor: '#fff' }}>
-                    {artwork.thumbnailPath ? (
+                    {artwork.originalPath ? (
                       <div style={{ aspectRatio: '1', overflow: 'hidden', backgroundColor: '#f5f5f5' }}>
                         <img
-                          src={storage.getUrl(artwork.thumbnailPath)}
+                          src={storage.getUrl(artwork.originalPath)}
                           alt={artwork.title}
                           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                         />

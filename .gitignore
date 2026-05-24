@@ -50,3 +50,10 @@ next-env.d.ts
 
 # Variables d'environnement locales
 .env
+
+# Fichiers locaux personnels (photos, notes, exports de design)
+Images\ Upload/
+Notes.md
+design_galerie.bin
+design_galerie_extracted/
+design_upload_extracted/

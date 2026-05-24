@@ -1,42 +1,69 @@
 /**
- * Panel d'informations de la page détail d'une œuvre — Galerie POF.
+ * Panel d'informations de la page détail d'une œuvre — Variante A "Cartel de musée".
  *
- * Contenu dans la colonne droite (420px) du layout 2 colonnes desktop.
- * Suit l'ordre de lecture vertical défini dans UI-SPEC section 9 :
- *   1. Badge statut (ArtworkStatusBadge)
- *   2. Titre — Oswald 32px, uppercase (D-02)
- *   3. Année — Space Mono 12px, muted
- *   4. Séparateur horizontal
- *   5. Méta-grille (2 colonnes) : technique, médium, format, prix de base
- *   6. Séparateur
- *   7. Description — Cormorant Garamond 17px italic (D-02)
- *   8. Section offres (placeholder Phase 3 — câblée en Phase 4)
- *   9. Navigation précédent/suivant (ArtworkNav)
+ * ORDRE DE LECTURE (design "Cartel de musée") :
+ *   1. Header : "Cartel · n°042" (gauche) + SaveButton ♡/♥ (droite)
+ *   2. Titre Oswald 30px + règle orange 36px
+ *   3. Statut (dot coloré + label) · type · médium · année
+ *   4. Description — Cormorant italic 17px
+ *   5. Dimensions entre deux hairlines
+ *   6. Bloc prix (accent teal 3px gauche) + toggle décomposition
+ *   7. CTA "Faire une offre →" ou message statut (non disponible)
+ *   8. Toggle historique offres
+ *   9. Navigation précédent/suivant
  *
- * PLACEHOLDER OFFRES (Phase 3) :
- * Le bouton "Faire une offre" est affiché mais désactivé (disabled).
- * Il sera fonctionnel en Phase 4 (profils visiteurs + offres).
- * Ce choix évite un composant vide — le visiteur comprend la fonctionnalité à venir.
+ * Server Component — les parts interactives (SaveButton, PriceBlock,
+ * OfferSection, OfferHistory) sont des Client Components importés ici.
+ *
+ * SÉCURITÉ :
+ * - Le téléphone du visiteur n'est jamais transmis au client (T-04-04-01)
+ * - saveButton visible pour tous — identité gate gérée dans SaveButton lui-même
  */
+
 import Link from 'next/link'
-import { ArtworkStatusBadge } from './ArtworkStatusBadge'
 import { ArtworkNav } from './ArtworkNav'
-import { PriceBreakdown } from './PriceBreakdown'
+import { PriceBlock } from './PriceBlock'
 import { OfferSection } from './OfferSection'
 import { OfferHistory } from './OfferHistory'
+import { SaveButton } from '@/components/visitor/SaveButton'
 import type { PriceBreakdownData } from '@/db/schema'
 import type { OfferHistoryItem } from './OfferHistory'
 
-/** Données minimales pour les liens de navigation */
 interface ArtworkNavItem {
   id: number
   title: string
 }
 
+/** Couleur du dot de statut */
+const STATUS_DOT: Record<string, string> = {
+  available: 'var(--color-teal)',
+  reserved:  'var(--color-orange)',
+  sold:      'var(--color-red)',
+  given:     'var(--color-green)',
+}
+
+/** Libellé lisible du statut */
+const STATUS_LABEL: Record<string, string> = {
+  available: 'Disponible',
+  reserved:  'Réservé',
+  sold:      'Vendu',
+  given:     'Donné',
+}
+
+/** Couleurs du bloc message quand l'œuvre n'est plus disponible */
+const STATUS_MSG_STYLE: Record<string, { bg: string; fg: string; text: string }> = {
+  sold:     { bg: 'var(--badge-sold-bg)',     fg: 'var(--badge-sold-fg)',     text: "Cette œuvre a trouvé son acquéreur." },
+  reserved: { bg: 'var(--badge-reserved-bg)', fg: 'var(--badge-reserved-fg)', text: "Réservée — l'artiste réfléchit à une offre en cours." },
+  given:    { bg: 'var(--badge-given-bg)',     fg: 'var(--badge-given-fg)',     text: "Cette œuvre n'est plus disponible — elle a été donnée." },
+}
+
 interface ArtworkInfoPanelProps {
   title: string
   status: string
-  createdDate: Date | null
+  /** ID numérique de l'œuvre — affiché dans le cartel "n°042" et passé à SaveButton */
+  artworkId: number
+  createdYear: number | null
+  createdMonth: number | null
   widthCm: string | null
   heightCm: string | null
   description: string | null
@@ -45,104 +72,22 @@ interface ArtworkInfoPanelProps {
   basePrice: string | null
   prev: ArtworkNavItem | null
   next: ArtworkNavItem | null
-  /**
-   * ID du visiteur identifié — undefined si le visiteur n'a pas de session active.
-   * Transmis depuis la page détail qui lit le cookie côté serveur. [AUTH-02]
-   * SÉCURITÉ : on ne transmet jamais le téléphone côté client — uniquement l'ID. [T-04-01-06]
-   */
   visitorId?: number
-  /**
-   * Pseudo du visiteur affiché dans le panel si une session est active.
-   * Vient de la session iron-session, pas de la DB (évite un aller-retour inutile).
-   */
   visitorName?: string
-  /**
-   * Décomposition du prix de base — 6 facteurs expliqués au visiteur (MARKET-01).
-   * undefined ou null = ne pas afficher PriceBreakdown.
-   * Renseignée par l'artiste via l'admin (Phase 5) — affichage Phase 4.
-   */
   priceBreakdown?: PriceBreakdownData | null
-  /**
-   * ID de l'œuvre — nécessaire pour submitOffer dans OfferSection/OfferForm.
-   * Passé à OfferSection qui le transmet à OfferForm via un champ caché.
-   */
-  artworkId: number
-  /**
-   * Nombre total d'offres reçues pour cette œuvre.
-   * Si 0 → OfferHistory retourne null (pas de section vide).
-   * Calculé via COUNT() côté serveur dans page.tsx.
-   */
   offerCount: number
-  /**
-   * Meilleure offre (MAX(amount)) en string Drizzle ou null.
-   * Calculé côté serveur — le client ne peut pas manipuler cette valeur (T-04-04-06).
-   * Affiché dans le résumé OfferHistory sans opt-in.
-   */
   bestOffer: string | null
-  /**
-   * Liste complète des offres pour l'historique opt-in.
-   * Chargée côté serveur, passée en prop pour éviter un round-trip au toggle (RESEARCH.md Pattern 5).
-   * Ne contient JAMAIS le numéro de téléphone du visiteur (T-04-04-01).
-   */
   allOffers: OfferHistoryItem[]
-}
-
-/**
- * Séparateur horizontal réutilisé entre les sections du panel.
- * Couleur: --color-ink-muted à opacity 0.3 (UI-SPEC section 9).
- */
-function Separator() {
-  return (
-    <div
-      style={{
-        height: '1px',
-        backgroundColor: 'var(--color-ink-muted)',
-        opacity: 0.3,
-        margin: '16px 0',
-      }}
-    />
-  )
-}
-
-/**
- * Ligne de méta-données (label + valeur) dans la grille de métadonnées.
- * POURQUOI dt/dd ?
- * Sémantique correcte pour une liste de définitions (terme + description).
- * Meilleure accessibilité et SEO qu'un grid de <span>.
- */
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <dt
-        style={{
-          fontFamily: 'var(--font-space-mono)',
-          fontSize: '11px',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          color: 'var(--color-ink-muted)',
-          margin: 0,
-        }}
-      >
-        {label}
-      </dt>
-      <dd
-        style={{
-          fontFamily: 'var(--font-space-mono)',
-          fontSize: '11px',
-          color: 'var(--color-ink)',
-          margin: 0,
-        }}
-      >
-        {value}
-      </dd>
-    </>
-  )
+  /** État initial du favori, calculé côté serveur — false si non identifié */
+  initialSaved: boolean
 }
 
 export function ArtworkInfoPanel({
   title,
   status,
-  createdDate,
+  artworkId,
+  createdYear,
+  createdMonth,
   widthCm,
   heightCm,
   description,
@@ -153,170 +98,244 @@ export function ArtworkInfoPanel({
   next,
   visitorId,
   visitorName,
-  priceBreakdown, // Ajouté dans ce plan (04-02)
-  artworkId,      // Ajouté dans ce plan (04-03) — nécessaire pour OfferSection
-  offerCount,     // Ajouté dans ce plan (04-04) — nombre total d'offres
-  bestOffer,      // Ajouté dans ce plan (04-04) — meilleure offre pour le résumé
-  allOffers,      // Ajouté dans ce plan (04-04) — liste complète pour l'opt-in
+  priceBreakdown,
+  offerCount,
+  bestOffer,
+  allOffers,
+  initialSaved,
 }: ArtworkInfoPanelProps) {
-  // Extraire l'année depuis la date de création de l'œuvre
-  const year = createdDate ? new Date(createdDate).getFullYear() : null
+  // Dimensions formatées — parseFloat supprime les zéros trailing ("30.0" → "30")
+  const widthFmt = widthCm ? parseFloat(widthCm).toString() : null
+  const heightFmt = heightCm ? parseFloat(heightCm).toString() : null
 
-  // Formater les dimensions — widthCm/heightCm sont des strings numeric de Drizzle
-  // parseFloat() supprime les zéros trailing (ex: "30.0" → "30")
-  const dimensions =
-    widthCm && heightCm
-      ? `${parseFloat(widthCm)} × ${parseFloat(heightCm)} cm`
-      : null
-
-  // Formater le prix — basePrice est une string numeric de Drizzle (ex: "1500.00")
-  const formattedPrice = basePrice
-    ? `${parseFloat(basePrice).toLocaleString('fr-FR')} €`
+  // Période de création — "Mars 2024", "2024", ou null si non renseignée
+  const MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+  const periodLabel = createdYear
+    ? (createdMonth && createdMonth >= 1 && createdMonth <= 12 ? `${MONTHS_FR[createdMonth - 1]} ${createdYear}` : String(createdYear))
     : null
 
+  // Ligne méta : "Peinture · Huile sur toile · Mars 2024"
+  const metaParts = [typeName, mediumName, periodLabel].filter(Boolean)
+  const metaString = metaParts.join(' · ')
+
+  const dotColor = STATUS_DOT[status] ?? 'var(--color-ink-muted)'
+  const statusLabel = STATUS_LABEL[status] ?? status
+
   return (
-    <div>
-      {/* 0. Lien retour vers la galerie — toujours visible en haut du panel */}
-      <Link
-        href="/"
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 22,
+        height: '100%',
+      }}
+    >
+      {/* ── 1. Header : cartel n° + bouton ♡ ──────────────────────────────── */}
+      <div
         style={{
-          fontFamily: 'var(--font-space-mono)',
-          fontSize: '11px',
-          letterSpacing: '0.05em',
-          color: 'var(--color-teal)',
-          textDecoration: 'none',
-          display: 'inline-block',
-          marginBottom: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}
       >
-        ← Galerie
-      </Link>
-
-      {/* 1. Badge statut — même composant que dans la grille masonry */}
-      <ArtworkStatusBadge status={status} />
-
-      {/* 2. Titre — Oswald 32px, weight 700, uppercase, letter-spacing 0.05em (D-02, UI-SPEC) */}
-      <h1
-        style={{
-          fontFamily: 'var(--font-oswald)',
-          fontSize: '32px',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          color: 'var(--color-ink)',
-          margin: '12px 0 4px 0',
-          lineHeight: 1.1,
-          // D-03 : pas de margin-bottom arrondi — on utilise des valeurs exactes
-        }}
-      >
-        {title}
-      </h1>
-
-      {/* 3. Année — Space Mono 12px, --color-ink-muted (UI-SPEC section 9) */}
-      {year && (
-        <p
+        <span
           style={{
             fontFamily: 'var(--font-space-mono)',
-            fontSize: '12px',
+            fontSize: '11px',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
             color: 'var(--color-ink-muted)',
-            margin: 0,
           }}
         >
-          {year}
-        </p>
-      )}
+          Cartel · n°{artworkId.toString().padStart(3, '0')}
+        </span>
 
-      {/* 4. Séparateur */}
-      <Separator />
+        {/* SaveButton — toujours visible, identity gate interne */}
+        <SaveButton
+          artworkId={artworkId}
+          initialSaved={initialSaved}
+          visitorId={visitorId}
+        />
+      </div>
 
-      {/* 5. Méta-grille (2 colonnes) — technique, médium, format, prix de base */}
-      <dl
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '10px 8px',
-          margin: 0,
-        }}
-      >
-        {typeName && <MetaRow label="Technique" value={typeName} />}
-        {mediumName && <MetaRow label="Médium" value={mediumName} />}
-        {dimensions && <MetaRow label="Format" value={dimensions} />}
-        {formattedPrice && <MetaRow label="Prix de base" value={formattedPrice} />}
-      </dl>
+      {/* ── 2. Titre + règle orange ──────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-oswald)',
+            fontWeight: 600,
+            fontSize: '30px',
+            lineHeight: 1.05,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            color: 'var(--color-ink)',
+          }}
+        >
+          {title}
+        </h1>
+        {/* Flourish orange — signature visuelle de la Variante A */}
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'block',
+            width: 36,
+            height: 2,
+            background: 'var(--color-orange)',
+          }}
+        />
+      </div>
 
-      {/* 5.5 Décomposition du prix de base (MARKET-01 — Plan 04-02) */}
-      {/* Affiché uniquement si l'artiste a renseigné au moins un facteur */}
-      {/* POURQUOI après la méta-grille ? L'ordre de lecture logique est : */}
-      {/* titre → date → technique/médium/format/prix → comment ce prix a été calculé → description */}
-      {priceBreakdown && (
-        <>
-          <Separator />
-          <PriceBreakdown data={priceBreakdown} />
-        </>
-      )}
+      {/* ── 3. Statut + méta ──────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {/* Dot coloré */}
+        <span
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: '50%',
+            background: dotColor,
+            flexShrink: 0,
+          }}
+        />
+        {/* Label statut */}
+        <span
+          style={{
+            fontFamily: 'var(--font-geist-sans)',
+            fontWeight: 600,
+            fontSize: '13px',
+            color: 'var(--color-ink)',
+            letterSpacing: '0.01em',
+          }}
+        >
+          {statusLabel}
+        </span>
+        {/* Séparateur vertical */}
+        {metaString && (
+          <>
+            <span
+              style={{
+                width: 1,
+                height: 12,
+                background: 'rgba(0,0,0,0.18)',
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'var(--font-space-mono)',
+                fontSize: '11px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--color-ink-muted)',
+              }}
+            >
+              {metaString}
+            </span>
+          </>
+        )}
+      </div>
 
-      {/* 6. Séparateur — affiché uniquement si une description suit */}
-      {description && <Separator />}
-
-      {/* 7. Description — Cormorant Garamond 17px italic (D-02, UI-SPEC section 9) */}
+      {/* ── 4. Description — Cormorant italic ─────────────────────────────── */}
       {description && (
         <p
           style={{
+            margin: 0,
             fontFamily: 'var(--font-cormorant)',
             fontStyle: 'italic',
             fontSize: '17px',
+            lineHeight: 1.55,
             color: 'var(--color-ink)',
-            lineHeight: 1.6,
-            margin: 0,
           }}
         >
           {description}
         </p>
       )}
 
-      {/* 8. Section offres — historique + formulaire (Plan 04-04) */}
-      {/*
-       * COMPOSITION DE LA SECTION OFFRES :
-       * a. OfferHistory — résumé toujours visible + liste opt-in (Client Component)
-       *    Affiché dès qu'il y a au moins 1 offre, même si l'œuvre n'est plus disponible.
-       *    POURQUOI même pour les œuvres vendues/données ?
-       *    Le visiteur peut voir l'historique des offres pour une œuvre passée —
-       *    transparence sur le marché de l'artiste.
-       *
-       * b. OfferSection — formulaire de soumission (Client Component)
-       *    Affiché UNIQUEMENT si l'œuvre est encore disponible (status === 'available').
-       *    Contient VisitorProfileModal et OfferForm.
-       *
-       * PATTERN Server+Client (D-13) :
-       * ArtworkInfoPanel (Server) délègue l'interactivité à des Client Components.
-       * Le SSR du panel (titre, description, méta) est préservé.
-       */}
-      {(status === 'available' || offerCount > 0) && (
-        <>
-          <Separator />
-
-          {/* Résumé des offres — visible pour toutes les œuvres ayant reçu des offres */}
-          {/* OfferHistory retourne null si offerCount === 0 — pas de section vide */}
-          <OfferHistory
-            offerCount={offerCount}
-            bestOffer={bestOffer}
-            allOffers={allOffers}
-          />
-
-          {/* Formulaire d'offre — uniquement si l'œuvre est encore disponible */}
-          {status === 'available' && (
-            <OfferSection
-              visitorId={visitorId}
-              visitorName={visitorName}
-              artworkId={artworkId}
-              basePrice={basePrice}
-              status={status}
-            />
-          )}
-        </>
+      {/* ── 5. Dimensions entre hairlines ─────────────────────────────────── */}
+      {widthFmt && heightFmt && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            padding: '12px 0',
+            borderTop: '1px solid rgba(0,0,0,0.08)',
+            borderBottom: '1px solid rgba(0,0,0,0.08)',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-space-mono)',
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--color-ink-muted)',
+            }}
+          >
+            Dimensions
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-space-mono)',
+              fontWeight: 600,
+              fontSize: '20px',
+              color: 'var(--color-ink)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {widthFmt} × {heightFmt} cm
+          </span>
+        </div>
       )}
 
-      {/* 9. Navigation précédent/suivant (UI-SPEC section 10, D-17) */}
+      {/* ── 6. Bloc prix (PriceBlock client) ─────────────────────────────── */}
+      {basePrice && (
+        <PriceBlock
+          basePrice={basePrice}
+          status={status}
+          priceBreakdown={priceBreakdown ?? null}
+        />
+      )}
+
+      {/* ── 7. CTA ou message statut ──────────────────────────────────────── */}
+      {status === 'available' ? (
+        <OfferSection
+          visitorId={visitorId}
+          visitorName={visitorName}
+          artworkId={artworkId}
+          basePrice={basePrice}
+          status={status}
+        />
+      ) : (
+        /* Message contextuel selon le statut — Cormorant italic */
+        STATUS_MSG_STYLE[status] && (
+          <div
+            style={{
+              padding: '14px 16px',
+              background: STATUS_MSG_STYLE[status].bg,
+              color: STATUS_MSG_STYLE[status].fg,
+              fontFamily: 'var(--font-cormorant)',
+              fontStyle: 'italic',
+              fontSize: '14px',
+              lineHeight: 1.4,
+              borderRadius: 3,
+            }}
+          >
+            {STATUS_MSG_STYLE[status].text}
+          </div>
+        )
+      )}
+
+      {/* ── 8. Historique offres (toggle) ─────────────────────────────────── */}
+      {offerCount > 0 && (
+        <OfferHistory
+          offerCount={offerCount}
+          bestOffer={bestOffer}
+          allOffers={allOffers}
+        />
+      )}
+
+      {/* ── 9. Navigation précédent/suivant ───────────────────────────────── */}
       <ArtworkNav prev={prev} next={next} />
     </div>
   )

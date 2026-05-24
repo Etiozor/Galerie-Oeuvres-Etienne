@@ -149,3 +149,4 @@ Plans:
 
 Plans:
 - [x] 07-01: Page /admin/upload — layout split image/formulaire, composants admin (AdminNav, TypeSegmented, StatusSegmented, TagInput, ImageDropZone, SaveBadge), Server Actions saveArtworkDraft + publishArtwork
+- [x] 07-02: Page /admin/artworks — stat tiles (Toutes/À valider/Avec offres/Publiées), grille cartes 4:5 avec badges overlay, drawer latéral redimensionnable (320-720px) avec prévisualisation + changement de statut + liste d'offres

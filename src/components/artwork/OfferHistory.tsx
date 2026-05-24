@@ -1,258 +1,193 @@
 'use client'
 
 /**
- * Composant OfferHistory — historique des offres en opt-in.
+ * Historique des offres en opt-in — Variante A "Cartel de musée".
  *
- * POURQUOI 'use client' ?
- * Le toggle "Voir toutes les offres" utilise useState — la seule raison d'être
- * un Client Component. Le reste du panel (titre, description, méta-grille) reste
- * en Server Component. C'est le pattern "composition Server+Client" de Next.js 15.
+ * NOUVEAU TOGGLE ROW (design) :
+ * → Bouton pleine largeur : "{N} offre(s) reçue(s) · Meilleure {montant}" + ↓/↑
+ * → Badge jaune "Meilleure" sur la première ligne de la liste
+ * → Message et date par offre
  *
- * DÉCISION DESIGN (CLAUDE.md, MARKET-04) :
- * - Résumé TOUJOURS visible : nombre d'offres + meilleure offre
- *   → Indique l'intérêt pour l'œuvre sans bloquer l'accès
- * - Liste complète en OPT-IN uniquement (clic sur bouton)
- *   → Évite l'ancrage des prix à la baisse (si un visiteur voit "600 €", il sera
- *     influencé vers ce montant plutôt que vers sa propre estimation)
+ * DÉCISION (CLAUDE.md, MARKET-04) :
+ * - Résumé TOUJOURS visible : nombre + meilleure offre
+ * - Liste complète en OPT-IN (évite l'ancrage des prix à la baisse)
  *
- * D-03 : aucun border-radius dans ce composant — coins droits partout.
+ * D-03 : aucun border-radius.
  * SÉCURITÉ (T-04-04-01) : aucun numéro de téléphone dans le rendu.
- *   Le type OfferHistoryItem ne contient QUE displayName — jamais phone.
  */
 
 import { useState } from 'react'
 
-// ── Types exportés ────────────────────────────────────────────────────────────
-
-/**
- * Données d'une offre individuelle pour l'historique côté visiteur.
- *
- * SÉCURITÉ CRITIQUE : ce type NE CONTIENT PAS le numéro de téléphone.
- * - visitorName = visitors.displayName uniquement (piège 4 RESEARCH.md)
- * - Le téléphone est reservé à l'email privé artiste (sendNewOfferEmail)
- *   et ne doit JAMAIS passer dans des props côté client (T-04-04-01)
- */
 export interface OfferHistoryItem {
   id: number
-  amount: string          // String numeric Drizzle — ex: "850.00"
+  amount: string
   message: string | null
-  visitorName: string     // visitors.displayName uniquement — JAMAIS visitors.phone
+  visitorName: string
   createdAt: Date
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
-
 interface OfferHistoryProps {
-  /**
-   * Nombre total d'offres pour cette œuvre.
-   * Si 0 → le composant retourne null (pas de section vide).
-   */
   offerCount: number
-  /**
-   * Meilleure offre (MAX(amount)) en string Drizzle ou null.
-   * Calculé côté serveur via MAX() — le client ne peut pas manipuler cette valeur.
-   * Affiché dans le résumé sans opt-in.
-   */
   bestOffer: string | null
-  /**
-   * Liste complète des offres triées par montant décroissant.
-   * Chargée côté serveur (Server Component page.tsx), passée en prop.
-   *
-   * POURQUOI charger toute la liste même si elle est cachée ?
-   * Le toggle est côté client (useState) — pas de round-trip réseau au clic.
-   * Pour de nombreuses offres (>100), envisager la pagination en Phase 5.
-   * [RESEARCH.md Pattern 5]
-   */
   allOffers: OfferHistoryItem[]
 }
 
-// ── Composant ─────────────────────────────────────────────────────────────────
-
-/**
- * Affiche un résumé des offres pour une œuvre avec historique en opt-in.
- *
- * États :
- * - offerCount === 0 → null (pas de section à vide)
- * - showAll === false → résumé + bouton "Voir toutes les offres"
- * - showAll === true → résumé + liste complète (bouton masqué)
- */
 export function OfferHistory({ offerCount, bestOffer, allOffers }: OfferHistoryProps) {
-  // État local du toggle — false par défaut (opt-in, MARKET-04)
   const [showAll, setShowAll] = useState(false)
 
-  // ── Garde : aucune offre → ne pas rendre la section ──────────────────────
-  // POURQUOI return null ? Une section vide "0 offre" serait confuse et laide.
-  // Le composant s'auto-supprime si aucune offre n'existe.
-  if (offerCount === 0) {
-    return null
-  }
+  if (offerCount === 0) return null
 
-  // ── Formatage du résumé ───────────────────────────────────────────────────
-  // Singulier/pluriel en français : "1 offre" ou "3 offres"
-  const offerLabel = offerCount > 1 ? `${offerCount} offres` : `${offerCount} offre`
-
-  // Meilleure offre formatée en euros (format français : 1 234 €)
-  // parseFloat() pour supprimer les zéros trailing (ex: "850.00" → 850)
-  const bestOfferFormatted = bestOffer
-    ? ` · Meilleure : ${parseFloat(bestOffer).toLocaleString('fr-FR')} €`
-    : ''
+  const plural = offerCount > 1
+  const bestFormatted = bestOffer
+    ? parseFloat(bestOffer).toLocaleString('fr-FR') + ' €'
+    : null
 
   return (
-    <div
-      style={{
-        // D-03 : pas de border-radius — coins droits
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-      }}
-    >
-      {/* ── a. Résumé TOUJOURS visible (MARKET-04) ──────────────────────── */}
-      {/*
-       * POURQUOI la meilleure offre est-elle visible sans clic ?
-       * Elle indique l'intérêt pour l'œuvre et donne une référence de valeur
-       * sans révéler les montants individuels (qui créeraient un effet d'ancrage).
-       * Le visiteur sait "quelqu'un a offert 850 €" mais pas "3 personnes ont offert
-       * 850, 750 et 600 €" — ce qui le découragerait de proposer plus.
-       */}
-      <p
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Toggle row pleine largeur */}
+      <button
+        type="button"
+        onClick={() => setShowAll(v => !v)}
         style={{
-          fontFamily: 'var(--font-space-mono)',
-          fontSize: '12px',
-          color: 'var(--color-ink)',
-          margin: 0,
-          // D-03 : pas de border-radius
+          background: 'transparent',
+          border: 0,
+          padding: '8px 0',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          textAlign: 'left',
+          width: '100%',
         }}
       >
-        <span>{offerLabel}</span>
-        {bestOffer && <span>{bestOfferFormatted}</span>}
-      </p>
-
-      {/* ── b. Bouton opt-in — visible uniquement si la liste est fermée ── */}
-      {/*
-       * POURQUOI opt-in et pas affiché par défaut ?
-       * Si un visiteur voit "Marie Dupont — 600 €", il sera influencé vers ce montant.
-       * En cachant les montants individuels, chaque visiteur estime la valeur
-       * de l'œuvre indépendamment. C'est une décision éthique pour protéger
-       * l'artiste et les acheteurs potentiels. (CLAUDE.md)
-       */}
-      {!showAll && (
-        <button
-          type="button"
-          onClick={() => setShowAll(true)}
+        <span
           style={{
-            // Apparence : lien texte, pas de bouton classique
             fontFamily: 'var(--font-space-mono)',
             fontSize: '11px',
-            color: 'var(--color-teal)',
-            textDecoration: 'underline',
-            background: 'none',
-            border: 'none',
-            padding: '0',
-            cursor: 'pointer',
-            // D-03 : pas de border-radius
-            // Touch target minimum 44px (CLAUDE.md WCAG)
-            minHeight: '44px',
-            display: 'flex',
-            alignItems: 'center',
-            textAlign: 'left',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--color-ink-muted)',
           }}
         >
-          Voir toutes les offres
-        </button>
-      )}
-
-      {/* ── c. Liste complète — visible uniquement après opt-in ─────────── */}
-      {showAll && (
-        <ul
+          {offerCount} offre{plural ? 's' : ''} reçue{plural ? 's' : ''}
+          {bestFormatted && (
+            <>
+              {' · '}Meilleure&nbsp;
+              <span style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+                {bestFormatted}
+              </span>
+            </>
+          )}
+        </span>
+        <span
           style={{
-            listStyle: 'none',
-            padding: 0,
+            fontFamily: 'var(--font-space-mono)',
+            fontSize: '13px',
+            color: 'var(--color-ink-muted)',
+            flexShrink: 0,
+            marginLeft: 8,
+          }}
+        >
+          {showAll ? '↑' : '↓'}
+        </span>
+      </button>
+
+      {/* Liste complète — visible uniquement après opt-in */}
+      {showAll && (
+        <ol
+          style={{
             margin: 0,
+            padding: 0,
+            listStyle: 'none',
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px',
-            // D-03 : pas de border-radius sur la liste
+            borderTop: '1px solid rgba(0,0,0,0.08)',
           }}
         >
-          {allOffers.map((offer) => (
+          {allOffers.map((offer, i) => (
             <li
               key={offer.id}
               style={{
-                borderTop: '1px solid rgba(var(--color-ink-rgb, 26,26,26), 0.1)',
-                paddingTop: '8px',
-                // D-03 : pas de border-radius — coins droits
+                padding: '12px 0',
+                borderBottom: '1px solid rgba(0,0,0,0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
               }}
             >
-              {/* Nom du visiteur + montant — sur la même ligne */}
-              {/*
-               * SÉCURITÉ (T-04-04-01) : on affiche UNIQUEMENT visitorName.
-               * Le numéro de téléphone (visitors.phone) n'est pas dans OfferHistoryItem
-               * et ne doit JAMAIS figurer ici — données personnelles, canal public.
-               */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'baseline',
-                  gap: '8px',
-                }}
-              >
-                {/* displayName — en gras pour identifier rapidement l'offrant */}
+              {/* Nom + badge "Meilleure" + montant */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span
                   style={{
-                    fontFamily: 'var(--font-space-mono)',
-                    fontSize: '12px',
-                    fontWeight: 700,
+                    fontFamily: 'var(--font-geist-sans)',
+                    fontWeight: 600,
+                    fontSize: '13px',
                     color: 'var(--color-ink)',
                   }}
                 >
                   {offer.visitorName}
+                  {/* Badge jaune "Meilleure" sur la première offre */}
+                  {i === 0 && (
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        padding: '1px 6px',
+                        background: 'var(--color-yellow)',
+                        fontFamily: 'var(--font-space-mono)',
+                        fontSize: '10px',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--color-ink)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Meilleure
+                    </span>
+                  )}
                 </span>
-
-                {/* Montant formaté en euros (format français) */}
                 <span
                   style={{
                     fontFamily: 'var(--font-space-mono)',
-                    fontSize: '12px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    fontVariantNumeric: 'tabular-nums',
                     color: 'var(--color-ink)',
-                    whiteSpace: 'nowrap',
                   }}
                 >
                   {parseFloat(offer.amount).toLocaleString('fr-FR')} €
                 </span>
               </div>
 
-              {/* Message optionnel du visiteur — en italique Cormorant */}
+              {/* Message optionnel — italic Cormorant */}
               {offer.message && (
                 <p
                   style={{
+                    margin: 0,
                     fontFamily: 'var(--font-cormorant)',
                     fontStyle: 'italic',
                     fontSize: '14px',
-                    color: 'var(--color-ink)',
-                    margin: '4px 0 0 0',
                     lineHeight: 1.4,
-                    // D-03 : pas de border-radius
+                    color: 'var(--color-ink-muted)',
                   }}
                 >
-                  {offer.message}
+                  « {offer.message} »
                 </p>
               )}
 
-              {/* Date de l'offre — Space Mono 10px, couleur muted */}
-              <p
+              {/* Date — Space Mono 11px */}
+              <span
                 style={{
                   fontFamily: 'var(--font-space-mono)',
-                  fontSize: '10px',
+                  fontSize: '11px',
+                  letterSpacing: '0.05em',
                   color: 'var(--color-ink-muted)',
-                  margin: '4px 0 0 0',
                 }}
               >
                 {new Date(offer.createdAt).toLocaleDateString('fr-FR')}
-              </p>
+              </span>
             </li>
           ))}
-        </ul>
+        </ol>
       )}
     </div>
   )

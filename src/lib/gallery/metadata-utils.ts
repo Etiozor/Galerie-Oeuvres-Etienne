@@ -18,7 +18,7 @@ interface ArtworkForMetadata {
   description: string | null | undefined
   widthCm: string | null | undefined
   heightCm: string | null | undefined
-  processedPath: string | null | undefined
+  originalPath: string | null | undefined
   type: { name: string } | null
   medium: { name: string } | null
 }
@@ -62,10 +62,8 @@ export function buildArtworkMetadata(
     truncateDescription(artwork.description) ??
     `${artwork.type?.name ?? ''} · ${artwork.medium?.name ?? ''} · ${artwork.widthCm ?? '?'}×${artwork.heightCm ?? '?'} cm`
 
-  // URL de l'image og:image — incluse seulement si processedPath est présent
-  // SÉCURITÉ (T-03-08) : en dev, l'URL pointe vers localhost et n'est pas accessible
-  // aux crawlers sociaux. Comportement acceptable en Phase 3 (dev only).
-  const imageUrl = artwork.processedPath ? imageBaseUrl : null
+  // URL de l'image og:image — incluse seulement si originalPath est présent
+  const imageUrl = artwork.originalPath ? imageBaseUrl : null
 
   return {
     title: `${artwork.title} — Galerie POF`,

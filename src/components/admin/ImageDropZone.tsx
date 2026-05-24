@@ -100,12 +100,12 @@ export const ImageDropZone = forwardRef<ImageDropZoneHandle, ImageDropZoneProps>
             style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
         ) : (
-          <div style={{ padding: '0 32px', pointerEvents: 'none' }}>
-            <div style={{ font: '400 13px var(--font-space-mono)', letterSpacing: '0.04em' }}>
+          <div style={{ padding: '0 32px', pointerEvents: 'none', textAlign: 'center' }}>
+            <div style={{ font: '400 13px var(--font-space-mono)', letterSpacing: '0.04em', color: 'var(--color-ink-muted)' }}>
               Glissez la photo ici &nbsp;·&nbsp; ou cliquez pour parcourir
             </div>
-            <div style={{ font: '400 11px var(--font-space-mono)', color: 'var(--color-admin-mute-2)', marginTop: 8, letterSpacing: '0.02em' }}>
-              JPEG / PNG · 20 MB max
+            <div style={{ font: '400 11px var(--font-space-mono)', color: 'var(--color-ink-muted)', marginTop: 8, letterSpacing: '0.02em', opacity: 0.7 }}>
+              JPEG / PNG · 20 Mo max
             </div>
           </div>
         )}
@@ -115,7 +115,9 @@ export const ImageDropZone = forwardRef<ImageDropZoneHandle, ImageDropZoneProps>
             position: 'absolute', left: 16, bottom: 16,
             padding: '6px 10px',
             background: 'var(--badge-failed-bg)', color: 'var(--badge-failed-fg)',
+            border: '1px solid rgba(188,75,81,0.30)',
             font: '600 12px var(--font-geist-sans)',
+            borderRadius: 'var(--radius-sm)',
           }}>
             {error}
           </div>

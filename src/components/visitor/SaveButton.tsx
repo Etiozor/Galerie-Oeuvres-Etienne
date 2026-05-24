@@ -1,106 +1,128 @@
 'use client'
+
 /**
- * Bouton cœur pour enregistrer/retirer une œuvre des favoris.
+ * Bouton cœur pour enregistrer/retirer une œuvre des favoris — Galerie POF.
  *
- * POURQUOI un Client Component ?
- * L'état toggle (cœur plein / vide) est mis à jour optimistiquement côté client
- * via useState — pas de rechargement de page. La Server Action confirme en DB
- * via startTransition pour ne pas bloquer l'UI pendant la requête réseau.
+ * TOUJOURS VISIBLE — indépendamment de l'état d'identification du visiteur.
+ * (Décision design Variante A : le cœur "ne doit plus être perdu".)
  *
- * VISIBLE uniquement si le visiteur est connecté — la condition est dans la page
- * parente (/artworks/[id]/page.tsx) : {session.visitorId && <SaveButton />} (D-14).
+ * DEUX COMPORTEMENTS SELON L'ÉTAT D'IDENTIFICATION :
+ * 1. Visiteur NON identifié (visitorId undefined) :
+ *    → Affiche ♡ + "Enregistrer", clic ouvre VisitorProfileModal.
+ *    → Après identification, revalidatePath() rerend la page avec visitorId défini.
  *
- * ACCESSIBILITÉ :
- * - aria-label décrit l'action (pas l'état) : "Retirer des enregistrements" / "Enregistrer l'œuvre"
- * - disabled + opacity 0.6 pendant le chargement (isPending)
+ * 2. Visiteur identifié (visitorId défini) :
+ *    → Mise à jour optimiste ♡/♥ via toggleSavedArtwork Server Action.
+ *    → Toast implicite via le changement visuel immédiat.
  *
- * DESIGN (D-03) : borderRadius: 0 — pas de border-radius dans la galerie POF.
+ * DESIGN (Variante A "Cartel de musée") :
+ * - Inline-flex : texte "Enregistrer"/"Enregistrée" (Space Mono 11px) + glyph ♡/♥ (28px)
+ * - Texte et cœur rouges quand enregistré, muted/ink quand non enregistré
+ * - D-03 : pas de border-radius
  */
+
 import { useState, useTransition } from 'react'
 import { toggleSavedArtwork } from '@/actions/savedArtworks'
-
-// ── Props ────────────────────────────────────────────────────────────────────
+import { VisitorProfileModal } from '@/components/visitor/VisitorProfileModal'
 
 interface SaveButtonProps {
   /** ID de l'œuvre à basculer dans les favoris */
   artworkId: number
-  /** État initial du favori, lu côté serveur depuis saved_artworks (D-14) */
+  /** État initial lu côté serveur — false si visiteur non identifié */
   initialSaved: boolean
+  /**
+   * ID du visiteur identifié — undefined si pas de session active.
+   * Quand undefined : clic ouvre VisitorProfileModal au lieu de toggleSavedArtwork.
+   */
+  visitorId?: number
+  /** Mode icône seul — masque le label texte (usage dans la galerie masonry) */
+  iconOnly?: boolean
+  /** Couleur du cœur non rempli — défaut var(--color-ink), utiliser '#fff' sur fond sombre */
+  heartColor?: string
 }
 
-// ── Composant ────────────────────────────────────────────────────────────────
-
-/**
- * Bouton toggle favori avec mise à jour optimiste.
- *
- * Logique :
- * 1. Clic → setIsSaved (optimiste) + startTransition(toggleSavedArtwork)
- * 2. Si succès → setIsSaved(result.saved) pour synchroniser avec la réponse serveur
- * 3. Si erreur → revenir à l'état précédent (rollback optimiste)
- */
-export function SaveButton({ artworkId, initialSaved }: SaveButtonProps) {
-  // État local du favori — initialisé depuis le Server Component parent
+export function SaveButton({ artworkId, initialSaved, visitorId, iconOnly, heartColor }: SaveButtonProps) {
   const [isSaved, setIsSaved] = useState(initialSaved)
-  // isPending = true pendant l'appel à la Server Action
   const [isPending, startTransition] = useTransition()
+  // Modal d'identification — ouvert quand le visiteur clique sans être identifié
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   function handleToggle() {
-    // ── Mise à jour optimiste : l'UI répond immédiatement ────────────────
+    if (visitorId === undefined) {
+      // Visiteur non identifié → ouvrir le modal d'identification
+      setIsModalOpen(true)
+      return
+    }
+
+    // Visiteur identifié → mise à jour optimiste
     const previousState = isSaved
     setIsSaved(prev => !prev)
 
     startTransition(async () => {
       const result = await toggleSavedArtwork(artworkId)
-
       if (result.success) {
-        // ── Synchroniser avec la réponse serveur (état canonique) ─────────
-        // POURQUOI re-synchroniser ? L'état optimiste peut diverger si deux
-        // onglets togglent simultanément. On prend l'état serveur comme référence.
         setIsSaved(result.saved)
       } else {
-        // ── Rollback en cas d'erreur ──────────────────────────────────────
-        // Remettre l'état précédent pour indiquer que l'action a échoué
         setIsSaved(previousState)
-        // Note : une notification d'erreur pourrait être ajoutée ici en v2
       }
     })
   }
 
   return (
-    <button
-      onClick={handleToggle}
-      disabled={isPending}
-      aria-label={isSaved ? 'Retirer des enregistrements' : "Enregistrer l'œuvre"}
-      title={isSaved ? 'Retirer des enregistrements' : "Enregistrer l'œuvre"}
-      style={{
-        width: '36px',
-        height: '36px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: isSaved ? 'var(--color-ink)' : 'transparent',
-        border: '1px solid var(--color-ink)',
-        borderRadius: 0,  // D-03 : pas de border-radius dans la galerie POF
-        cursor: isPending ? 'not-allowed' : 'pointer',
-        opacity: isPending ? 0.6 : 1,
-        transition: 'background-color 0.15s ease, opacity 0.15s ease',
-        flexShrink: 0,
-      }}
-    >
-      {/*
-       * ♥ plein si enregistré, ♡ vide sinon.
-       * POURQUOI Unicode et pas une bibliothèque d'icônes ?
-       * Évite une dépendance supplémentaire pour deux caractères.
-       * Les caractères Unicode sont rendus nativement par tous les navigateurs.
-       */}
-      <span style={{
-        fontSize: '16px',
-        color: isSaved ? '#ffffff' : 'var(--color-ink)',
-        lineHeight: 1,
-        userSelect: 'none',
-      }}>
-        {isSaved ? '♥' : '♡'}
-      </span>
-    </button>
+    <>
+      <button
+        onClick={handleToggle}
+        disabled={isPending}
+        aria-label={isSaved ? 'Retirer des enregistrements' : "Enregistrer l'œuvre"}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          background: 'transparent',
+          border: 0,
+          padding: 4,
+          cursor: isPending ? 'not-allowed' : 'pointer',
+          opacity: isPending ? 0.6 : 1,
+          transition: 'opacity 0.15s ease',
+        }}
+      >
+        {/* Label texte — masqué en mode iconOnly (galerie masonry) */}
+        {!iconOnly && (
+          <span
+            style={{
+              fontFamily: 'var(--font-space-mono)',
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: isSaved ? 'var(--color-red)' : 'var(--color-ink-muted)',
+              transition: 'color 0.15s ease',
+            }}
+          >
+            {isSaved ? 'Enregistrée' : 'Enregistrer'}
+          </span>
+        )}
+
+        {/* Glyph cœur */}
+        <span
+          style={{
+            fontFamily: 'var(--font-geist-sans)',
+            fontSize: iconOnly ? '22px' : '28px',
+            lineHeight: 1,
+            color: isSaved ? 'var(--color-red)' : (heartColor ?? 'var(--color-ink)'),
+            transform: isSaved ? 'scale(1.15)' : 'scale(1)',
+            transition: 'transform 0.15s ease, color 0.15s ease',
+            userSelect: 'none',
+          }}
+        >
+          {isSaved ? '♥' : '♡'}
+        </span>
+      </button>
+
+      {/* Modal d'identification — déclenché uniquement pour les visiteurs non identifiés */}
+      <VisitorProfileModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
   )
 }

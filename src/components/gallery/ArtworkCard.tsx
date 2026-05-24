@@ -1,31 +1,44 @@
+'use client'
 /**
  * Carte vignette d'une œuvre dans la galerie masonry.
  *
- * POURQUOI break-inside: avoid sur le conteneur racine ?
- * Piège 3 (03-RESEARCH.md) : break-inside doit être sur l'enfant DIRECT
- * du conteneur .masonry-grid. Si on ajoute un wrapper supplémentaire, la
- * propriété doit être sur ce wrapper. Ici, ArtworkCard est directement
- * enfant du .masonry-grid — tout va bien.
+ * Deux modes :
+ * - onOpen fourni → clic ouvre la lightbox (GalleryClient)
+ * - onOpen absent → clic navigue vers /artworks/{id} (Link standard)
  *
- * POURQUOI <img> standard et pas next/image ?
- * Anti-pattern documenté (03-RESEARCH.md) : les URLs /api/uploads/...
- * sont servies par un Route Handler local. next/image nécessiterait une
- * configuration remotePatterns complexe. <img> avec srcSet est suffisant
- * en Phase 3.
- *
- * POURQUOI thumbnailUrl en prop et pas calculé ici ?
- * Piège 5 : getStorage() utilise node:fs — incompatible avec le bundle
- * navigateur. Les URLs sont résolues côté serveur dans page.tsx et
- * passées en props.
- *
- * Specs UI-SPEC section 5 :
- * - Image : aspect-ratio basé sur dimensions réelles (D-07)
- * - Image : max-height 640px, object-fit cover
- * - Overlay : rgba(42,42,42,0.55) + "Voir l'œuvre" Space Mono (D-11)
- * - Info strip : titre Oswald tronqué + badge statut (D-09)
+ * POURQUOI thumbnailUrl en prop ? Piège 5 : getStorage() = node:fs.
+ * POURQUOI 'use client' ? Nécessaire pour importer SaveButton (cœur de favori au survol).
  */
 import Link from 'next/link'
-import { ArtworkStatusBadge } from '@/components/artwork/ArtworkStatusBadge'
+import { SaveButton } from '@/components/visitor/SaveButton'
+
+function StatusStamp({ status }: { status: string }) {
+  const cfg: Record<string, { color: string; label: string } | null> = {
+    available: null,
+    reserved: { color: 'var(--color-orange)', label: 'Réservé' },
+    sold:      { color: 'var(--color-red)',    label: 'Vendu'   },
+    given:     { color: 'var(--color-green)',  label: 'Donné'   },
+  }
+  const c = cfg[status]
+  if (!c) return null
+  return (
+    <div aria-hidden="true" style={{
+      position: 'absolute', inset: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      pointerEvents: 'none',
+    }}>
+      <span style={{
+        transform: 'rotate(-10deg)',
+        fontFamily: 'var(--font-oswald)', fontSize: '22px', fontWeight: 700,
+        lineHeight: 1, letterSpacing: '0.22em', color: c.color,
+        border: `2.5px solid ${c.color}`,
+        padding: '6px 14px',
+        background: 'rgba(242,232,207,0.75)',
+        textTransform: 'uppercase', borderRadius: 0,
+      }}>{c.label}</span>
+    </div>
+  )
+}
 
 interface ArtworkCardProps {
   id: number
@@ -34,6 +47,14 @@ interface ArtworkCardProps {
   thumbnailUrl: string | null
   widthCmNum: number
   heightCmNum: number
+  typeName: string | null
+  mediumName: string | null
+  basePriceNum: number
+  onOpen?: (id: number) => void
+  /** ID du visiteur connecté — undefined si non identifié */
+  visitorId?: number
+  /** État initial du favori (lu côté serveur) */
+  initialSaved?: boolean
 }
 
 export function ArtworkCard({
@@ -43,134 +64,108 @@ export function ArtworkCard({
   thumbnailUrl,
   widthCmNum,
   heightCmNum,
+  mediumName,
+  basePriceNum,
+  onOpen,
+  visitorId,
+  initialSaved = false,
 }: ArtworkCardProps) {
-  return (
-    /*
-     * break-inside: avoid sur l'élément enfant DIRECT de .masonry-grid.
-     * Sans cette propriété, la carte pourrait se couper entre l'image et
-     * l'info strip (piège 3 RESEARCH.md).
-     */
-    <div
-      className="artwork-card"
-      style={{
-        breakInside: 'avoid',
-        marginBottom: '2px',
-        width: '100%',
-        position: 'relative',
-        zIndex: 1,
-      }}
-    >
-      <Link href={`/artworks/${id}`} style={{ textDecoration: 'none', display: 'block' }}>
-        {/* Zone image + overlay hover */}
-        {/*
-         * width: 100% OBLIGATOIRE ici.
-         * Dans un layout CSS columns, sans width explicite sur ce div intermédiaire,
-         * le navigateur peut ignorer la contrainte de colonne et laisser l'image
-         * dépasser au lieu de la réduire. (Bug observé en Phase 3.)
-         */}
-        <div style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt={title}
-              loading="lazy"
-              style={{
-                width: '100%',
-                height: 'auto',
-                display: 'block',
-                // D-07 : aspect-ratio calculé depuis les dimensions réelles de l'œuvre
-                // Les valeurs numériques sont déjà converties par parseFloat dans page.tsx
-                aspectRatio: `${widthCmNum} / ${heightCmNum}`,
-                // Évite les œuvres très hautes d'écraser toute la grille
-                maxHeight: '640px',
-                objectFit: 'cover',
-              }}
-            />
-          ) : (
-            // Placeholder si l'image n'est pas encore disponible (ex: thumbnailPath null)
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: `${widthCmNum} / ${heightCmNum}`,
-                maxHeight: '640px',
-                backgroundColor: 'var(--color-surface)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-space-mono)',
-                  fontSize: '10px',
-                  color: 'var(--color-ink-muted)',
-                }}
-              >
-                Image à venir
-              </span>
-            </div>
-          )}
-
-          {/*
-           * Overlay hover desktop (D-11).
-           * opacity: 0 par défaut → 1 au survol via CSS globals :
-           * .artwork-card:hover .artwork-overlay { opacity: 1 !important; }
-           * La transition 0.25s ease est définie ici.
-           */}
-          <div
-            className="artwork-overlay"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: 'rgba(42,42,42,0.55)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: 0,
-              transition: 'opacity 0.25s ease',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-space-mono)',
-                color: '#f2e8cf',
-                textTransform: 'uppercase',
-                fontSize: '11px',
-                letterSpacing: '0.1em',
-              }}
-            >
-              Voir l&apos;œuvre
-            </span>
-          </div>
-        </div>
-
-        {/* Info strip sous l'image (D-09) : titre tronqué + badge statut */}
-        <div
+  const visual = (
+    <div style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
+      {thumbnailUrl ? (
+        <img
+          src={thumbnailUrl}
+          alt={title}
+          loading="lazy"
           style={{
-            backgroundColor: 'var(--color-bg)',
-            padding: '6px 8px 4px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
+            width: '100%', height: 'auto', display: 'block',
+            borderRadius: 'var(--radius-sm)',
           }}
-        >
-          <span
-            style={{
-              fontFamily: 'var(--font-oswald)',
-              fontSize: '14px',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              flex: 1,
-            }}
-          >
-            {title}
+        />
+      ) : (
+        <div style={{
+          width: '100%', aspectRatio: `${widthCmNum} / ${heightCmNum}`,
+          backgroundColor: 'var(--color-surface)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: 'var(--radius-sm)',
+        }}>
+          <span style={{ fontFamily: 'var(--font-space-mono)', fontSize: '10px', color: 'var(--color-ink-muted)' }}>
+            Image à venir
           </span>
-          <ArtworkStatusBadge status={status} />
         </div>
+      )}
+
+      <StatusStamp status={status} />
+
+      <div className="artwork-overlay" style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(to top, rgba(26,26,26,0.78) 0%, rgba(26,26,26,0.45) 55%, rgba(26,26,26,0) 100%)',
+        color: '#fff',
+        opacity: 0,
+        transition: 'opacity 200ms ease',
+        display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        padding: '14px 16px',
+      }}>
+        {/* Bouton cœur — top-right, stopPropagation pour ne pas déclencher le clic de la carte */}
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'absolute', top: 8, right: 8 }}
+        >
+          <SaveButton
+            artworkId={id}
+            initialSaved={initialSaved}
+            visitorId={visitorId}
+            iconOnly
+            heartColor="rgba(255,255,255,0.85)"
+          />
+        </div>
+
+        <div style={{
+          fontFamily: 'var(--font-oswald)', fontSize: '15px', fontWeight: 600,
+          lineHeight: 1.15, letterSpacing: '0.05em', textTransform: 'uppercase',
+        }}>{title}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6, gap: 12 }}>
+          <span style={{ fontFamily: 'var(--font-space-mono)', fontSize: '10px', letterSpacing: '0.08em', opacity: 0.78, textTransform: 'uppercase' }}>
+            {mediumName ?? ''} · {widthCmNum}×{heightCmNum}
+          </span>
+          {basePriceNum > 0 && (
+            <span style={{ fontFamily: 'var(--font-space-mono)', fontSize: '13px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+              {basePriceNum.toLocaleString('fr-FR')} €
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  if (onOpen) {
+    return (
+      <div
+        className="artwork-card"
+        onClick={() => onOpen(id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && onOpen(id)}
+        style={{
+          breakInside: 'avoid', marginBottom: '20px', width: '100%',
+          position: 'relative', zIndex: 1,
+          borderRadius: 'var(--radius-sm)', overflow: 'hidden',
+          cursor: 'pointer', outline: 'none',
+        }}
+      >
+        {visual}
+      </div>
+    )
+  }
+
+  return (
+    <div className="artwork-card" style={{
+      breakInside: 'avoid', marginBottom: '20px', width: '100%',
+      position: 'relative', zIndex: 1,
+      borderRadius: 'var(--radius-sm)', overflow: 'hidden',
+    }}>
+      <Link href={`/artworks/${id}`} style={{ textDecoration: 'none', display: 'block' }}>
+        {visual}
       </Link>
     </div>
   )

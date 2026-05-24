@@ -1,200 +1,142 @@
 /**
- * Page de liste des œuvres — /admin/artworks.
+ * Page Mes œuvres — /admin/artworks (07-02 Direction B).
  *
- * Server Component : la liste est rendue côté serveur à chaque refresh.
- * Le composant PipelinePoller (Client Component) déclenche ces refreshs
- * toutes les 3 secondes si des œuvres sont en PENDING ou PROCESSING.
+ * Server Component : charge les données depuis la DB avec jointures,
+ * calcule les statistiques (comptes d'offres, favoris) et passe
+ * tout au Client Component ArtworksClient.
  *
- * POURQUOI un Server Component et pas un Client Component ?
- * La liste est protégée (artiste uniquement) mais statique en lecture.
- * Rendre côté serveur garantit que les données sont fraîches à chaque visite
- * et évite un useEffect + fetch côté client avec gestion d'état.
+ * POURQUOI trois requêtes séparées et pas une seule avec agrégation ?
+ * Drizzle ORM ne supporte pas nativement les GROUP BY avec COUNT dans
+ * les jointures multiples. Trois requêtes ciblées puis fusion JS est
+ * plus lisible et performant que du SQL complexe avec sous-requêtes.
  *
- * Architecture de la page :
- * - AdminArtworksPage (Server) : auth check + requête DB + rendu initial
- *   └── PipelinePoller (Client) : polling 3s si hasPendingItems
- *   └── PipelineBadge (Server) : badge coloré par état
- *   └── RetryButton (Client) : bouton avec état loading, appelle retryPipeline
+ * SÉCURITÉ : double vérification auth (middleware + page).
  */
+
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { db } from '@/db'
-import { artworks } from '@/db/schema'
-import { desc } from 'drizzle-orm'
-import Link from 'next/link'
-import { PipelineBadge } from './_components/PipelineBadge'
-import { PipelinePoller } from './_components/PipelinePoller'
-import { RetryButton } from './_components/RetryButton'
-
-/**
- * Badge de statut de vente d'une œuvre.
- *
- * POURQUOI des couleurs inline et pas des classes Tailwind ?
- * Les couleurs exactes du design system (UI-SPEC.md Phase 5) ne peuvent pas être
- * garanties via la cascade Tailwind sur ce projet (décision 02-03 pattern établi).
- * D-03 : borderRadius: 0 sur tous les badges sans exception.
- *
- * Couleurs conformes UI-SPEC.md Phase 5 :
- * - available → vert léger (bg rgba(91,142,125,0.12), texte #5b8e7d)
- * - reserved  → orange léger (bg rgba(244,162,89,0.15), texte #a05a20)
- * - sold      → rouge léger (bg rgba(188,75,81,0.12), texte #bc4b51)
- * - given     → vert olive léger (bg rgba(140,179,105,0.15), texte #5a7a3a)
- */
-function StatusBadge({ status }: { status: string }) {
-  // Configuration couleur et libellé par statut
-  const config: Record<string, { bg: string; text: string; label: string }> = {
-    available: { bg: 'rgba(91,142,125,0.12)',  text: '#5b8e7d', label: 'Disponible' },
-    reserved:  { bg: 'rgba(244,162,89,0.15)',  text: '#a05a20', label: 'Réservé' },
-    sold:      { bg: 'rgba(188,75,81,0.12)',   text: '#bc4b51', label: 'Vendu' },
-    given:     { bg: 'rgba(140,179,105,0.15)', text: '#5a7a3a', label: 'Donné' },
-  }
-  // Fallback pour un statut inconnu (sécurité défensive)
-  const c = config[status] ?? { bg: '#f5f5f5', text: '#737373', label: status }
-
-  return (
-    <span style={{
-      fontSize: '12px',
-      fontWeight: 600,
-      padding: '3px 8px',
-      backgroundColor: c.bg,
-      color: c.text,
-      borderRadius: 0,  // D-03 : zéro coins arrondis
-      fontFamily: 'var(--font-geist-sans)',
-      whiteSpace: 'nowrap',
-    }}>
-      {c.label}
-    </span>
-  )
-}
+import { artworks, artworkTypes, mediums, offers, visitors, savedArtworks } from '@/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { getStorage } from '@/lib/storage'
+import type { ArtworkRow, OfferDetail } from './_components/ArtworksClient'
+import { ArtworksClient } from './_components/ArtworksClient'
 
 export default async function AdminArtworksPage() {
-  // ── Auth : même pattern que src/app/admin/page.tsx ──
-  // Double vérification : le middleware a déjà bloqué les non-connectés,
-  // mais on vérifie de nouveau ici pour la défense en profondeur.
+  // ── 1. Vérification de session ──
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/admin/login')
 
-  // ── Charger toutes les œuvres, plus récentes en premier ──
-  // desc(artworks.createdAt) = ordre chronologique inversé (dernière upload en tête)
-  const allArtworks = await db
-    .select()
+  // ── 2. Charger les œuvres avec noms de type et de médium ──
+  // LEFT JOIN pour ne pas exclure les œuvres sans type/médium assigné
+  const artworkRows = await db
+    .select({
+      id:           artworks.id,
+      title:        artworks.title,
+      status:       artworks.status,
+      publishedAt:  artworks.publishedAt,
+      originalPath: artworks.originalPath,
+      widthCm:      artworks.widthCm,
+      heightCm:     artworks.heightCm,
+      basePrice:    artworks.basePrice,
+      createdYear:  artworks.createdYear,
+      createdMonth: artworks.createdMonth,
+      createdAt:    artworks.createdAt,
+      typeName:     artworkTypes.name,
+      mediumName:   mediums.name,
+    })
     .from(artworks)
+    .leftJoin(artworkTypes, eq(artworks.typeId, artworkTypes.id))
+    .leftJoin(mediums, eq(artworks.mediumId, mediums.id))
     .orderBy(desc(artworks.createdAt))
 
-  // ── Calculer si des œuvres sont en cours de traitement (pour le polling) ──
-  // PENDING et PROCESSING sont des états transitoires — ils appellent le polling.
-  // AWAITING_VALIDATION, PUBLISHED, FAILED sont des états stables — l'artiste doit agir.
-  const hasPendingItems = allArtworks.some(
-    (a) => a.pipelineState === 'pending' || a.pipelineState === 'processing'
-  )
+  // ── 3. Charger toutes les offres avec les infos visiteur ──
+  // Trié par montant décroissant pour que la meilleure offre soit en tête dans le drawer
+  const allOffers = await db
+    .select({
+      id:                   offers.id,
+      artworkId:            offers.artworkId,
+      amount:               offers.amount,
+      message:              offers.message,
+      createdAt:            offers.createdAt,
+      visitorDisplayName:   visitors.displayName,
+      visitorPhone:         visitors.phone,
+      visitorEmail:         visitors.email,
+    })
+    .from(offers)
+    .leftJoin(visitors, eq(offers.visitorId, visitors.id))
+    .orderBy(desc(offers.amount))
+
+  // ── 4. Charger les favoris pour calculer le compte par œuvre ──
+  const savedRows = await db
+    .select({ artworkId: savedArtworks.artworkId })
+    .from(savedArtworks)
+
+  // ── 5. Construire les maps d'agrégation ──
+
+  // Regrouper les offres par artworkId
+  const offersByArtworkId = new Map<number, typeof allOffers>()
+  for (const o of allOffers) {
+    const existing = offersByArtworkId.get(o.artworkId) ?? []
+    existing.push(o)
+    offersByArtworkId.set(o.artworkId, existing)
+  }
+
+  // Compter les favoris par artworkId
+  const savedCountByArtworkId = new Map<number, number>()
+  for (const s of savedRows) {
+    savedCountByArtworkId.set(s.artworkId, (savedCountByArtworkId.get(s.artworkId) ?? 0) + 1)
+  }
+
+  // ── 6. Résoudre les URLs de stockage et assembler la structure finale ──
+  const storage = getStorage()
+
+  const data: ArtworkRow[] = artworkRows.map(a => {
+    const artworkOffers = offersByArtworkId.get(a.id) ?? []
+
+    // Calculer la meilleure offre (max) — null si aucune offre
+    const topOffer = artworkOffers.length > 0
+      ? Math.max(...artworkOffers.map(o => parseFloat(o.amount)))
+      : null
+
+    // Nettoyer les champs visiteur (nulls de LEFT JOIN — en pratique jamais null)
+    const offerDetails: OfferDetail[] = artworkOffers.map(o => ({
+      id:                   o.id,
+      amount:               o.amount,
+      message:              o.message,
+      createdAt:            o.createdAt,
+      visitorDisplayName:   o.visitorDisplayName ?? 'Visiteur inconnu',
+      visitorPhone:         o.visitorPhone ?? '',
+      visitorEmail:         o.visitorEmail ?? null,
+    }))
+
+    return {
+      id:           a.id,
+      title:        a.title,
+      status:       a.status,
+      publishedAt:  a.publishedAt,
+      // Résoudre la clé de stockage en URL publique
+      imageUrl:     a.originalPath ? storage.getUrl(a.originalPath) : null,
+      widthCm:      a.widthCm,
+      heightCm:     a.heightCm,
+      basePrice:    a.basePrice,
+      createdYear:  a.createdYear ?? null,
+      createdMonth: a.createdMonth ?? null,
+      createdAt:    a.createdAt,
+      typeName:     a.typeName ?? null,
+      mediumName:   a.mediumName ?? null,
+      offerCount:   artworkOffers.length,
+      topOffer,
+      savedCount:   savedCountByArtworkId.get(a.id) ?? 0,
+      offers:       offerDetails,
+    }
+  })
 
   return (
-    <main style={{ padding: '48px 16px', fontFamily: 'var(--font-geist-sans)', maxWidth: '960px', margin: '0 auto' }}>
-      {/* Polling automatique — invisible, déclenche router.refresh() toutes les 3s */}
-      {/* Ne polling que si hasPendingItems — sinon le composant ne fait rien */}
-      <PipelinePoller hasPendingItems={hasPendingItems} />
-
-      {/* En-tête : titre + bouton upload */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        {/* Titre — Heading (UI-SPEC) */}
-        <h1 style={{ fontSize: '28px', fontWeight: 600, margin: 0 }}>
-          Mes œuvres
-        </h1>
-        <Link
-          href="/admin/upload"
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#171717',
-            color: '#ffffff',
-            borderRadius: 0,  // D-03 : zéro coins arrondis
-            fontSize: '14px',
-            fontWeight: 600,
-            textDecoration: 'none',
-          }}
-        >
-          Uploader une photo
-        </Link>
-      </div>
-
-      {/* État vide — texte EXACT de UI-SPEC.md */}
-      {allArtworks.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: '#737373' }}>
-          <p style={{ fontSize: '16px', marginBottom: '16px' }}>
-            Aucune œuvre pour l&apos;instant. Uploader votre première photo pour commencer.
-          </p>
-          <Link
-            href="/admin/upload"
-            style={{ color: '#171717', fontWeight: 600, textDecoration: 'underline' }}
-          >
-            Uploader une photo
-          </Link>
-        </div>
-      )}
-
-      {/* Liste des œuvres */}
-      {allArtworks.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {allArtworks.map((artwork) => (
-            <div
-              key={artwork.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '12px 16px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: 0,  // D-03 : zéro coins arrondis
-                flexWrap: 'wrap',
-              }}
-            >
-              {/* Titre de l'œuvre — cliquable pour ouvrir le détail */}
-              <Link
-                href={`/admin/artworks/${artwork.id}`}
-                style={{ flex: 1, fontSize: '16px', minWidth: '120px', color: '#171717', textDecoration: 'none', fontWeight: 500 }}
-              >
-                {artwork.title}
-              </Link>
-
-              {/* Badge d'état pipeline — couleur EXACTE selon UI-SPEC.md */}
-              <PipelineBadge state={artwork.pipelineState} />
-
-              {/* Badge statut de vente — couleurs exactes UI-SPEC.md Phase 5, D-03 */}
-              <StatusBadge status={artwork.status} />
-
-              {/* Date d'upload */}
-              <span style={{ fontSize: '14px', color: '#737373', whiteSpace: 'nowrap' }}>
-                {new Date(artwork.createdAt).toLocaleDateString('fr-FR')}
-              </span>
-
-              {/* Lien "Valider" si AWAITING_VALIDATION — couleur ambre de UI-SPEC */}
-              {artwork.pipelineState === 'awaiting_validation' && (
-                <Link
-                  href={`/admin/artworks/${artwork.id}/validate`}
-                  style={{
-                    padding: '6px 14px',
-                    backgroundColor: '#fefce8',
-                    color: '#a16207',
-                    borderRadius: 0,  // D-03 : zéro coins arrondis
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    border: '1px solid #a1620722',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Valider
-                </Link>
-              )}
-
-              {/* Bouton "Réessayer" si FAILED (D-09) */}
-              {artwork.pipelineState === 'failed' && (
-                <RetryButton artworkId={artwork.id} />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </main>
+    <ArtworksClient
+      artworks={data}
+      userEmail={session.user.email ?? undefined}
+    />
   )
 }

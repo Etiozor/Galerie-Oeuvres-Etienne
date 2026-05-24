@@ -10,9 +10,10 @@
  * - Les types et médiums sont en TABLE (pas en enum TypeScript) pour être
  *   extensibles depuis l'admin sans toucher au code [D-01, D-03]
  * - Les tags libres utilisent une relation many-to-many [D-02]
- * - Chaque œuvre a 3 chemins d'image distincts (original, traité, miniature) [C1]
+ * - Chaque œuvre a un seul chemin d'image (original_path) [C1]
  * - Les statuts utilisent des enums PostgreSQL natifs — ce sont des valeurs
  *   machine-critiques qui ne changent jamais [M8]
+ * - La visibilité dans la galerie est contrôlée par published_at (non null = visible)
  */
 
 import {
@@ -120,23 +121,6 @@ export const artworkStatusEnum = pgEnum('artwork_status', [
   'reserved',
 ])
 
-/**
- * État du pipeline de traitement d'image.
- *
- * Chaque œuvre passe par ces états lors de l'upload et du traitement :
- * - pending : en attente de traitement (upload reçu)
- * - processing : Sharp est en train de traiter l'image
- * - awaiting_validation : traitement terminé, artiste doit valider
- * - published : validé et visible dans la galerie publique
- * - failed : erreur lors du traitement — doit être géré par l'artiste
- */
-export const pipelineStateEnum = pgEnum('pipeline_state', [
-  'pending',
-  'processing',
-  'awaiting_validation',
-  'published',
-  'failed',
-])
 
 // ============================================================
 // TABLE : artwork_types — Types d'œuvres (extensibles depuis l'admin)
@@ -213,9 +197,14 @@ export const artworks = pgTable('artworks', {
   title: varchar('title', { length: 255 }).notNull().default('Sans titre'),
   description: text('description'),
 
-  // Date de CRÉATION de l'œuvre (pas la date d'ajout dans la galerie)
-  // L'artiste saisit cette date manuellement
-  createdDate: timestamp('created_date', { withTimezone: true }),
+  // Période de CRÉATION de l'œuvre — mois et année saisis par l'artiste.
+  // POURQUOI 2 colonnes smallint et pas un timestamp ?
+  // On ne connaît pas le jour exact de création. Un timestamp serait
+  // sémantiquement trompeur (forcerait un "01" arbitraire). Deux entiers
+  // sont honnêtes sur la précision réelle et triviaux à grouper pour la timeline.
+  // createdMonth est nullable : l'artiste peut renseigner l'année sans le mois.
+  createdYear: smallint('created_year'),
+  createdMonth: smallint('created_month'),
 
   // Dimensions en centimètres (null si non renseigné)
   widthCm: numeric('width_cm', { precision: 6, scale: 1 }),
@@ -230,9 +219,8 @@ export const artworks = pgTable('artworks', {
 
   // Niveau 3 : tags libres — via la table de jonction artwork_tags [D-02]
 
-  // === Statuts ===
+  // === Statut ===
   status: artworkStatusEnum('status').notNull().default('available'),
-  pipelineState: pipelineStateEnum('pipeline_state').notNull().default('pending'),
 
   // === Prix ===
   // Prix de base (plancher souple) — les offres sous ce montant affichent un avertissement
@@ -267,21 +255,13 @@ export const artworks = pgTable('artworks', {
   // pour une œuvre à laquelle il tient particulièrement
   priceAttachment: smallint('price_attachment'),
 
-  // === Chemins de stockage [C1 - CRITIQUE] ===
-  // TROIS chemins DISTINCTS pour ne jamais perdre l'original.
-  // La DB stocke des CLÉS de stockage, jamais des chemins absolus [M6].
+  // === Chemin de stockage [C1] ===
+  // La DB stocke une CLÉ de stockage, jamais un chemin absolu [M6].
   // En local : "originals/abc123.jpg"
   // En production R2 : même clé, le StorageProvider gère la différence.
 
-  // Fichier original tel qu'uploadé — JAMAIS écrasé, JAMAIS public
+  // Fichier original tel qu'uploadé
   originalPath: text('original_path'),
-
-  // Fichier traité par Sharp (auto-rotation, normalisation, WebP)
-  // Null tant que le pipeline n'a pas terminé
-  processedPath: text('processed_path'),
-
-  // Miniature (400px de large, WebP) pour la galerie en scroll
-  thumbnailPath: text('thumbnail_path'),
 
   // === Dates système ===
   // Date à laquelle l'œuvre est devenue publiquement visible
@@ -294,10 +274,10 @@ export const artworks = pgTable('artworks', {
   // même après modification du titre, du prix, etc. en Phase 5.
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
-  // Index pour accélérer les filtres par statut et état pipeline
-  // (utilisés fréquemment dans la galerie publique et l'admin)
+  // Index pour accélérer les filtres par statut (galerie publique et admin)
   index('artworks_status_idx').on(table.status),
-  index('artworks_pipeline_idx').on(table.pipelineState),
+  // Index pour accélérer le filtre published_at IS NOT NULL (galerie publique)
+  index('artworks_published_idx').on(table.publishedAt),
 ])
 
 // ============================================================
@@ -553,6 +533,22 @@ export const savedArtworkRelations = relations(savedArtworks, ({ one }) => ({
  *   import type { Artwork, NewArtwork } from '@/db/schema'
  *   const artwork: Artwork = await db.query.artworks.findFirst(...)
  */
+// Tableau des mois en français — index 0 = Janvier (mois 1 en DB)
+export const MONTHS_FR = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+] as const
+
+/**
+ * Formate une période mois/année en label lisible.
+ * Exemples : (2024, 3) → "Mars 2024" · (2024, null) → "2024" · (null, …) → null
+ */
+export function formatCreatedPeriod(year: number | null, month: number | null): string | null {
+  if (!year) return null
+  if (month && month >= 1 && month <= 12) return `${MONTHS_FR[month - 1]} ${year}`
+  return String(year)
+}
+
 export type ArtworkType = typeof artworkTypes.$inferSelect
 export type NewArtworkType = typeof artworkTypes.$inferInsert
 

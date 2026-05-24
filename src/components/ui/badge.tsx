@@ -1,9 +1,6 @@
 /**
  * Composant Badge — étiquettes d'état colorées.
- *
- * Utilisé pour les badges d'état pipeline (PENDING, PROCESSING, etc.)
- * dans la liste admin des œuvres. Les badges pipeline utilisent des styles
- * inline spécifiques (PipelineBadge.tsx) — ce composant est la base générique.
+ * Base générique utilisée dans l'admin pour les badges de statut.
  */
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"

@@ -33,16 +33,16 @@ export function MasonryGrid({ children }: MasonryGridProps) {
       <style>{`
         .masonry-grid {
           columns: 3;
-          column-gap: 2px;
+          column-gap: 20px;
         }
         @media (max-width: 1023px) {
-          .masonry-grid { columns: 2; }
+          .masonry-grid { columns: 2; column-gap: 16px; }
         }
         @media (max-width: 767px) {
           .masonry-grid { columns: 1; }
         }
       `}</style>
-      <div className="masonry-grid" style={{ padding: '0 2px' }}>
+      <div className="masonry-grid" style={{ padding: '0 24px' }}>
         {children}
       </div>
     </>

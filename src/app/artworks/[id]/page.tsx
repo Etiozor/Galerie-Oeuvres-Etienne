@@ -2,27 +2,26 @@
  * Page détail d'une œuvre — Galerie POF.
  *
  * Server Component : fetch Drizzle direct + generateMetadata Open Graph.
- * Accessible publiquement sans authentification (la galerie est publique — AUTH-01).
+ * Accessible publiquement sans authentification (la galerie est publique).
  *
  * SÉCURITÉ :
- * - parseInt(id, 10) + isNaN() protège contre les injections via l'URL (T-03-06)
- *   Ex: /artworks/../../etc/passwd → parseInt = NaN → notFound() immédiat
- * - Le filtre pipelineState='published' dans TOUTES les requêtes garantit que
- *   seules les œuvres publiées sont accessibles (T-03-07)
- *   Ex: /artworks/42 avec state=awaiting_validation → notFound()
+ * - parseInt(id, 10) + isNaN() protège contre les injections via l'URL
+ * - Le filtre isNotNull(publishedAt) garantit que seules les œuvres publiées
+ *   sont accessibles — un brouillon sans publishedAt retourne 404
  *
- * LAYOUT (D-14, UI-SPEC section 8) :
+ * LAYOUT :
  * - Desktop (≥1024px) : grid 2 colonnes — 1fr (image) + 420px (panel info)
  * - Mobile (<1024px) : image pleine largeur puis panel info empilé
  *
- * NAVIGATION prev/next (Pattern 6 — RESEARCH.md) :
+ * NAVIGATION prev/next :
  * - "Précédent" = œuvre publiée plus récemment (publishedAt > courant, ORDER BY ASC)
  * - "Suivant" = œuvre publiée moins récemment (publishedAt < courant, ORDER BY DESC)
  */
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import type { Metadata } from 'next'
 import { db } from '@/db'
-import { gt, lt, asc, desc, and, eq, count, max } from 'drizzle-orm'
+import { gt, lt, asc, desc, and, eq, count, max, isNotNull } from 'drizzle-orm'
 import { artworks, offers, visitors, savedArtworks } from '@/db/schema'
 import type { PriceBreakdownData } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
@@ -31,7 +30,6 @@ import { SiteNav } from '@/components/layout/SiteNav'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 import { getVisitorSession } from '@/lib/session'
 import type { OfferHistoryItem } from '@/components/artwork/OfferHistory'
-import { SaveButton } from '@/components/visitor/SaveButton'
 
 /** Type des props d'une page dynamique Next.js 15 (params est une Promise) */
 type Props = { params: Promise<{ id: string }> }
@@ -53,10 +51,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (isNaN(artworkId)) return { title: '404 — Galerie POF' }
 
   const artwork = await db.query.artworks.findFirst({
-    where: (a, { and, eq }) => and(
+    where: (a, { and, eq, isNotNull }) => and(
       eq(a.id, artworkId),
-      // SÉCURITÉ : ne jamais exposer les métadonnées d'une œuvre non publiée via og:image
-      eq(a.pipelineState, 'published')
+      isNotNull(a.publishedAt)
     ),
     with: { type: true, medium: true },
   })
@@ -64,7 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!artwork) return { title: '404 — Galerie POF' }
 
   const storage = getStorage()
-  const imageUrl = artwork.processedPath ? storage.getUrl(artwork.processedPath) : undefined
+  const imageUrl = artwork.originalPath ? storage.getUrl(artwork.originalPath) : undefined
 
   // Description : texte de l'œuvre (tronqué) ou fallback type · médium · dimensions
   const description =
@@ -92,11 +89,9 @@ export default async function ArtworkDetailPage({ params }: Props) {
 
   // Charger l'œuvre avec ses relations type et médium
   const artwork = await db.query.artworks.findFirst({
-    where: (a, { and, eq }) => and(
+    where: (a, { and, eq, isNotNull }) => and(
       eq(a.id, artworkId),
-      // SÉCURITÉ CRITIQUE : filtre pipelineState = 'published' (mitigation T-03-07)
-      // Une œuvre pending/processing/awaiting_validation/failed → notFound()
-      eq(a.pipelineState, 'published')
+      isNotNull(a.publishedAt)
     ),
     with: { type: true, medium: true },
   })
@@ -105,11 +100,9 @@ export default async function ArtworkDetailPage({ params }: Props) {
   if (!artwork) notFound()
 
   // Résoudre l'URL de l'image côté serveur
-  // POURQUOI côté serveur uniquement ?
-  // getStorage() utilise node:fs (LocalStorageAdapter) — incompatible avec le bundle navigateur
-  // (Piège 5 RESEARCH.md). L'URL résolue est passée en props au rendu client.
+  // getStorage() utilise node:fs — incompatible avec le bundle navigateur
   const storage = getStorage()
-  const processedUrl = artwork.processedPath ? storage.getUrl(artwork.processedPath) : null
+  const processedUrl = artwork.originalPath ? storage.getUrl(artwork.originalPath) : null
 
   // ── Navigation précédent/suivant ──────────────────────────────────────────
   // Ordre galerie : published_at DESC (plus récent en premier)
@@ -120,10 +113,10 @@ export default async function ArtworkDetailPage({ params }: Props) {
   const prevArtwork = artwork.publishedAt
     ? await db.query.artworks.findFirst({
         where: and(
-          eq(artworks.pipelineState, 'published'),
+          isNotNull(artworks.publishedAt),
           gt(artworks.publishedAt, artwork.publishedAt)
         ),
-        orderBy: [asc(artworks.publishedAt)], // ASC = on prend le plus proche (le plus récent juste avant)
+        orderBy: [asc(artworks.publishedAt)],
         columns: { id: true, title: true },
       })
     : null
@@ -131,10 +124,10 @@ export default async function ArtworkDetailPage({ params }: Props) {
   const nextArtwork = artwork.publishedAt
     ? await db.query.artworks.findFirst({
         where: and(
-          eq(artworks.pipelineState, 'published'),
+          isNotNull(artworks.publishedAt),
           lt(artworks.publishedAt, artwork.publishedAt)
         ),
-        orderBy: [desc(artworks.publishedAt)], // DESC = on prend le plus proche (le plus ancien juste après)
+        orderBy: [desc(artworks.publishedAt)],
         columns: { id: true, title: true },
       })
     : null
@@ -286,29 +279,72 @@ export default async function ArtworkDetailPage({ params }: Props) {
           <div
             style={{
               backgroundColor: 'var(--color-bg)',
-              padding: '32px',
+              padding: '40px 48px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative',
             }}
           >
+            {/* Lien retour vers la galerie — ancré en haut à gauche de la colonne image */}
+            <Link
+              href="/"
+              style={{
+                position: 'absolute',
+                top: 20,
+                left: 32,
+                fontFamily: 'var(--font-space-mono)',
+                fontSize: '11px',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--color-ink-muted)',
+                textDecoration: 'none',
+              }}
+            >
+              ← Galerie
+            </Link>
+
             {processedUrl ? (
-              <img
-                src={processedUrl}
-                srcSet={srcset}
-                sizes="(max-width: 1023px) 100vw, calc(100vw - 420px)"
-                alt={artwork.title}
-                loading="eager" // Page dédiée — priorité haute (D-14 UI-SPEC)
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: 'calc(100vh - 120px)', // Évite que l'image déborde la fenêtre
-                  objectFit: 'contain', // D-15 : ne JAMAIS recadrer une œuvre d'art
-                  boxShadow: '0 2px 16px rgba(26,26,26,0.12)', // Ombre portée D-14
-                  display: 'block',
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={processedUrl}
+                  srcSet={srcset}
+                  sizes="(max-width: 1023px) 100vw, calc(100vw - 420px)"
+                  alt={artwork.title}
+                  loading="eager"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: 'calc(100vh - 120px)',
+                    objectFit: 'contain',
+                    boxShadow: '0 2px 16px rgba(26,26,26,0.12)',
+                    display: 'block',
+                  }}
+                />
+                {/* Stamp "Vendu" diagonal sur l'image quand applicable */}
+                {artwork.status === 'sold' && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%) rotate(-8deg)',
+                      border: '3px solid var(--color-red)',
+                      color: 'var(--color-red)',
+                      padding: '8px 22px',
+                      fontFamily: 'var(--font-oswald)',
+                      fontWeight: 700,
+                      fontSize: '28px',
+                      letterSpacing: '0.16em',
+                      textTransform: 'uppercase',
+                      background: 'rgba(253,248,232,0.65)',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    Vendu
+                  </div>
+                )}
+              </div>
             ) : (
-              /* Placeholder si l'image n'est pas encore disponible */
               <div
                 style={{
                   width: '400px',
@@ -317,7 +353,6 @@ export default async function ArtworkDetailPage({ params }: Props) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  // D-03 : pas de border-radius
                 }}
               >
                 <span
@@ -336,28 +371,26 @@ export default async function ArtworkDetailPage({ params }: Props) {
           {/* ── Colonne droite : panel info (D-14) ─────────────────────────── */}
           <div
             style={{
-              backgroundColor: 'var(--color-surface)', // #ede0b8 — fond panel info
-              padding: '24px',
-              overflowY: 'auto',     // Scroll si le contenu dépasse la hauteur fenêtre
-              maxHeight: '100vh',    // Panel ne dépasse pas la fenêtre (D-14)
-              position: 'sticky',    // Panel reste visible pendant le scroll de l'image
+              backgroundColor: 'var(--color-surface)',
+              padding: '32px 32px 28px',
+              overflowY: 'auto',
+              maxHeight: '100vh',
+              position: 'sticky',
               top: 0,
             }}
           >
             {/*
-             * Bouton cœur — visible uniquement si le visiteur est connecté (D-14).
-             * Positionné en haut du panel, à droite, avant le titre de l'œuvre.
-             * initialSaved est calculé côté serveur pour éviter un flash ♡→♥.
+             * ArtworkInfoPanel contient désormais le SaveButton dans son header.
+             * Le bouton est TOUJOURS rendu (même sans session) — la logique d'identité
+             * est gérée dans SaveButton (ouvre VisitorProfileModal si non identifié).
+             * initialSaved vaut false quand il n'y a pas de session (calculé ci-dessus).
              */}
-            {visitorSession.visitorId && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                <SaveButton artworkId={artwork.id} initialSaved={isSaved} />
-              </div>
-            )}
             <ArtworkInfoPanel
               title={artwork.title}
               status={artwork.status}
-              createdDate={artwork.createdDate}
+              artworkId={artworkId}
+              createdYear={artwork.createdYear ?? null}
+              createdMonth={artwork.createdMonth ?? null}
               widthCm={artwork.widthCm}
               heightCm={artwork.heightCm}
               description={artwork.description}
@@ -369,10 +402,10 @@ export default async function ArtworkDetailPage({ params }: Props) {
               visitorId={visitorSession.visitorId}
               visitorName={visitorSession.displayName}
               priceBreakdown={priceBreakdown}
-              artworkId={artworkId}
               offerCount={offerCount}
               bestOffer={bestOffer}
               allOffers={allOffers}
+              initialSaved={isSaved}
             />
           </div>
         </div>

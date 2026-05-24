@@ -1,13 +1,13 @@
 /**
- * Page détail d'une œuvre — /admin/artworks/[id].
+ * Page détail / édition d'une œuvre — /admin/artworks/[id].
  *
- * Structure (ordre UX) :
- * 1. Titre éditable inline (cliquer pour modifier)
- * 2. Statut + pipeline + changement de statut
- * 3. Offres reçues — au sommet car c'est ce qui intéresse le plus l'artiste
- * 4. Image + description éditable inline
- * 5. Formulaire métadonnées secondaires (date, type, médium, dimensions, prix)
- * 6. Zone dangereuse (suppression)
+ * Layout "split" avec fond Crème POF :
+ * 1. Barre admin sticky (GALERIE POF + email + déconnexion)
+ * 2. Bloc titre (retour, breadcrumb mono, H1 Oswald éditable, pills, statut, lien galerie)
+ * 3. Hero split — image gauche (surface sable + ombre) / panneau info droite sticky
+ * 4. Offres reçues — meilleure offre mise en avant en teal
+ * 5. Formulaire métadonnées (grille 6 colonnes, composantes prix dépliables)
+ * 6. Zone dangereuse
  *
  * Server Component : données lues depuis la DB, auth vérifiée côté serveur.
  */
@@ -19,7 +19,6 @@ import { artworks, artworkTypes, mediums, offers, visitors } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
 import Link from 'next/link'
-import { PipelineBadge } from '../_components/PipelineBadge'
 import {
   updateArtworkStatus,
   deleteArtwork,
@@ -31,6 +30,53 @@ import { StatusChangeForm } from './_components/StatusChangeForm'
 import { DeleteArtworkButton } from './_components/DeleteArtworkButton'
 import { ArtworkEditForm } from './_components/ArtworkEditForm'
 import { InlineEditField } from './_components/InlineEditField'
+import { AdminHeaderStrip } from './_components/AdminHeaderStrip'
+import { QuickInfoPanel } from './_components/QuickInfoPanel'
+import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
+
+// ── Pills de statut et pipeline ──────────────────────────────────────────────
+
+function PublishedPill({ published }: { published: boolean }) {
+  const bg = published ? 'var(--badge-published-bg)' : 'var(--badge-pending-bg)'
+  const fg = published ? 'var(--badge-published-fg)' : 'var(--badge-pending-fg)'
+  const label = published ? 'Publiée' : 'Non publiée'
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '3px 10px',
+      background: bg, color: fg,
+      font: '600 12px var(--font-geist-sans)',
+      borderRadius: 'var(--radius-sm)',
+      whiteSpace: 'nowrap',
+    }}>
+      <span style={{ width: 5, height: 5, background: fg, borderRadius: '50%', opacity: 0.75 }} />
+      {label}
+    </span>
+  )
+}
+
+function StatusPill({ status }: { status: string }) {
+  const cfg: Record<string, { bg: string; fg: string; label: string }> = {
+    available: { bg: 'var(--badge-available-bg)', fg: 'var(--badge-available-fg)', label: 'Disponible' },
+    reserved:  { bg: 'var(--badge-reserved-bg)',  fg: 'var(--badge-reserved-fg)',  label: 'Réservé' },
+    sold:      { bg: 'var(--badge-sold-bg)',       fg: 'var(--badge-sold-fg)',      label: 'Vendu' },
+    given:     { bg: 'var(--badge-given-bg)',      fg: 'var(--badge-given-fg)',     label: 'Donné' },
+  }
+  const { bg, fg, label } = cfg[status] ?? { bg: '#f5f5f5', fg: '#737373', label: status }
+  return (
+    <span style={{
+      padding: '3px 10px',
+      background: bg, color: fg,
+      font: '600 12px var(--font-geist-sans)',
+      borderRadius: 'var(--radius-sm)',
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function ArtworkDetailPage({
   params,
@@ -74,240 +120,438 @@ export default async function ArtworkDetailPage({
   const { artwork, type, medium } = rows[0]!
 
   const storage = getStorage()
-  const processedUrl = artwork.processedPath ? storage.getUrl(artwork.processedPath) : null
-  const thumbnailUrl = artwork.thumbnailPath ? storage.getUrl(artwork.thumbnailPath) : null
+  const imageUrl = artwork.originalPath ? storage.getUrl(artwork.originalPath) : null
 
-  // Binder les Server Actions avec l'artworkId côté serveur (T-05-01-01)
+  // Server Actions bindées avec artworkId côté serveur (T-05-01-01)
   const updateStatusWithId = updateArtworkStatus.bind(null, artwork.id)
   const deleteWithId = deleteArtwork.bind(null, artwork.id)
   const updateMetaWithId = updateArtworkMeta.bind(null, artwork.id)
-  // Actions légères pour l'édition inline — bindées avec artworkId
   const updateTitleAction = updateArtworkTitle.bind(null, artwork.id)
   const updateDescriptionAction = updateArtworkDescription.bind(null, artwork.id)
 
-  const statusLabels: Record<string, string> = {
-    available: 'Disponible',
-    sold: 'Vendu',
-    given: 'Donné',
-    reserved: 'Réservé',
-  }
+  const createdFr = artwork.createdAt
+    ? new Date(artwork.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null
 
   return (
-    <main style={{ padding: '48px 16px', fontFamily: 'var(--font-geist-sans)', maxWidth: '960px', margin: '0 auto' }}>
+    <>
+      <BackgroundDecor />
 
-      {/* ── Navigation retour ── */}
-      <Link
-        href="/admin/artworks"
-        style={{ fontSize: '14px', color: '#737373', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '24px' }}
-      >
-        ← Retour à la liste
-      </Link>
+      <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
 
-      {/* ── Titre éditable inline ── */}
-      <InlineEditField
-        initialValue={artwork.title}
-        onSave={updateTitleAction}
-        as="title"
-      />
+      {/* ── Barre admin sticky ── */}
+      <AdminHeaderStrip userEmail={session.user.email} />
 
-      {/* ── Statut + pipeline + changement de statut ── */}
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '40px', marginTop: '8px' }}>
-        <span style={{
-          fontSize: '13px',
-          fontWeight: 600,
-          padding: '4px 10px',
-          borderRadius: 0,
-          backgroundColor: artwork.status === 'available' ? '#dcfce7' : '#f5f5f5',
-          color: artwork.status === 'available' ? '#15803d' : '#525252',
-        }}>
-          {statusLabels[artwork.status] ?? artwork.status}
-        </span>
-        <PipelineBadge state={artwork.pipelineState} />
-        <div style={{ marginLeft: 'auto' }}>
-          <StatusChangeForm
-            currentStatus={artwork.status}
-            updateStatusAction={updateStatusWithId}
-          />
-        </div>
-      </div>
+      <main style={{
+        padding: '44px 32px 80px',
+        maxWidth: 1200,
+        margin: '0 auto',
+        fontFamily: 'var(--font-geist-sans)',
+      }}>
 
-      {/* ══════════════════════════════════════════════════════════════
-          OFFRES REÇUES — en premier car c'est la priorité artiste
-          ══════════════════════════════════════════════════════════════ */}
-      <section style={{ marginBottom: '48px', padding: '24px', backgroundColor: '#fafafa', border: '1px solid #e5e5e5' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-geist-sans)', color: '#171717', margin: '0 0 4px' }}>
-          Offres reçues
-        </h2>
-        <p style={{ fontSize: '13px', color: '#737373', marginBottom: '20px', marginTop: '4px', fontFamily: 'var(--font-geist-sans)' }}>
-          {offerRows.length} offre{offerRows.length !== 1 ? 's' : ''} — triées par montant décroissant
-        </p>
+        {/* ══════════════════════════════════════════════════════════════
+            BLOC TITRE
+            ══════════════════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 36 }}>
+          <Link href="/admin/artworks" style={{
+            font: '400 13px var(--font-geist-sans)',
+            color: 'var(--color-ink-muted)',
+            textDecoration: 'none',
+            display: 'inline-block',
+            marginBottom: 20,
+          }}>
+            ← Retour à la liste
+          </Link>
 
-        {offerRows.length === 0 ? (
-          <div style={{ padding: '24px', backgroundColor: '#f5f5f5', textAlign: 'center', fontSize: '14px', color: '#a3a3a3' }}>
-            Aucune offre reçue pour cette œuvre.
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #e5e5e5' }}>
-                  {['Visiteur', 'Téléphone', 'Email', 'Montant', 'Message', 'Date'].map(col => (
-                    <th key={col} style={{ padding: '10px 12px', textAlign: col === 'Montant' ? 'right' : 'left', fontWeight: 600, whiteSpace: 'nowrap', fontSize: '13px' }}>
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {offerRows.map((offer, index) => (
-                  <tr key={offer.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontWeight: 500 }}>{offer.visitorName ?? '—'}</span>
-                        {index === 0 && (
-                          <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 6px', backgroundColor: 'rgba(91,142,125,0.12)', color: '#5b8e7d', borderRadius: 0, alignSelf: 'flex-start', fontFamily: 'var(--font-space-mono)' }}>
-                            Meilleure offre
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-space-mono)', verticalAlign: 'top', fontSize: '13px' }}>
-                      {offer.visitorPhone ?? '—'}
-                    </td>
-                    <td style={{ padding: '10px 12px', verticalAlign: 'top', fontSize: '13px' }}>
-                      {offer.visitorEmail ?? '—'}
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'var(--font-space-mono)', fontSize: '16px', fontWeight: 600, whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                      {parseFloat(offer.amount).toLocaleString('fr-FR')} €
-                    </td>
-                    <td style={{ padding: '10px 12px', maxWidth: '180px', verticalAlign: 'top', color: '#525252', fontSize: '13px' }}>
-                      {offer.message ? (offer.message.length > 70 ? offer.message.slice(0, 70) + '…' : offer.message) : <span style={{ color: '#a3a3a3' }}>—</span>}
-                    </td>
-                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-space-mono)', fontSize: '12px', color: '#737373', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                      {new Date(offer.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* ── Image + description ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px', marginBottom: '48px' }}>
-
-        {/* Image principale */}
-        <div>
-          {(thumbnailUrl || processedUrl) ? (
-            <img
-              src={thumbnailUrl ?? processedUrl ?? ''}
-              alt={artwork.title}
-              style={{ width: '100%', height: 'auto', borderRadius: 0, border: '1px solid #e5e5e5', display: 'block' }}
-            />
-          ) : (
-            <div style={{ padding: '32px', backgroundColor: '#f5f5f5', color: '#a3a3a3', textAlign: 'center', fontSize: '14px' }}>
-              Aucune image disponible
+          {createdFr && (
+            <div style={{
+              font: '400 12px var(--font-space-mono)',
+              letterSpacing: '0.05em',
+              color: 'var(--color-ink-muted)',
+              marginBottom: 8,
+            }}>
+              Œuvre #{String(artwork.id).padStart(3, '0')} · créée le {createdFr}
             </div>
           )}
-          {/* Infos rapides sous l'image */}
-          <dl style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: '13px' }}>
-            <dt style={{ color: '#737373' }}>Type</dt>
-            <dd style={{ margin: 0, color: '#171717' }}>{type?.name ?? '—'}</dd>
-            <dt style={{ color: '#737373' }}>Médium</dt>
-            <dd style={{ margin: 0, color: '#171717' }}>{medium?.name ?? '—'}</dd>
-            <dt style={{ color: '#737373' }}>Dimensions</dt>
-            <dd style={{ margin: 0, color: '#171717' }}>
-              {artwork.widthCm && artwork.heightCm ? `${artwork.widthCm} × ${artwork.heightCm} cm` : '—'}
-            </dd>
-            <dt style={{ color: '#737373' }}>Prix de base</dt>
-            <dd style={{ margin: 0, color: '#171717', fontFamily: 'var(--font-space-mono)', fontWeight: 600 }}>
-              {artwork.basePrice ? `${parseFloat(artwork.basePrice).toLocaleString('fr-FR')} €` : '—'}
-            </dd>
-          </dl>
-        </div>
 
-        {/* Description éditable inline */}
-        <div>
-          <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#737373', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-space-mono)' }}>
-            Description
-          </h2>
           <InlineEditField
-            initialValue={artwork.description ?? ''}
-            onSave={updateDescriptionAction}
-            as="description"
+            initialValue={artwork.title}
+            onSave={updateTitleAction}
+            as="title"
           />
 
-          {/* Lien validation pipeline si en attente */}
-          {artwork.pipelineState === 'awaiting_validation' && (
-            <div style={{ marginTop: '24px' }}>
-              <Link
-                href={`/admin/artworks/${artwork.id}/validate`}
-                style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: '#171717', color: '#fff', borderRadius: 0, textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}
-              >
-                Valider la correction →
-              </Link>
+          {/* Pills + sélecteur statut + lien galerie */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
+            <PublishedPill published={artwork.publishedAt !== null} />
+            <StatusPill status={artwork.status} />
+            <span style={{ flex: 1, minWidth: 12 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                font: '400 11px var(--font-space-mono)',
+                letterSpacing: '0.12em',
+                color: 'var(--color-ink-muted)',
+                textTransform: 'uppercase',
+              }}>
+                Statut
+              </span>
+              <StatusChangeForm currentStatus={artwork.status} updateStatusAction={updateStatusWithId} />
+            </div>
+            <Link href={`/artworks/${artwork.id}`} style={{
+              padding: '8px 12px',
+              background: 'transparent',
+              border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: 'var(--radius-sm)',
+              font: '600 13px var(--font-geist-sans)',
+              color: 'var(--color-ink)',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+            }}>
+              Voir sur la galerie ↗
+            </Link>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════
+            HERO SPLIT — image gauche + panneau info droite (sticky)
+            ══════════════════════════════════════════════════════════════ */}
+        <section style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) 400px',
+          gap: 40,
+          marginBottom: 56,
+        }}>
+          {/* Image gauche sur surface sable */}
+          <div>
+            <div style={{
+              width: '100%',
+              background: 'var(--color-surface)',
+              border: '1px solid rgba(0,0,0,0.08)',
+              boxShadow: 'var(--shadow-artwork)',
+              overflow: 'hidden',
+              position: 'relative',
+            }}>
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={artwork.title}
+                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
+              ) : (
+                <div style={{
+                  aspectRatio: artwork.widthCm && artwork.heightCm
+                    ? `${artwork.widthCm} / ${artwork.heightCm}`
+                    : '3 / 4',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  font: 'italic 400 17px/1.5 var(--font-cormorant)',
+                  color: 'var(--color-ink-muted)',
+                  minHeight: 240,
+                }}>
+                  Aucune image disponible
+                </div>
+              )}
+              {/* Stamp "Vendu" si statut sold */}
+              {artwork.status === 'sold' && (
+                <span style={{
+                  position: 'absolute', top: 20, right: 20,
+                  transform: 'rotate(-6deg)',
+                  padding: '6px 14px',
+                  background: 'var(--color-red)',
+                  color: '#fff',
+                  font: '700 13px var(--font-oswald)',
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  borderRadius: 0,
+                }}>
+                  Vendu
+                </span>
+              )}
+            </div>
+
+            {/* Dimensions + médium sous l'image */}
+            <div style={{
+              marginTop: 14,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}>
+              <span style={{
+                font: '400 12px var(--font-space-mono)',
+                letterSpacing: '0.05em',
+                color: 'var(--color-ink-muted)',
+              }}>
+                {artwork.widthCm && artwork.heightCm
+                  ? `${artwork.widthCm} × ${artwork.heightCm} cm`
+                  : '—'}
+                {medium?.name ? ` · ${medium.name}` : ''}
+              </span>
+            </div>
+          </div>
+
+          {/* Panneau info droite : description + KV + prix */}
+          <QuickInfoPanel
+            artwork={{
+              description: artwork.description ?? '',
+              type: type?.name ?? null,
+              medium: medium?.name ?? null,
+              widthCm: artwork.widthCm,
+              heightCm: artwork.heightCm,
+              createdYear: artwork.createdYear,
+              createdMonth: artwork.createdMonth,
+              basePrice: artwork.basePrice,
+            }}
+            updateDescriptionAction={updateDescriptionAction}
+          />
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════
+            OFFRES REÇUES
+            ══════════════════════════════════════════════════════════════ */}
+        <section style={{
+          marginBottom: 56,
+          padding: 28,
+          background: 'var(--color-surface)',
+          border: '1px solid rgba(0,0,0,0.08)',
+          borderRadius: 'var(--radius-sm)',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+            marginBottom: 18, gap: 12, flexWrap: 'wrap',
+          }}>
+            <div>
+              <div style={{
+                font: '400 11px var(--font-space-mono)',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--color-ink-muted)',
+              }}>
+                Offres reçues
+                <span style={{ color: 'var(--color-ink-muted)' }}> ({offerRows.length})</span>
+              </div>
+              <p style={{ margin: '4px 0 0', font: '400 13px var(--font-geist-sans)', color: 'var(--color-ink-muted)' }}>
+                Triées par montant décroissant.
+              </p>
+            </div>
+
+            {offerRows.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                <span style={{
+                  font: '400 12px var(--font-space-mono)',
+                  letterSpacing: '0.05em',
+                  color: 'var(--color-ink-muted)',
+                }}>
+                  Meilleure offre
+                </span>
+                <span style={{
+                  font: '700 22px var(--font-space-mono)',
+                  fontVariantNumeric: 'tabular-nums',
+                  color: 'var(--color-teal)',
+                  lineHeight: 1,
+                }}>
+                  {parseFloat(offerRows[0]!.amount).toLocaleString('fr-FR')} €
+                </span>
+              </div>
+            )}
+          </div>
+
+          {offerRows.length === 0 ? (
+            <div style={{
+              padding: 32,
+              background: 'var(--color-bg)',
+              border: '1px dashed rgba(0,0,0,0.12)',
+              borderRadius: 'var(--radius-sm)',
+              textAlign: 'center',
+              font: 'italic 400 17px/1.5 var(--font-cormorant)',
+              color: 'var(--color-ink-muted)',
+            }}>
+              Aucune offre reçue pour cette œuvre.
+            </div>
+          ) : (
+            <div style={{
+              overflowX: 'auto',
+              background: 'var(--color-bg)',
+              border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: 'var(--radius-sm)',
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', font: '400 14px var(--font-geist-sans)' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+                    {[
+                      { label: 'Visiteur', align: 'left' as const },
+                      { label: 'Téléphone', align: 'left' as const },
+                      { label: 'Email', align: 'left' as const },
+                      { label: 'Montant', align: 'right' as const },
+                      { label: 'Message', align: 'left' as const },
+                      { label: 'Date', align: 'left' as const },
+                    ].map(col => (
+                      <th key={col.label} style={{
+                        padding: '12px 14px',
+                        textAlign: col.align,
+                        font: '400 11px var(--font-space-mono)',
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: 'var(--color-ink-muted)',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {col.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {offerRows.map((offer, index) => (
+                    <tr
+                      key={offer.id}
+                      style={{ borderBottom: index === offerRows.length - 1 ? 'none' : '1px solid rgba(0,0,0,0.06)' }}
+                    >
+                      <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ font: '500 14px var(--font-geist-sans)', color: 'var(--color-ink)' }}>
+                            {offer.visitorName ?? '—'}
+                          </span>
+                          {index === 0 && (
+                            <span style={{
+                              font: '600 10px var(--font-space-mono)',
+                              letterSpacing: '0.12em',
+                              textTransform: 'uppercase',
+                              padding: '2px 6px',
+                              background: 'var(--badge-available-bg)',
+                              color: 'var(--badge-available-fg)',
+                              borderRadius: 'var(--radius-sm)',
+                              alignSelf: 'flex-start',
+                            }}>
+                              Meilleure offre
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'top', fontFamily: 'var(--font-space-mono)', fontSize: 13, color: 'var(--color-ink)' }}>
+                        {offer.visitorPhone ?? '—'}
+                      </td>
+                      <td style={{ padding: '12px 14px', verticalAlign: 'top', fontSize: 13, color: 'var(--color-ink)' }}>
+                        {offer.visitorEmail ?? <span style={{ color: 'var(--color-ink-muted)' }}>—</span>}
+                      </td>
+                      <td style={{
+                        padding: '12px 14px', verticalAlign: 'top', textAlign: 'right',
+                        font: '700 16px var(--font-space-mono)',
+                        fontVariantNumeric: 'tabular-nums',
+                        whiteSpace: 'nowrap',
+                        color: index === 0 ? 'var(--color-teal)' : 'var(--color-ink)',
+                      }}>
+                        {parseFloat(offer.amount).toLocaleString('fr-FR')} €
+                      </td>
+                      <td style={{
+                        padding: '12px 14px', verticalAlign: 'top', maxWidth: 280,
+                        color: 'var(--color-ink-muted)', fontSize: 13, lineHeight: 1.5,
+                      }}>
+                        {offer.message
+                          ? (offer.message.length > 90 ? offer.message.slice(0, 90) + '…' : offer.message)
+                          : <span style={{ color: 'var(--color-ink-muted)' }}>—</span>}
+                      </td>
+                      <td style={{
+                        padding: '12px 14px', verticalAlign: 'top',
+                        fontFamily: 'var(--font-space-mono)', fontSize: 12,
+                        color: 'var(--color-ink-muted)', whiteSpace: 'nowrap',
+                      }}>
+                        {new Date(offer.createdAt).toLocaleDateString('fr-FR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
-      </div>
+        </section>
 
-      {/* ── Formulaire métadonnées secondaires ── */}
-      {/*
-       * key={String(artwork.updatedAt)} : force le remontage du Client Component après chaque
-       * sauvegarde via revalidatePath. Sans cette clé, defaultValue des inputs ne se rafraîchit
-       * pas car React ne remonte pas les composants dont l'arbre ne change pas.
-       */}
-      <section style={{ marginBottom: '48px', paddingTop: '32px', borderTop: '1px solid #e5e5e5' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '24px', color: '#171717' }}>
-          Date, type, dimensions et prix
-        </h2>
-        <ArtworkEditForm
-          key={String(artwork.updatedAt)}
-          updateAction={updateMetaWithId}
-          initialCreatedDate={(artwork.createdDate ? new Date(artwork.createdDate).toISOString().split('T')[0] : null) ?? null}
-          initialTypeId={artwork.typeId}
-          initialMediumId={artwork.mediumId}
-          initialWidthCm={artwork.widthCm}
-          initialHeightCm={artwork.heightCm}
-          initialBasePrice={artwork.basePrice}
-          initialPriceHoursSpent={artwork.priceHoursSpent}
-          initialPriceFormat={artwork.priceFormat}
-          initialPriceFraming={artwork.priceFraming}
-          initialPriceMaterials={artwork.priceMaterials}
-          initialPriceTechnicality={artwork.priceTechnicality}
-          initialPriceAttachment={artwork.priceAttachment}
-          artworkTypes={allTypes}
-          mediums={allMediums}
-        />
-      </section>
-
-      {/* ── Zone dangereuse ── */}
-      <section style={{ paddingTop: '24px', borderTop: '2px solid #bc4b51' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#bc4b51' }}>
-          Zone dangereuse
-        </h2>
-        <p style={{ fontSize: '14px', color: '#737373', marginBottom: '16px' }}>
-          La suppression est irréversible. Images et offres seront effacées.
-        </p>
-        <DeleteArtworkButton deleteAction={deleteWithId} />
-      </section>
-
-      {/* ── Chemins de stockage (technique) ── */}
-      <details style={{ marginTop: '48px' }}>
-        <summary style={{ fontSize: '12px', color: '#a3a3a3', cursor: 'pointer', fontFamily: 'var(--font-space-mono)' }}>
-          Chemins de stockage
-        </summary>
-        <dl style={{ marginTop: '12px', fontSize: '12px', fontFamily: 'monospace', display: 'grid', gap: '6px' }}>
-          {[['Original', artwork.originalPath], ['Traité', artwork.processedPath], ['Miniature', artwork.thumbnailPath]].map(([label, path]) => (
-            <div key={label}>
-              <dt style={{ color: '#a3a3a3', marginBottom: '2px' }}>{label}</dt>
-              <dd style={{ margin: 0, color: '#525252', wordBreak: 'break-all' }}>{path ?? '—'}</dd>
+        {/* ══════════════════════════════════════════════════════════════
+            FORMULAIRE MÉTADONNÉES
+            ══════════════════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 56 }}>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{
+              font: '400 11px var(--font-space-mono)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--color-ink-muted)',
+            }}>
+              Date, type, dimensions et prix
             </div>
-          ))}
-        </dl>
-      </details>
+            <p style={{ margin: '6px 0 0', font: '400 13px var(--font-geist-sans)', color: 'var(--color-ink-muted)' }}>
+              Métadonnées éditoriales. Sauvegarde manuelle.
+            </p>
+          </div>
+          {/*
+           * key={String(artwork.updatedAt)} : force le remontage après chaque sauvegarde
+           * via revalidatePath. Sans cette clé, defaultValue des inputs ne se rafraîchit pas.
+           */}
+          <ArtworkEditForm
+            key={String(artwork.updatedAt)}
+            updateAction={updateMetaWithId}
+            initialCreatedYear={artwork.createdYear ?? null}
+            initialCreatedMonth={artwork.createdMonth ?? null}
+            initialTypeId={artwork.typeId}
+            initialMediumId={artwork.mediumId}
+            initialWidthCm={artwork.widthCm}
+            initialHeightCm={artwork.heightCm}
+            initialBasePrice={artwork.basePrice}
+            initialPriceHoursSpent={artwork.priceHoursSpent}
+            initialPriceFormat={artwork.priceFormat}
+            initialPriceFraming={artwork.priceFraming}
+            initialPriceMaterials={artwork.priceMaterials}
+            initialPriceTechnicality={artwork.priceTechnicality}
+            initialPriceAttachment={artwork.priceAttachment}
+            artworkTypes={allTypes}
+            mediums={allMediums}
+          />
+        </section>
 
-    </main>
+        {/* ══════════════════════════════════════════════════════════════
+            ZONE DANGEREUSE
+            ══════════════════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24, paddingTop: 28, borderTop: '2px solid var(--color-red)' }}>
+          <h2 style={{ margin: '0 0 8px', font: '700 16px var(--font-geist-sans)', color: 'var(--color-red)' }}>
+            Zone dangereuse
+          </h2>
+          <p style={{ margin: '0 0 18px', font: '400 14px var(--font-geist-sans)', color: 'var(--color-ink-muted)' }}>
+            La suppression est irréversible. Images et offres seront effacées.
+          </p>
+          <DeleteArtworkButton deleteAction={deleteWithId} />
+        </section>
+
+        {/* ── Chemin de stockage (technique) ── */}
+        <details style={{ marginTop: 32, marginBottom: 64 }}>
+          <summary style={{
+            font: '400 11px var(--font-space-mono)',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--color-ink-muted)',
+            cursor: 'pointer',
+          }}>
+            Chemin de stockage
+          </summary>
+          <dl style={{ marginTop: 12, fontFamily: 'var(--font-space-mono)', display: 'grid', gap: 6 }}>
+            <div>
+              <dt style={{
+                color: 'var(--color-ink-muted)', marginBottom: 4,
+                font: '400 10px var(--font-space-mono)', textTransform: 'uppercase', letterSpacing: '0.12em',
+              }}>
+                Original
+              </dt>
+              <dd style={{
+                margin: 0, color: 'var(--color-ink-muted)',
+                wordBreak: 'break-all', font: '400 12px var(--font-space-mono)',
+              }}>
+                {artwork.originalPath ?? '—'}
+              </dd>
+            </div>
+          </dl>
+        </details>
+
+      </main>
+    </div>
+    </>
   )
 }

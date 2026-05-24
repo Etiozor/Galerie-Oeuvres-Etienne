@@ -1,39 +1,24 @@
 /**
  * Composant client principal de la galerie.
  *
- * POURQUOI 'use client' ?
- * Ce composant utilise des hooks React qui ne fonctionnent que côté navigateur :
- * 1. useSearchParams — lire les filtres depuis l'URL (?type=...&medium=...)
- * 2. useRouter — mettre à jour l'URL sans rechargement de page
- * 3. useState — compteur d'œuvres visibles pour l'infinite scroll
- * 4. useEffect — réinitialiser le compteur à chaque changement de filtre
+ * Layout d'après galerie.html (design export) :
+ * - Hero éditorial : eyebrow + Oswald clamp + Cormorant italic + stats (N œuvres · N disponibles)
+ * - Barre filtre sticky : recherche + chips par section (Filtrer / Médium / Statut) + tri
+ * - Clic sur une carte → navigation vers /artworks/{id}
+ * - Grille masonry avec scroll infini
  *
- * ARCHITECTURE (Pattern 1 — 03-RESEARCH.md) :
- * Le Server Component parent (page.tsx) charge TOUTES les œuvres publiées
- * une seule fois, les passe en props ici. On filtre et on pagine côté client.
- * Viable pour une collection < 500 œuvres (hypothèse A1 RESEARCH.md).
- *
- * PIÈGE 2 (03-RESEARCH.md) : useSearchParams DOIT être dans un composant
- * enveloppé par <Suspense> dans le Server Component parent. Sinon `next build`
- * échoue avec "Missing Suspense boundary with useSearchParams".
- * → page.tsx enveloppe ce composant dans <Suspense fallback={...}>.
+ * PIÈGE 2 : useSearchParams → ce composant doit être enveloppé dans <Suspense>.
  */
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MasonryGrid } from './MasonryGrid'
 import { ArtworkCard } from './ArtworkCard'
 import { ScrollSentinel } from './ScrollSentinel'
-import { FilterBar } from './FilterBar'
 import type { ArtworkType, Medium } from '@/db/schema'
 
-// Nombre d'œuvres affichées par lot (D-08 : 6 au départ, 6 de plus)
 const BATCH_SIZE = 6
 
-/**
- * Artwork avec URLs pré-résolues côté serveur.
- * Les URLs ne sont jamais calculées côté client (Piège 5 : getStorage() = node:fs).
- */
 interface ArtworkWithUrls {
   id: number
   title: string
@@ -44,146 +29,263 @@ interface ArtworkWithUrls {
   heightCmNum: number
   typeId: number | null
   mediumId: number | null
-  /** Extrait de description (≤500 chars) pour la recherche texte côté client */
+  typeName: string | null
+  mediumName: string | null
+  basePriceNum: number
   descriptionSnippet: string | null
-  /** Timestamp de création de l'œuvre — pour le tri par date côté client */
   createdTimestamp: number
 }
 
 interface GalleryClientProps {
-  /** Toutes les œuvres publiées, triées par published_at DESC */
   artworks: ArtworkWithUrls[]
-  /** Types d'œuvres disponibles pour les filtres */
   types: ArtworkType[]
-  /** Médiums disponibles pour les filtres */
   mediums: Medium[]
+  /** ID du visiteur connecté — undefined si non identifié */
+  visitorId?: number
+  /** IDs des œuvres enregistrées par ce visiteur (lu côté serveur) */
+  savedArtworkIds?: number[]
 }
 
-export function GalleryClient({ artworks, types, mediums }: GalleryClientProps) {
+// ── Chip helper ───────────────────────────────────────────────────────────────
+
+function Chip({ value, label, active, color, onToggle }: {
+  value: string
+  label: string
+  active: boolean
+  color?: string
+  onToggle: (v: string) => void
+}) {
+  return (
+    <button
+      onClick={() => onToggle(active ? 'all' : value)}
+      style={{
+        padding: '7px 14px',
+        border: '1px solid rgba(0,0,0,0.08)',
+        background: active ? (color ?? 'var(--color-teal)') : 'var(--color-bg)',
+        color: active ? '#fff' : 'var(--color-ink)',
+        fontFamily: 'var(--font-space-mono)', fontSize: 12,
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+        cursor: 'pointer', borderRadius: 3, whiteSpace: 'nowrap',
+        transition: 'background 140ms, color 140ms',
+      }}
+    >{label}</button>
+  )
+}
+
+// ── Composant principal ────────────────────────────────────────────────────────
+
+export function GalleryClient({ artworks, types, mediums, visitorId, savedArtworkIds = [] }: GalleryClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Lire les filtres depuis l'URL (persistance D-13)
-  // Les valeurs sont des IDs de type et médium sous forme de string
-  const activeTypeId = searchParams.get('type') ?? ''
-  const activeMediumId = searchParams.get('medium') ?? ''
-
-  // Recherche texte libre — filtre sur titre + description côté client
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Tri : 'date-desc' = plus récentes en premier (défaut), 'date-asc' = plus anciennes
-  const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc'>('date-desc')
-
-  // Compteur d'œuvres visibles — démarre à BATCH_SIZE (D-08 : 6 au départ)
+  const activeFilter = searchParams.get('filter') ?? 'all'
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE)
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState('date-desc')
 
-  /**
-   * CRITIQUE — Piège 6 (03-RESEARCH.md) :
-   * Réinitialiser le compteur à chaque changement de filtre ou de recherche.
-   * Sans ce reset, on peut afficher 0 résultat si les N premiers items
-   * ne correspondent pas au filtre actif.
-   */
-  useEffect(() => {
-    setVisibleCount(BATCH_SIZE)
-  }, [activeTypeId, activeMediumId, searchQuery, sortOrder])
+  useEffect(() => { setVisibleCount(BATCH_SIZE) }, [activeFilter, search, sort])
 
-  // Filtrage côté client — type, médium, recherche texte (titre + description)
-  const filteredArtworks = artworks
-    .filter((a) => {
-      if (activeTypeId && String(a.typeId) !== activeTypeId) return false
-      if (activeMediumId && String(a.mediumId) !== activeMediumId) return false
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase()
-        const inTitle = a.title.toLowerCase().includes(q)
-        const inDesc = a.descriptionSnippet?.toLowerCase().includes(q) ?? false
-        if (!inTitle && !inDesc) return false
+  // Comptage statuts pour afficher "N disponibles" dans le hero
+  const availableCount = useMemo(() => artworks.filter(a => a.status === 'available').length, [artworks])
+
+  // Filtrage + tri
+  const filteredArtworks = useMemo(() => {
+    let list = artworks
+
+    if (activeFilter !== 'all') {
+      if (activeFilter.startsWith('type:')) {
+        const typeId = parseInt(activeFilter.slice(5), 10)
+        list = list.filter(a => a.typeId === typeId)
+      } else if (activeFilter.startsWith('medium:')) {
+        const mediumId = parseInt(activeFilter.slice(7), 10)
+        list = list.filter(a => a.mediumId === mediumId)
+      } else if (activeFilter.startsWith('status:')) {
+        const statusVal = activeFilter.slice(7)
+        list = list.filter(a => a.status === statusVal)
       }
-      return true
-    })
-    // Tri par date de création de l'œuvre
-    .sort((a, b) =>
-      sortOrder === 'date-asc'
-        ? a.createdTimestamp - b.createdTimestamp
-        : b.createdTimestamp - a.createdTimestamp
-    )
+    }
 
-  // Tranche visible — les N premières œuvres filtrées
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      list = list.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        (a.descriptionSnippet ?? '').toLowerCase().includes(q)
+      )
+    }
+
+    if (sort === 'date-asc')   return [...list].sort((a, b) => a.createdTimestamp - b.createdTimestamp)
+    if (sort === 'price-desc') return [...list].sort((a, b) => b.basePriceNum - a.basePriceNum)
+    if (sort === 'price-asc')  return [...list].sort((a, b) => a.basePriceNum - b.basePriceNum)
+    return list
+  }, [artworks, activeFilter, search, sort])
+
   const visibleArtworks = filteredArtworks.slice(0, visibleCount)
   const hasMore = visibleCount < filteredArtworks.length
 
-  /** Charge le lot suivant quand ScrollSentinel est atteint */
-  function loadMore() {
-    setVisibleCount((n) => Math.min(n + BATCH_SIZE, filteredArtworks.length))
+  function loadMore() { setVisibleCount(n => Math.min(n + BATCH_SIZE, filteredArtworks.length)) }
+
+  function handleFilterChange(filter: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (filter === 'all') params.delete('filter')
+    else params.set('filter', filter)
+    router.replace(`/?${params.toString()}`, { scroll: false })
   }
 
-  /** Met à jour un filtre dans l'URL sans rechargement (D-13) */
-  function setFilter(key: 'type' | 'medium', value: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set(key, value)
-    } else {
-      params.delete(key)
-    }
-    // scroll: false → évite le saut en haut de page à chaque clic de filtre
-    router.replace(`/?${params.toString()}`, { scroll: false })
+  const sectionLabel = {
+    fontFamily: 'var(--font-space-mono)', fontSize: 10,
+    letterSpacing: '0.14em', textTransform: 'uppercase' as const,
+    color: 'var(--color-ink-muted)',
   }
 
   return (
     <div style={{ position: 'relative', zIndex: 1 }}>
-      {/* Barre de filtres — type, médium, recherche texte, tri */}
-      <FilterBar
-        types={types}
-        mediums={mediums}
-        activeTypeId={activeTypeId}
-        activeMediumId={activeMediumId}
-        onTypeChange={(id) => setFilter('type', id)}
-        onMediumChange={(id) => setFilter('medium', id)}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        sortOrder={sortOrder}
-        onSortChange={setSortOrder}
-      />
 
-      {/* État vide — UI-SPEC section 12 */}
-      {filteredArtworks.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-          <p
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <section style={{ padding: '48px 32px 28px', maxWidth: 1200, margin: '0 auto' }}>
+        <span style={sectionLabel}>Galerie POF · Atelier</span>
+        <h1 style={{
+          margin: '8px 0 0',
+          fontFamily: 'var(--font-oswald)', fontWeight: 700,
+          fontSize: 'clamp(36px, 5vw, 56px)', lineHeight: 1.05,
+          letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--color-ink)',
+        }}>Atelier — collection courante</h1>
+        <p style={{
+          margin: '14px 0 0',
+          fontFamily: 'var(--font-cormorant)', fontStyle: 'italic', fontSize: 18, lineHeight: 1.55,
+          color: 'var(--color-ink)', maxWidth: 620,
+        }}>
+          Dernières œuvres au sortir de l&apos;atelier. Faites défiler la page comme on tournerait les pages d&apos;un carnet ; arrêtez-vous sur ce qui vous attrape. Pour acquérir une œuvre, faites une offre — je réponds à chacune.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 22 }}>
+          <span style={{
+            fontFamily: 'var(--font-space-mono)', fontWeight: 700, fontSize: 13,
+            letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-ink)',
+          }}>{artworks.length} œuvre{artworks.length !== 1 ? 's' : ''}</span>
+          <span style={{ width: 1, height: 12, background: 'rgba(0,0,0,0.18)' }} />
+          <span style={{
+            fontFamily: 'var(--font-space-mono)', fontSize: 13,
+            letterSpacing: '0.06em', color: 'var(--color-teal)',
+          }}>● {availableCount} disponible{availableCount !== 1 ? 's' : ''}</span>
+        </div>
+      </section>
+
+      {/* ── Barre filtre sticky ───────────────────────────────────────── */}
+      <div style={{
+        position: 'sticky', top: 56, zIndex: 9,
+        padding: '10px 24px',
+        backgroundColor: 'var(--color-surface)',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+        borderTop: '1px solid rgba(0,0,0,0.06)',
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+      }}>
+        {/* Recherche */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          border: '1px solid rgba(0,0,0,0.12)', background: 'var(--color-bg)',
+          borderRadius: 3, padding: '0 12px', height: 36, minWidth: 180, flex: '0 1 220px',
+          color: 'var(--color-ink-muted)',
+        }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/>
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="RECHERCHER…"
             style={{
-              fontFamily: 'var(--font-oswald)',
-              fontSize: '20px',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              marginBottom: '8px',
+              flex: 1, border: 0, outline: 0,
+              fontFamily: 'var(--font-space-mono)', fontSize: 11,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: 'var(--color-ink)', background: 'transparent',
+            }}
+          />
+        </div>
+
+        {/* Section Filtrer */}
+        <span style={sectionLabel}>Filtrer</span>
+        <Chip value="all" label="Tous" active={activeFilter === 'all'} onToggle={handleFilterChange} />
+
+        {/* Section Médium — types de la DB */}
+        {types.length > 0 && (
+          <>
+            <span style={{ ...sectionLabel, marginLeft: 4 }}>Médium</span>
+            {types.map(t => (
+              <Chip
+                key={t.id}
+                value={`type:${t.id}`}
+                label={t.name}
+                active={activeFilter === `type:${t.id}`}
+                onToggle={handleFilterChange}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Section Statut */}
+        <span style={{ ...sectionLabel, marginLeft: 4 }}>Statut</span>
+        <Chip value="status:available" label="Disponibles" active={activeFilter === 'status:available'} color="var(--color-teal)"   onToggle={handleFilterChange} />
+        <Chip value="status:reserved"  label="Réservées"   active={activeFilter === 'status:reserved'}  color="var(--color-orange)" onToggle={handleFilterChange} />
+        <Chip value="status:sold"      label="Vendues"     active={activeFilter === 'status:sold'}      color="var(--color-red)"    onToggle={handleFilterChange} />
+
+        <span style={{ flex: 1 }} />
+
+        {/* Compteur */}
+        <span style={{ ...sectionLabel, color: 'var(--color-ink-muted)', whiteSpace: 'nowrap' }}>
+          {filteredArtworks.length} affichée{filteredArtworks.length > 1 ? 's' : ''}
+        </span>
+
+        {/* Tri */}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={sort}
+            onChange={e => setSort(e.target.value)}
+            style={{
+              appearance: 'none', padding: '7px 30px 7px 14px',
+              border: '1px solid rgba(0,0,0,0.12)', background: 'var(--color-surface)',
+              fontFamily: 'var(--font-space-mono)', fontSize: 11,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: 'var(--color-ink)', cursor: 'pointer', height: 36, borderRadius: 3,
             }}
           >
-            {activeTypeId || activeMediumId
-              ? 'Aucun résultat pour ces filtres. Essayez une autre combinaison.'
-              : "Aucune œuvre publiée pour l'instant."}
+            <option value="date-desc">Récentes d&apos;abord</option>
+            <option value="date-asc">Anciennes d&apos;abord</option>
+            <option value="price-desc">Prix ↓</option>
+            <option value="price-asc">Prix ↑</option>
+          </select>
+          <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-ink-muted)' }}>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="2,3.5 5,6.5 8,3.5"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* État vide */}
+      {filteredArtworks.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <p style={{ fontFamily: 'var(--font-cormorant)', fontSize: 18, fontStyle: 'italic', color: 'var(--color-ink-muted)' }}>
+            Aucune œuvre ne correspond à ces filtres.
           </p>
-          {!activeTypeId && !activeMediumId && (
-            <p
-              style={{
-                fontFamily: 'var(--font-space-mono)',
-                fontSize: '11px',
-                color: 'var(--color-ink-muted)',
-              }}
-            >
-              Revenez bientôt.
-            </p>
-          )}
         </div>
       )}
 
-      {/* Grille masonry — rendue seulement s'il y a des œuvres à afficher */}
+      {/* Grille masonry */}
       {visibleArtworks.length > 0 && (
-        <MasonryGrid>
-          {visibleArtworks.map((artwork) => (
-            <ArtworkCard key={artwork.id} {...artwork} />
-          ))}
-        </MasonryGrid>
+        <div style={{ paddingTop: 8, paddingBottom: 40 }}>
+          <MasonryGrid>
+            {visibleArtworks.map(artwork => (
+              <ArtworkCard
+                key={artwork.id}
+                {...artwork}
+                visitorId={visitorId}
+                initialSaved={savedArtworkIds.includes(artwork.id)}
+              />
+            ))}
+          </MasonryGrid>
+        </div>
       )}
 
-      {/* Sentinel invisible — déclenche loadMore quand il entre dans le viewport */}
       <ScrollSentinel onIntersect={loadMore} hasMore={hasMore} />
     </div>
   )

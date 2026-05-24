@@ -88,8 +88,9 @@ export async function updateArtworkStatus(
 const updateArtworkSchema = z.object({
   title: z.string().min(1, 'Le titre est obligatoire.').max(255, 'Titre trop long.'),
   description: z.string().max(2000, 'Description trop longue.').optional(),
-  // Date ISO string "YYYY-MM-DD" — retournée par input type="date" ou vide
-  createdDate: z.string().optional(),
+  // Année et mois de création — FormData retourne "" si champ vide, on normalise en undefined
+  createdYear: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1900).max(2100).optional()),
+  createdMonth: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1).max(12).optional()),
   typeId: z.coerce.number().int().positive().optional(),
   mediumId: z.coerce.number().int().positive().optional(),
   // Colonnes numeric Drizzle — z.coerce convertit "42.5" → 42.5
@@ -162,8 +163,8 @@ export async function updateArtwork(
       .set({
         title: data.title,
         description: data.description ?? null,
-        // Date ISO "YYYY-MM-DD" → Date object ; null si champ laissé vide
-        createdDate: data.createdDate ? new Date(data.createdDate) : null,
+        createdYear: data.createdYear ?? null,
+        createdMonth: data.createdMonth ?? null,
         typeId: data.typeId ?? null,
         mediumId: data.mediumId ?? null,
         // CRITIQUE : colonnes numeric Drizzle → .toString() OBLIGATOIRE
@@ -249,7 +250,8 @@ export async function updateArtworkDescription(
 // ============================================================
 
 const updateArtworkMetaSchema = z.object({
-  createdDate: z.string().optional(),
+  createdYear: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1900).max(2100).optional()),
+  createdMonth: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1).max(12).optional()),
   typeId: z.coerce.number().int().positive().optional(),
   mediumId: z.coerce.number().int().positive().optional(),
   widthCm: z.coerce.number().positive().optional(),
@@ -285,7 +287,8 @@ export async function updateArtworkMeta(
   try {
     await db.update(artworks)
       .set({
-        createdDate: data.createdDate ? new Date(data.createdDate) : null,
+        createdYear: data.createdYear ?? null,
+        createdMonth: data.createdMonth ?? null,
         typeId: data.typeId ?? null,
         mediumId: data.mediumId ?? null,
         widthCm: data.widthCm?.toString() ?? null,
@@ -345,17 +348,10 @@ export async function deleteArtwork(artworkId: number): Promise<{ error: string 
 
   const storage = getStorage()
 
-  // ── 3. Supprimer les 3 variantes stockées — AVANT la DB (T-05-01-02) ──
+  // ── 3. Supprimer le fichier stocké — AVANT la DB (T-05-01-02) ──
   // .catch(() => {}) : idempotent — ignore ENOENT si le fichier est déjà absent
-  // (utile en cas de retry ou d'upload partiel)
   if (artwork.originalPath) {
     await storage.delete(artwork.originalPath).catch(() => {})
-  }
-  if (artwork.processedPath) {
-    await storage.delete(artwork.processedPath).catch(() => {})
-  }
-  if (artwork.thumbnailPath) {
-    await storage.delete(artwork.thumbnailPath).catch(() => {})
   }
 
   // ── 4. Supprimer la ligne DB après les fichiers ──

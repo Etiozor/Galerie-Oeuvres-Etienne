@@ -5,59 +5,28 @@
  *
  * POURQUOI un Client Component ?
  * useActionState nécessite un hook React — impossible dans un Server Component.
- * Le formulaire doit réagir aux erreurs retournées par updateArtwork (Zod par champ).
  *
- * POURQUOI les données DB sont passées en props et non re-fetchées ici ?
- * Le Server Component parent charge les données — le Client Component les reçoit.
- * Évite un double fetch et garde la logique DB côté serveur. (pattern D-09)
+ * POURQUOI useActionState et pas useTransition ?
+ * Le formulaire retourne des erreurs Zod par champ — useActionState les persiste
+ * entre soumissions sans useState supplémentaire.
  *
- * POURQUOI updateAction est une prop et non importée directement ?
- * La Server Action est bindée avec l'artworkId dans le Server Component parent :
- * `const updateArtworkWithId = updateArtwork.bind(null, artwork.id)`
- * Cela garantit que l'artworkId ne peut pas être falsifié par le client (T-05-02-03).
- *
- * Structure du formulaire (UI-SPEC.md section 05-02) :
- * 1. Section Métadonnées : titre, date, type, médium (2 colonnes), dimensions (2 colonnes), description
- * 2. Section Prix : basePrice + 6 facteurs de décomposition (libellés de PriceBreakdown.tsx)
- * 3. Bouton "Enregistrer les modifications"
- *
- * Design (D-03) : AUCUN border-radius — zéro coins arrondis sur tous les éléments.
- * Typographie admin : fontFamily var(--font-geist-sans) sur les labels et inputs.
+ * Structure :
+ * - Section principale (6 colonnes) : date, type, médium, largeur, hauteur, prix de base
+ * - Section "Composantes du prix" (dépliable) : 6 facteurs de décomposition
  */
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-/**
- * Résultat retourné par updateArtworkMeta — compatible avec useActionState.
- */
 type UpdateArtworkResult =
   | { success: true }
   | { success: false; errors: Record<string, string[]> }
 
-/**
- * Props de ArtworkEditForm — métadonnées secondaires uniquement.
- * Titre et description sont gérés par InlineEditField dans la page parente.
- */
 interface ArtworkEditFormProps {
   updateAction: (prevState: unknown, formData: FormData) => Promise<UpdateArtworkResult>
-
-  /**
-   * Date de création au format YYYY-MM-DD pour input type="date".
-   */
-  initialCreatedDate: string | null
-
-  /** ID du type sélectionné — null si non défini */
+  initialCreatedYear: number | null
+  initialCreatedMonth: number | null
   initialTypeId: number | null
-
-  /** ID du médium sélectionné — null si non défini */
   initialMediumId: number | null
-
-  /**
-   * Colonnes numeric Drizzle — arrivent comme string | null en TypeScript.
-   * Affiché tel quel dans les inputs (pas de reformatage nécessaire).
-   */
   initialWidthCm: string | null
   initialHeightCm: string | null
   initialBasePrice: string | null
@@ -65,83 +34,131 @@ interface ArtworkEditFormProps {
   initialPriceFormat: string | null
   initialPriceFraming: string | null
   initialPriceMaterials: string | null
-
-  /**
-   * Colonnes smallint Drizzle — arrivent comme number | null en TypeScript.
-   * Scores de 1 à 5. PAS de .toString() en lecture (contrairement aux numeric).
-   */
   initialPriceTechnicality: number | null
   initialPriceAttachment: number | null
-
-  /** Options pour les selects — chargées en parallèle par le Server Component parent */
   artworkTypes: Array<{ id: number; name: string }>
   mediums: Array<{ id: number; name: string }>
 }
 
 // ── Styles partagés ──────────────────────────────────────────────────────────
 
-/** Style commun pour les labels au-dessus des champs */
-const labelStyle: React.CSSProperties = {
+const eyebrowStyle: React.CSSProperties = {
+  font: '400 11px var(--font-space-mono)',
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase' as const,
+  color: 'var(--color-ink-muted)',
+  marginBottom: 6,
   display: 'block',
-  fontSize: '14px',
-  fontWeight: 600,
-  fontFamily: 'var(--font-geist-sans)',
-  color: '#171717',
-  marginBottom: '6px',
 }
 
-/** Style commun pour les inputs texte et number */
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  height: '40px',
-  padding: '0 12px',
-  fontFamily: 'var(--font-geist-sans)',
-  fontSize: '13px',
-  color: '#171717',
-  backgroundColor: '#ffffff',
-  border: '1px solid #d4d4d4',
-  borderRadius: 0,  // D-03 : ZERO coins arrondis
+  minHeight: 40,
+  padding: '8px 12px',
+  background: '#fff',
+  border: '1px solid rgba(0,0,0,0.14)',
+  borderRadius: 'var(--radius-sm)',
+  font: '400 14px var(--font-space-mono)',
+  color: 'var(--color-ink)',
+  outline: 'none',
   boxSizing: 'border-box',
 }
 
-/** Style commun pour les selects */
 const selectStyle: React.CSSProperties = {
   width: '100%',
-  height: '40px',
-  padding: '0 12px',
-  fontFamily: 'var(--font-geist-sans)',
-  fontSize: '13px',
-  color: '#171717',
-  backgroundColor: '#ffffff',
-  border: '1px solid #d4d4d4',
-  borderRadius: 0,  // D-03 : ZERO coins arrondis
-  boxSizing: 'border-box',
+  minHeight: 40,
+  padding: '8px 36px 8px 12px',
+  background: "#fff url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23737373' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>\") no-repeat right 12px center",
+  border: '1px solid rgba(0,0,0,0.14)',
+  borderRadius: 'var(--radius-sm)',
+  font: '400 14px var(--font-geist-sans)',
+  color: 'var(--color-ink)',
+  outline: 'none',
   cursor: 'pointer',
+  appearance: 'none' as const,
+  WebkitAppearance: 'none' as const,
+  boxSizing: 'border-box',
 }
 
-/** Style pour les messages d'erreur par champ (Zod) */
 const fieldErrorStyle: React.CSSProperties = {
   fontFamily: 'var(--font-space-mono)',
-  fontSize: '11px',
-  color: '#bc4b51',
-  margin: '4px 0 0 0',
+  fontSize: 11,
+  color: 'var(--color-red)',
+  margin: '4px 0 0',
 }
 
-// ── Composant ─────────────────────────────────────────────────────────────────
+// Champ avec suffixe (cm, €, h)
+function InputWithSuffix({
+  id, name, type = 'number', suffix, defaultValue, placeholder, step, min, max,
+  error,
+}: {
+  id: string; name: string; type?: string; suffix: string; defaultValue?: string | number | null
+  placeholder?: string; step?: string; min?: string; max?: string; error?: string
+}) {
+  return (
+    <label htmlFor={id} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+      <span style={eyebrowStyle}>{name}</span>
+      <div style={{ display: 'flex', alignItems: 'stretch', minWidth: 0 }}>
+        <input
+          id={id}
+          name={id}
+          type={type}
+          defaultValue={defaultValue ?? ''}
+          placeholder={placeholder}
+          step={step}
+          min={min}
+          max={max}
+          style={{
+            ...inputStyle,
+            borderRadius: `var(--radius-sm) 0 0 var(--radius-sm)`,
+          }}
+        />
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '0 12px',
+          background: '#fafafa',
+          border: '1px solid rgba(0,0,0,0.14)',
+          borderLeft: 0,
+          borderRadius: `0 var(--radius-sm) var(--radius-sm) 0`,
+          font: '400 12px var(--font-space-mono)',
+          letterSpacing: '0.05em',
+          color: 'var(--color-ink-muted)',
+          whiteSpace: 'nowrap',
+        }}>{suffix}</span>
+      </div>
+      {error && <p role="alert" style={fieldErrorStyle}>{error}</p>}
+    </label>
+  )
+}
 
-/**
- * ArtworkEditForm — Formulaire d'édition complet des métadonnées d'une œuvre.
- *
- * 15 champs répartis en 2 sections :
- * - Métadonnées : titre, date, type, médium, dimensions (L × H), description
- * - Prix : prix de base + 6 facteurs de décomposition
- *
- * Erreurs affichées en rouge (#bc4b51) au-dessous de chaque champ concerné.
- * Message de succès en vert (#5b8e7d) après enregistrement.
- */
+function Field({
+  id, label, children, span = 1, error,
+}: {
+  id?: string; label: string; children: React.ReactNode; span?: number; error?: string
+}) {
+  return (
+    <div style={{ gridColumn: `span ${span}`, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {id ? (
+        <label htmlFor={id} style={eyebrowStyle}>{label}</label>
+      ) : (
+        <span style={eyebrowStyle}>{label}</span>
+      )}
+      {children}
+      {error && <p role="alert" style={fieldErrorStyle}>{error}</p>}
+    </div>
+  )
+}
+
+const MONTHS_FR = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+]
+
 export function ArtworkEditForm({
   updateAction,
-  initialCreatedDate,
+  initialCreatedYear,
+  initialCreatedMonth,
   initialTypeId,
   initialMediumId,
   initialWidthCm,
@@ -157,396 +174,250 @@ export function ArtworkEditForm({
   mediums,
 }: ArtworkEditFormProps) {
   const [state, formAction, isPending] = useActionState(updateAction, null)
+  const [priceOpen, setPriceOpen] = useState(false)
+
+  const err = (field: string) =>
+    (state && !state.success && state.errors?.[field]?.[0]) || undefined
+
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: '22px 20px',
+    padding: 28,
+    background: 'var(--color-surface)',
+    border: '1px solid rgba(0,0,0,0.08)',
+    borderRadius: 'var(--radius-sm)',
+  }
 
   return (
     <form action={formAction}>
 
       {/* ── Erreur globale ── */}
       {state && !state.success && state.errors?._form && (
-        <div role="alert" style={{ backgroundColor: 'rgba(188,75,81,0.1)', border: '1px solid rgba(188,75,81,0.4)', padding: '8px 12px', marginBottom: '16px', borderRadius: 0 }}>
+        <div role="alert" style={{ backgroundColor: 'rgba(188,75,81,0.08)', border: '1px solid rgba(188,75,81,0.3)', padding: '8px 12px', marginBottom: 16, borderRadius: 'var(--radius-sm)' }}>
           {state.errors._form.map((err, i) => (
-            <p key={i} style={{ fontFamily: 'var(--font-space-mono)', fontSize: '11px', color: '#bc4b51', margin: 0 }}>{err}</p>
+            <p key={i} style={{ fontFamily: 'var(--font-space-mono)', fontSize: 11, color: 'var(--color-red)', margin: 0 }}>{err}</p>
           ))}
         </div>
       )}
 
       {/* ── Succès ── */}
       {state?.success && (
-        <p role="status" style={{ fontSize: '14px', color: '#5b8e7d', marginBottom: '16px', padding: '8px 12px', backgroundColor: 'rgba(91,142,125,0.1)', border: '1px solid rgba(91,142,125,0.4)', borderRadius: 0 }}>
+        <p role="status" style={{ fontSize: 14, color: 'var(--color-teal)', marginBottom: 16, padding: '8px 12px', backgroundColor: 'rgba(91,142,125,0.08)', border: '1px solid rgba(91,142,125,0.3)', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-geist-sans)' }}>
           Modifications enregistrées.
         </p>
       )}
 
-      {/* Grille 2 colonnes */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-
-        {/* ── Date de création ── */}
-        <div>
-          <label htmlFor="createdDate" style={labelStyle}>
-            Date de création
-          </label>
-          <input
-            id="createdDate"
-            name="createdDate"
-            type="date"
-            defaultValue={initialCreatedDate ?? ''}
-            style={inputStyle}
-          />
-          {state && !state.success && state.errors?.createdDate && (
-            <p role="alert" style={fieldErrorStyle}>{state.errors.createdDate[0]}</p>
-          )}
-        </div>
-
-        {/* ── Type (select) ── */}
-        <div>
-          <label htmlFor="typeId" style={labelStyle}>
-            Type
-          </label>
+      {/* ── Grille principale — 6 colonnes ── */}
+      <div style={gridStyle}>
+        {/* Mois de création — 1 col */}
+        <Field id="createdMonth" label="Mois" span={1} error={err('createdMonth')}>
           <select
-            id="typeId"
-            name="typeId"
-            defaultValue={initialTypeId ?? ''}
+            id="createdMonth"
+            name="createdMonth"
+            defaultValue={initialCreatedMonth ?? ''}
             style={selectStyle}
           >
             <option value="">— Non défini —</option>
-            {artworkTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
+            {MONTHS_FR.map((name, i) => (
+              <option key={i + 1} value={i + 1}>{name}</option>
             ))}
           </select>
-          {state && !state.success && state.errors?.typeId && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.typeId[0]}
-            </p>
-          )}
-        </div>
+        </Field>
 
-        {/* ── Médium (select) ── */}
-        <div>
-          <label htmlFor="mediumId" style={labelStyle}>
-            Médium
-          </label>
-          <select
-            id="mediumId"
-            name="mediumId"
-            defaultValue={initialMediumId ?? ''}
-            style={selectStyle}
-          >
-            <option value="">— Non défini —</option>
-            {mediums.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          {state && !state.success && state.errors?.mediumId && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.mediumId[0]}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Dimensions (grille 2 colonnes) ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px',
-          marginBottom: '16px',
-        }}
-      >
-        <div>
-          <label htmlFor="widthCm" style={labelStyle}>
-            Largeur (cm)
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="widthCm"
-              name="widthCm"
-              type="number"
-              step="0.1"
-              min="0"
-              defaultValue={initialWidthCm ?? ''}
-              placeholder="ex : 42.5"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              cm
-            </span>
-          </div>
-          {state && !state.success && state.errors?.widthCm && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.widthCm[0]}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="heightCm" style={labelStyle}>
-            Hauteur (cm)
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="heightCm"
-              name="heightCm"
-              type="number"
-              step="0.1"
-              min="0"
-              defaultValue={initialHeightCm ?? ''}
-              placeholder="ex : 60"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              cm
-            </span>
-          </div>
-          {state && !state.success && state.errors?.heightCm && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.heightCm[0]}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <hr style={{ border: 'none', borderBottom: '1px solid rgba(0,0,0,0.1)', margin: '24px 0' }} />
-
-      {/* ══════════════════════════════════════════════════════════════
-          Prix
-          ══════════════════════════════════════════════════════════════ */}
-      <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#171717', marginBottom: '16px', marginTop: 0 }}>
-        Prix de base
-      </h2>
-
-      {/* ── Prix de base ── */}
-      <div style={{ marginBottom: '16px', maxWidth: '320px' }}>
-        <label htmlFor="basePrice" style={labelStyle}>
-          Prix de base
-        </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Année de création — 1 col */}
+        <Field id="createdYear" label="Année" span={1} error={err('createdYear')}>
           <input
-            id="basePrice"
-            name="basePrice"
+            id="createdYear"
+            name="createdYear"
             type="number"
+            min="1900"
+            max="2100"
+            placeholder="AAAA"
+            defaultValue={initialCreatedYear ?? ''}
+            style={{ ...inputStyle }}
+          />
+        </Field>
+
+        {/* Type — 2 col */}
+        <Field id="typeId" label="Type" span={2} error={err('typeId')}>
+          <select id="typeId" name="typeId" defaultValue={initialTypeId ?? ''} style={selectStyle}>
+            <option value="">— Non défini —</option>
+            {artworkTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </Field>
+
+        {/* Médium — 2 col */}
+        <Field id="mediumId" label="Médium" span={2} error={err('mediumId')}>
+          <select id="mediumId" name="mediumId" defaultValue={initialMediumId ?? ''} style={selectStyle}>
+            <option value="">— Non défini —</option>
+            {mediums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </Field>
+
+        {/* Largeur — 2 col */}
+        <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+          <InputWithSuffix
+            id="widthCm"
+            name="Largeur"
+            suffix="cm"
+            defaultValue={initialWidthCm}
+            placeholder="ex : 42.5"
+            step="0.1"
+            min="0"
+            error={err('widthCm')}
+          />
+        </div>
+
+        {/* Hauteur — 2 col */}
+        <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+          <InputWithSuffix
+            id="heightCm"
+            name="Hauteur"
+            suffix="cm"
+            defaultValue={initialHeightCm}
+            placeholder="ex : 60"
+            step="0.1"
+            min="0"
+            error={err('heightCm')}
+          />
+        </div>
+
+        {/* Prix de base — 2 col */}
+        <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+          <InputWithSuffix
+            id="basePrice"
+            name="Prix de base"
+            suffix="€"
+            defaultValue={initialBasePrice}
+            placeholder="ex : 350"
             step="0.01"
             min="0"
-            defaultValue={initialBasePrice ?? ''}
-            placeholder="ex : 350"
-            style={inputStyle}
+            error={err('basePrice')}
           />
-          <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-            €
-          </span>
         </div>
-        {state && !state.success && state.errors?.basePrice && (
-          <p role="alert" style={fieldErrorStyle}>
-            {state.errors.basePrice[0]}
-          </p>
-        )}
       </div>
 
-      {/* ── Décomposition du prix (6 facteurs — libellés de PriceBreakdown.tsx) ── */}
-      {/*
-       * POURQUOI ces libellés précisément ?
-       * Ils sont extraits de PriceBreakdown.tsx (référence D-08) pour assurer la cohérence
-       * entre ce que l'artiste saisit en admin et ce que le visiteur voit côté public.
-       * "Temps de travail", "Format / Dimensions", "Encadrement", "Matériaux",
-       * "Complexité technique", "Attachement" sont les 6 labels de PriceBreakdown.
-       */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
-        {/* ── Temps de travail ── */}
-        <div>
-          <label htmlFor="priceHoursSpent" style={labelStyle}>
-            Temps de travail
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="priceHoursSpent"
-              name="priceHoursSpent"
-              type="number"
-              step="0.5"
-              min="0"
-              defaultValue={initialPriceHoursSpent ?? ''}
-              placeholder="ex : 200"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              € (temps de travail)
-            </span>
-          </div>
-          {state && !state.success && state.errors?.priceHoursSpent && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.priceHoursSpent[0]}
+      {/* ── Composantes du prix — dépliable ── */}
+      <div style={{ marginTop: 16 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          marginBottom: priceOpen ? 16 : 0,
+          gap: 12,
+          flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{
+              font: '400 11px var(--font-space-mono)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--color-ink-muted)',
+            }}>
+              Composantes du prix
+            </div>
+            <p style={{ margin: '6px 0 0', font: '400 13px var(--font-geist-sans)', color: 'var(--color-ink-muted)' }}>
+              Facteurs utilisés pour calibrer le prix de base.
             </p>
-          )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPriceOpen(!priceOpen)}
+            style={{
+              padding: '8px 14px',
+              background: 'transparent',
+              border: '1px solid rgba(0,0,0,0.14)',
+              borderRadius: 'var(--radius-sm)',
+              font: '600 13px var(--font-geist-sans)',
+              color: 'var(--color-ink)',
+              cursor: 'pointer',
+            }}
+          >
+            {priceOpen ? 'Replier  −' : 'Déplier  +'}
+          </button>
         </div>
 
-        {/* ── Format / Dimensions ── */}
-        <div>
-          <label htmlFor="priceFormat" style={labelStyle}>
-            Format / Dimensions
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="priceFormat"
-              name="priceFormat"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={initialPriceFormat ?? ''}
-              placeholder="ex : 50"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              € (format/dimensions)
-            </span>
+        {/* Les inputs sont toujours dans le DOM pour la soumission, juste masqués */}
+        <div style={{ display: priceOpen ? 'grid' : 'none', ...gridStyle, marginTop: 0 }}>
+          {/* Heures passées */}
+          <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+            <InputWithSuffix id="priceHoursSpent" name="Heures passées" suffix="h" defaultValue={initialPriceHoursSpent} placeholder="ex : 8" step="0.5" min="0" error={err('priceHoursSpent')} />
           </div>
-          {state && !state.success && state.errors?.priceFormat && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.priceFormat[0]}
-            </p>
-          )}
-        </div>
 
-        {/* ── Encadrement ── */}
-        <div>
-          <label htmlFor="priceFraming" style={labelStyle}>
-            Encadrement
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="priceFraming"
-              name="priceFraming"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={initialPriceFraming ?? ''}
-              placeholder="0 si non encadré"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              € (encadrement)
-            </span>
+          {/* Format / Dimensions (valeur numérique €) */}
+          <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+            <InputWithSuffix id="priceFormat" name="Format / Dimensions" suffix="€" defaultValue={initialPriceFormat} placeholder="ex : 50" step="0.01" min="0" error={err('priceFormat')} />
           </div>
-          {state && !state.success && state.errors?.priceFraming && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.priceFraming[0]}
-            </p>
-          )}
-        </div>
 
-        {/* ── Matériaux ── */}
-        <div>
-          <label htmlFor="priceMaterials" style={labelStyle}>
-            Matériaux
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="priceMaterials"
-              name="priceMaterials"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={initialPriceMaterials ?? ''}
-              placeholder="ex : 20"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              € (matériaux)
-            </span>
+          {/* Encadrement */}
+          <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+            <InputWithSuffix id="priceFraming" name="Encadrement" suffix="€" defaultValue={initialPriceFraming} placeholder="0 si non encadré" step="0.01" min="0" error={err('priceFraming')} />
           </div>
-          {state && !state.success && state.errors?.priceMaterials && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.priceMaterials[0]}
-            </p>
-          )}
-        </div>
 
-        {/* ── Complexité technique (score 1-5, smallint) ── */}
-        <div>
-          <label htmlFor="priceTechnicality" style={labelStyle}>
-            Complexité technique
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="priceTechnicality"
-              name="priceTechnicality"
-              type="number"
-              min="1"
-              max="5"
-              step="1"
-              defaultValue={initialPriceTechnicality ?? ''}
-              placeholder="1 à 5"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              / 5 (complexité technique)
-            </span>
+          {/* Matériaux */}
+          <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+            <InputWithSuffix id="priceMaterials" name="Matériaux" suffix="€" defaultValue={initialPriceMaterials} placeholder="ex : 20" step="0.01" min="0" error={err('priceMaterials')} />
           </div>
-          {state && !state.success && state.errors?.priceTechnicality && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.priceTechnicality[0]}
-            </p>
-          )}
-        </div>
 
-        {/* ── Attachement sentimental (score 1-5, smallint) ── */}
-        <div>
-          <label htmlFor="priceAttachment" style={labelStyle}>
-            Attachement
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              id="priceAttachment"
-              name="priceAttachment"
-              type="number"
-              min="1"
-              max="5"
-              step="1"
-              defaultValue={initialPriceAttachment ?? ''}
-              placeholder="1 à 5"
-              style={inputStyle}
-            />
-            <span style={{ fontFamily: 'var(--font-geist-sans)', fontSize: '13px', color: '#525252', whiteSpace: 'nowrap' }}>
-              / 5 (attachement artiste)
-            </span>
+          {/* Technicité (score 1–5) */}
+          <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
+            <InputWithSuffix id="priceTechnicality" name="Technicité" suffix="/ 5" defaultValue={initialPriceTechnicality} placeholder="1 à 5" step="1" min="1" max="5" error={err('priceTechnicality')} />
           </div>
-          {state && !state.success && state.errors?.priceAttachment && (
-            <p role="alert" style={fieldErrorStyle}>
-              {state.errors.priceAttachment[0]}
-            </p>
-          )}
+
+          {/* Attachement (score 1–5) avec hint */}
+          <div style={{ gridColumn: 'span 2', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={eyebrowStyle}>Attachement</span>
+            <div style={{ display: 'flex', alignItems: 'stretch', minWidth: 0 }}>
+              <input
+                id="priceAttachment"
+                name="priceAttachment"
+                type="number"
+                step="1"
+                min="1"
+                max="5"
+                defaultValue={initialPriceAttachment ?? ''}
+                placeholder="1 à 5"
+                style={{ ...inputStyle, borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)' }}
+              />
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', padding: '0 12px',
+                background: 'var(--color-bg)', border: '1px solid rgba(0,0,0,0.14)', borderLeft: 0,
+                borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
+                font: '400 12px var(--font-space-mono)', letterSpacing: '0.05em',
+                color: 'var(--color-ink-muted)', whiteSpace: 'nowrap',
+              }}>/ 5</span>
+            </div>
+            <span style={{ font: '400 12px var(--font-geist-sans)', color: 'var(--color-ink-muted)' }}>
+              Combien vous tenez à cette œuvre.
+            </span>
+            {err('priceAttachment') && <p role="alert" style={fieldErrorStyle}>{err('priceAttachment')}</p>}
+          </div>
         </div>
       </div>
 
       {/* ── Bouton submit ── */}
-      <button
-        type="submit"
-        disabled={isPending}
-        style={{
-          height: '44px',  // WCAG 2.5.5 : cible tactile minimum
-          backgroundColor: isPending ? '#a3a3a3' : '#171717',
-          color: '#ffffff',
-          fontFamily: 'var(--font-geist-sans)',
-          fontSize: '14px',
-          fontWeight: 600,
-          border: 'none',
-          borderRadius: 0,  // D-03 : ZERO coins arrondis
-          cursor: isPending ? 'not-allowed' : 'pointer',
-          padding: '0 24px',
-          minWidth: '240px',
-        }}
-      >
-        {isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
-      </button>
+      <div style={{ marginTop: 24 }}>
+        <button
+          type="submit"
+          disabled={isPending}
+          style={{
+            height: 44,
+            backgroundColor: isPending ? 'var(--color-ink-muted)' : 'var(--color-ink)',
+            color: '#fff',
+            fontFamily: 'var(--font-geist-sans)',
+            fontSize: 14,
+            fontWeight: 600,
+            border: 'none',
+            borderRadius: 'var(--radius-sm)',
+            cursor: isPending ? 'not-allowed' : 'pointer',
+            padding: '0 24px',
+            minWidth: 240,
+          }}
+        >
+          {isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
+        </button>
+      </div>
     </form>
   )
 }
