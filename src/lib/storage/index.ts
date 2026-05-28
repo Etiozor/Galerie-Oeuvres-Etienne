@@ -16,6 +16,7 @@
  */
 
 import type { LocalStorageAdapter } from './local'
+import type { R2StorageAdapter } from './r2'
 
 // ============================================================
 // INTERFACE — Contrat que tous les adaptateurs doivent respecter
@@ -100,14 +101,11 @@ export function getStorage(): StorageProvider {
       return new LocalStorageAdapter()
     }
 
-    case 'r2':
-      // R2StorageAdapter sera implémenté en Phase 6
-      // Pour l'instant, lever une erreur explicite pour éviter les bugs silencieux
-      throw new Error(
-        'R2StorageAdapter non encore implémenté. ' +
-        "Utiliser STORAGE_BACKEND=local en développement. " +
-        "L'adaptateur R2 sera ajouté en Phase 6."
-      )
+    case 'r2': {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { R2StorageAdapter } = require('./r2') as { R2StorageAdapter: new () => R2StorageAdapter }
+      return new R2StorageAdapter()
+    }
 
     default:
       throw new Error(
