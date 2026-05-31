@@ -29,8 +29,7 @@ export default function AdminLoginPage() {
       password,
       fetchOptions: {
         onSuccess: () => {
-          router.refresh()
-          router.push('/admin')
+          window.location.href = '/admin'
         },
         onError: (ctx) => {
           setError(ctx.error.message ?? 'Email ou mot de passe incorrect')
