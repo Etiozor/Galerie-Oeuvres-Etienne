@@ -23,6 +23,8 @@ import { getStorage } from '@/lib/storage'
 import type { ArtworkRow, OfferDetail } from './_components/ArtworksClient'
 import { ArtworksClient } from './_components/ArtworksClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminArtworksPage() {
   // ── 1. Vérification de session ──
   const session = await auth.api.getSession({ headers: await headers() })

@@ -76,6 +76,8 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
+export const dynamic = 'force-dynamic'
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function ArtworkDetailPage({

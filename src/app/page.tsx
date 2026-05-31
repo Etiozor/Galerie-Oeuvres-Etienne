@@ -48,6 +48,8 @@ function GalleryLoadingSkeleton() {
   )
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function GalleryPage() {
   /*
    * Charger toutes les œuvres publiées avec leurs relations type et médium.

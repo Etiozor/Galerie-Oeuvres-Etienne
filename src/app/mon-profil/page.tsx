@@ -17,6 +17,8 @@ function maskPhone(phone: string): string {
   return '••••' + phone.slice(-4)
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function MonProfilPage() {
   const session = await getVisitorSession()
   if (!session.visitorId) redirect('/')
