@@ -548,7 +548,7 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
                                 fontFamily: 'var(--font-space-mono)', fontSize: 10,
                                 letterSpacing: '0.06em', opacity: 0.85, textTransform: 'uppercase',
                               }}>
-                                {a.mediumName} · {w}×{h} cm
+                                {a.mediumName} · {a.widthCm}×{a.heightCm} cm
                               </span>
                               {a.basePrice && (
                                 <span style={{
