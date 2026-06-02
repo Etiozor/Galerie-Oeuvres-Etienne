@@ -113,37 +113,42 @@ async function saveTags(artworkId: number, tagNames: string[]) {
  * L'œuvre n'est pas visible dans la galerie tant que publishedAt est null.
  */
 export async function saveArtworkDraft(formData: FormData): Promise<DocumentResult> {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return { success: false, error: 'Non autorisé.' }
+  try {
+    const session = await auth.api.getSession({ headers: await headers() })
+    if (!session) return { success: false, error: 'Non autorisé.' }
 
-  const meta = await parseMetadata(formData)
-  const values = {
-    title: meta.title,
-    typeId: meta.typeId,
-    mediumId: meta.mediumId,
-    createdYear: meta.createdYear,
-    createdMonth: meta.createdMonth,
-    widthCm: meta.widthCm,
-    heightCm: meta.heightCm,
-    status: meta.status,
-    basePrice: meta.basePrice,
-    description: meta.description,
+    const meta = await parseMetadata(formData)
+    const values = {
+      title: meta.title,
+      typeId: meta.typeId,
+      mediumId: meta.mediumId,
+      createdYear: meta.createdYear,
+      createdMonth: meta.createdMonth,
+      widthCm: meta.widthCm,
+      heightCm: meta.heightCm,
+      status: meta.status,
+      basePrice: meta.basePrice,
+      description: meta.description,
+    }
+
+    let id = meta.artworkId
+    if (id) {
+      await db.update(artworks).set(values).where(eq(artworks.id, id))
+    } else {
+      const [inserted] = await db.insert(artworks)
+        .values(values)
+        .returning({ id: artworks.id })
+      id = inserted?.id ?? null
+    }
+
+    if (!id) return { success: false, error: 'Erreur lors de la sauvegarde.' }
+
+    await saveTags(id, meta.tagNames)
+    return { success: true, artworkId: id }
+  } catch (err) {
+    console.error('[saveArtworkDraft] Erreur inattendue :', err)
+    return { success: false, error: "Une erreur inattendue s'est produite. Réessaie." }
   }
-
-  let id = meta.artworkId
-  if (id) {
-    await db.update(artworks).set(values).where(eq(artworks.id, id))
-  } else {
-    const [inserted] = await db.insert(artworks)
-      .values(values)
-      .returning({ id: artworks.id })
-    id = inserted?.id ?? null
-  }
-
-  if (!id) return { success: false, error: 'Erreur lors de la sauvegarde.' }
-
-  await saveTags(id, meta.tagNames)
-  return { success: true, artworkId: id }
 }
 
 // ── Server Action : publier (métadonnées + upload image) ──────────────────────
@@ -153,63 +158,75 @@ export async function saveArtworkDraft(formData: FormData): Promise<DocumentResu
  * L'œuvre est immédiatement visible dans la galerie (publishedAt = maintenant).
  */
 export async function publishArtwork(formData: FormData): Promise<DocumentResult> {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return { success: false, error: 'Non autorisé.' }
+  try {
+    const session = await auth.api.getSession({ headers: await headers() })
+    if (!session) return { success: false, error: 'Non autorisé.' }
 
-  // Validation du fichier image
-  const file = formData.get('file')
-  if (!(file instanceof File) || file.size === 0) {
-    return { success: false, error: 'Aucune photo sélectionnée.' }
+    // Validation du fichier image
+    const file = formData.get('file')
+    if (!(file instanceof File) || file.size === 0) {
+      return { success: false, error: 'Aucune photo sélectionnée.' }
+    }
+    if (HEIC_TYPES.includes(file.type)) {
+      return { success: false, error: "Format HEIC non supporté. Exporte en JPEG depuis l'app Photos." }
+    }
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return { success: false, error: 'Format non supporté. JPEG ou PNG uniquement.' }
+    }
+    if (file.size > MAX_SIZE_BYTES) {
+      return { success: false, error: 'Fichier trop lourd (max 20 MB). Compresse-le avant d\'uploader.' }
+    }
+
+    const meta = await parseMetadata(formData)
+    const buffer = Buffer.from(new Uint8Array(await file.arrayBuffer()))
+    const ext = file.type === 'image/png' ? 'png' : 'jpg'
+    const uuid = randomUUID()
+    const originalKey = `originals/${uuid}.${ext}`
+    const storage = getStorage()
+
+    const metaValues = {
+      title: meta.title,
+      typeId: meta.typeId,
+      mediumId: meta.mediumId,
+      createdYear: meta.createdYear,
+      createdMonth: meta.createdMonth,
+      widthCm: meta.widthCm,
+      heightCm: meta.heightCm,
+      status: meta.status,
+      basePrice: meta.basePrice,
+      description: meta.description,
+      originalPath: originalKey,
+      publishedAt: new Date(),
+    }
+
+    // Crée ou met à jour l'entrée en DB
+    let id = meta.artworkId
+    if (id) {
+      await db.update(artworks).set(metaValues).where(eq(artworks.id, id))
+    } else {
+      const [inserted] = await db.insert(artworks)
+        .values(metaValues)
+        .returning({ id: artworks.id })
+      id = inserted?.id ?? null
+    }
+
+    if (!id) return { success: false, error: "Erreur lors de la création de l'œuvre." }
+
+    await saveTags(id, meta.tagNames)
+
+    // Upload de l'original — si le stockage échoue, on supprime l'entrée DB
+    // pour éviter une œuvre publiée sans image associée.
+    try {
+      await storage.put(originalKey, buffer, { contentType: file.type })
+    } catch (storageErr) {
+      await db.delete(artworks).where(eq(artworks.id, id))
+      console.error('[publishArtwork] Échec du stockage :', storageErr)
+      return { success: false, error: "Échec du stockage de l'image. Réessaie dans un instant." }
+    }
+
+    return { success: true, artworkId: id }
+  } catch (err) {
+    console.error('[publishArtwork] Erreur inattendue :', err)
+    return { success: false, error: "Une erreur inattendue s'est produite. Réessaie." }
   }
-  if (HEIC_TYPES.includes(file.type)) {
-    return { success: false, error: "Format HEIC non supporté. Exporte en JPEG depuis l'app Photos." }
-  }
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { success: false, error: 'Format non supporté. JPEG ou PNG uniquement.' }
-  }
-  if (file.size > MAX_SIZE_BYTES) {
-    return { success: false, error: 'Fichier trop lourd (max 20 MB). Compresse-le avant d\'uploader.' }
-  }
-
-  const meta = await parseMetadata(formData)
-  const buffer = Buffer.from(new Uint8Array(await file.arrayBuffer()))
-  const ext = file.type === 'image/png' ? 'png' : 'jpg'
-  const uuid = randomUUID()
-  const originalKey = `originals/${uuid}.${ext}`
-  const storage = getStorage()
-
-  const metaValues = {
-    title: meta.title,
-    typeId: meta.typeId,
-    mediumId: meta.mediumId,
-    createdYear: meta.createdYear,
-    createdMonth: meta.createdMonth,
-    widthCm: meta.widthCm,
-    heightCm: meta.heightCm,
-    status: meta.status,
-    basePrice: meta.basePrice,
-    description: meta.description,
-    originalPath: originalKey,
-    publishedAt: new Date(),
-  }
-
-  // Crée ou met à jour l'entrée en DB
-  let id = meta.artworkId
-  if (id) {
-    await db.update(artworks).set(metaValues).where(eq(artworks.id, id))
-  } else {
-    const [inserted] = await db.insert(artworks)
-      .values(metaValues)
-      .returning({ id: artworks.id })
-    id = inserted?.id ?? null
-  }
-
-  if (!id) return { success: false, error: "Erreur lors de la création de l'œuvre." }
-
-  await saveTags(id, meta.tagNames)
-
-  // Upload de l'original
-  await storage.put(originalKey, buffer, { contentType: file.type })
-
-  return { success: true, artworkId: id }
 }
