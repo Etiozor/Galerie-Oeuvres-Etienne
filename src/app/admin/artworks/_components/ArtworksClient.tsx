@@ -447,8 +447,6 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
                     const sold = a.status === 'sold' || a.status === 'given'
                     const stampColor = a.status === 'sold' ? 'var(--color-red)' : 'var(--color-green)'
                     const stampLabel = a.status === 'sold' ? 'Vendu' : 'Donné'
-                    const w = a.widthCm ? parseFloat(a.widthCm) || 1 : 1
-                    const h = a.heightCm ? parseFloat(a.heightCm) || 1 : 1
                     const isSelected = selectedId === a.id
                     return (
                       <div key={a.id} className="gal-tile-wrap">
@@ -460,7 +458,9 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
                           onKeyDown={e => e.key === 'Enter' && setSelectedId(a.id)}
                           style={{
                             position: 'relative', display: 'block', cursor: 'pointer',
-                            aspectRatio: `${w} / ${h}`,
+                            // Pas d'aspectRatio fixe : l'image détermine ses propres proportions.
+                            // Les dimensions physiques (cm) ne reflètent pas forcément le ratio photo.
+                            ...(a.imageUrl ? {} : { aspectRatio: '3 / 4' }),
                             background: 'var(--color-surface)',
                             overflow: 'hidden', userSelect: 'none',
                             outline: isSelected ? '2px solid var(--color-ink)' : 'none',
@@ -469,8 +469,7 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
                         >
                           {a.imageUrl ? (
                             <img src={a.imageUrl} alt={a.title} loading="lazy" style={{
-                              position: 'absolute', inset: 0,
-                              width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+                              width: '100%', height: 'auto', display: 'block',
                             }} />
                           ) : (
                             <div style={{

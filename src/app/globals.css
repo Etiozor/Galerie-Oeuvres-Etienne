@@ -666,6 +666,14 @@ body {
   outline: 2px dashed var(--color-ink);
   outline-offset: -4px;
 }
+/* Image dans la zone remplie — pleine largeur, hauteur naturelle. */
+/* height: 100% ne fonctionne pas quand le parent est height: auto. */
+.pof-gallery .dropzone.is-filled img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
 
 /* Méta fichier */
 .pof-gallery .file-meta {
