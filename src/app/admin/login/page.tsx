@@ -28,7 +28,15 @@ export default function AdminLoginPage() {
       email,
       password,
       fetchOptions: {
-        onSuccess: () => {
+        onSuccess: (ctx) => {
+          // Better Auth retourne le token dans la réponse mais ne pose pas
+          // toujours le cookie automatiquement. On le pose manuellement ici
+          // pour que le middleware puisse valider la session.
+          const token = (ctx.data as { token?: string })?.token
+          if (token) {
+            const secure = window.location.protocol === 'https:'
+            document.cookie = `better-auth.session_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax${secure ? '; secure' : ''}`
+          }
           window.location.href = '/admin'
         },
         onError: (ctx) => {
