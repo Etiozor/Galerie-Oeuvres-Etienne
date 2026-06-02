@@ -19,10 +19,14 @@ export const auth = betterAuth({
   // les cookies et les redirections en production.
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
 
-  // Origines autorisées à faire des requêtes auth (CORS + cookie samesite)
+  // Origines autorisées à faire des requêtes auth (CORS + cookie samesite).
+  // Inclure toutes les URLs possibles : locale, Railway, et toute URL custom.
   trustedOrigins: [
     process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
     'http://localhost:3000',
+    ...(process.env.RAILWAY_PUBLIC_DOMAIN
+      ? [`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`]
+      : []),
   ],
 
   database: drizzleAdapter(db, {

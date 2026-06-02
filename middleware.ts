@@ -1,28 +1,30 @@
 /**
  * Middleware Next.js — Protection des routes de l'admin.
  *
- * Vérifie la session en appelant l'endpoint Better Auth /api/auth/session
- * avec les cookies de la requête. Plus fiable que de chercher un cookie
- * par son nom (qui peut varier selon la config Better Auth).
+ * Vérifie la session via auth.api.getSession() directement côté serveur,
+ * sans HTTP fetch (évite les problèmes de self-call en production sur Railway).
+ *
+ * POURQUOI runtime 'nodejs' ?
+ * auth.api.getSession() utilise Drizzle + PostgreSQL — incompatible avec
+ * l'Edge Runtime qui ne supporte pas les drivers Node.js natifs.
  */
 
+export const runtime = 'nodejs'
+
+import { auth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Appel à l'endpoint de session Better Auth en transmettant les cookies
-  // du navigateur. Better Auth vérifie lui-même le cookie et retourne
-  // l'utilisateur si la session est valide.
+  // Validation directe via Better Auth — pas de fetch HTTP vers soi-même.
+  // auth.api.getSession() lit le cookie de la requête entrante et valide
+  // la session en base sans appel réseau.
   let hasSession = false
   try {
-    const baseUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
-    const sessionRes = await fetch(`${baseUrl}/api/auth/session`, {
-      headers: {
-        cookie: request.headers.get('cookie') ?? '',
-      },
+    const session = await auth.api.getSession({
+      headers: request.headers,
     })
-    const session = await sessionRes.json() as { user?: unknown }
     hasSession = !!session?.user
   } catch {
     hasSession = false
