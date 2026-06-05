@@ -5,13 +5,11 @@
  *
  * POURQUOI un Client Component ?
  * useActionState nécessite un hook React — impossible dans un Server Component.
- *
- * POURQUOI useActionState et pas useTransition ?
- * Le formulaire retourne des erreurs Zod par champ — useActionState les persiste
- * entre soumissions sans useState supplémentaire.
+ * useState est aussi nécessaire pour les pills médium multi-sélection.
  *
  * Structure :
- * - Section principale (6 colonnes) : date, type, médium, largeur, hauteur, prix de base
+ * - Section principale (6 colonnes) : date, type, largeur, hauteur, prix de base
+ * - Pills médiums : multi-sélection sur liste fixe de 5 médiums
  * - Section "Composantes du prix" (dépliable) : 6 facteurs de décomposition
  */
 
@@ -26,7 +24,8 @@ interface ArtworkEditFormProps {
   initialCreatedYear: number | null
   initialCreatedMonth: number | null
   initialTypeId: number | null
-  initialMediumId: number | null
+  /** IDs des médiums actuellement associés à l'œuvre (peut être vide) */
+  initialMediumIds: number[]
   initialWidthCm: string | null
   initialHeightCm: string | null
   initialBasePrice: string | null
@@ -160,7 +159,7 @@ export function ArtworkEditForm({
   initialCreatedYear,
   initialCreatedMonth,
   initialTypeId,
-  initialMediumId,
+  initialMediumIds,
   initialWidthCm,
   initialHeightCm,
   initialBasePrice,
@@ -175,6 +174,13 @@ export function ArtworkEditForm({
 }: ArtworkEditFormProps) {
   const [state, formAction, isPending] = useActionState(updateAction, null)
   const [priceOpen, setPriceOpen] = useState(false)
+  const [selectedMediumIds, setSelectedMediumIds] = useState<number[]>(initialMediumIds)
+
+  function toggleMedium(id: number) {
+    setSelectedMediumIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
 
   const err = (field: string) =>
     (state && !state.success && state.errors?.[field]?.[0]) || undefined
@@ -247,13 +253,38 @@ export function ArtworkEditForm({
           </select>
         </Field>
 
-        {/* Médium — 2 col */}
-        <Field id="mediumId" label="Médium" span={2} error={err('mediumId')}>
-          <select id="mediumId" name="mediumId" defaultValue={initialMediumId ?? ''} style={selectStyle}>
-            <option value="">— Non défini —</option>
-            {mediums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-        </Field>
+        {/* Médium — 4 col — multi-sélection en pills */}
+        <div style={{ gridColumn: 'span 4', minWidth: 0 }}>
+          <span style={eyebrowStyle}>Médium</span>
+          {/* Inputs cachés — un par médium sélectionné — lus par formData.getAll('mediumId') */}
+          {selectedMediumIds.map(id => (
+            <input key={id} type="hidden" name="mediumId" value={id} />
+          ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {mediums.map(m => {
+              const active = selectedMediumIds.includes(m.id)
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggleMedium(m.id)}
+                  style={{
+                    padding: '7px 14px',
+                    border: active ? '1px solid var(--color-teal)' : '1px solid rgba(0,0,0,0.14)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: active ? 'var(--color-teal)' : '#fff',
+                    color: active ? '#fff' : 'var(--color-ink)',
+                    font: '400 13px var(--font-geist-sans)',
+                    cursor: 'pointer',
+                    transition: 'background 120ms, border-color 120ms, color 120ms',
+                  }}
+                >
+                  {m.name}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* Largeur — 2 col */}
         <div style={{ gridColumn: 'span 2', minWidth: 0 }}>

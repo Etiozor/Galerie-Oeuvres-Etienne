@@ -18,7 +18,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/db'
-import { artworks } from '@/db/schema'
+import { artworks, artworkMediums } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
 import { z } from 'zod'
@@ -72,38 +72,29 @@ export async function updateArtworkStatus(
 // Schéma Zod pour la mise à jour des métadonnées d'une œuvre
 // ============================================================
 
-/**
- * Schéma Zod pour l'édition complète des métadonnées d'une œuvre.
- *
- * POURQUOI z.coerce sur les champs numériques ?
- * FormData retourne TOUJOURS des strings — z.coerce.number() convertit automatiquement
- * "42.5" → 42.5 avant la validation. Sans coerce, Zod rejetterait toutes les valeurs.
- *
- * POURQUOI optional() et pas nullable() ?
- * L'artiste peut laisser un champ vide — undefined signifie "non renseigné".
- * null en Zod représente une valeur explicitement absente.
- * FormData envoie "" pour les champs vides, z.coerce.number() rejette "" → on utilise
- * .optional() combiné avec une gestion null côté DB.
- */
+// POURQUOI z.preprocess et pas z.coerce ?
+// z.coerce.number() convertit "" (champ vide) en 0, puis .positive() ou .min(1)
+// rejette 0 — bloquant la sauvegarde si un champ est laissé vide.
+// toOptionalNumber intercepte "" avant la coercion et retourne undefined,
+// ce qui active .optional() correctement.
+const toOptionalNumber = (v: unknown) => (v === '' || v == null) ? undefined : Number(v)
+
 const updateArtworkSchema = z.object({
   title: z.string().min(1, 'Le titre est obligatoire.').max(255, 'Titre trop long.'),
   description: z.string().max(2000, 'Description trop longue.').optional(),
-  // Année et mois de création — FormData retourne "" si champ vide, on normalise en undefined
-  createdYear: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1900).max(2100).optional()),
-  createdMonth: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1).max(12).optional()),
-  typeId: z.coerce.number().int().positive().optional(),
-  mediumId: z.coerce.number().int().positive().optional(),
-  // Colonnes numeric Drizzle — z.coerce convertit "42.5" → 42.5
-  widthCm: z.coerce.number().positive().optional(),
-  heightCm: z.coerce.number().positive().optional(),
-  basePrice: z.coerce.number().positive().optional(),
-  priceHoursSpent: z.coerce.number().min(0).optional(),
-  priceFormat: z.coerce.number().min(0).optional(),
-  priceFraming: z.coerce.number().min(0).optional(),
-  priceMaterials: z.coerce.number().min(0).optional(),
-  // Scores 1-5 smallint — entiers, validation stricte de plage
-  priceTechnicality: z.coerce.number().int().min(1).max(5).optional(),
-  priceAttachment: z.coerce.number().int().min(1).max(5).optional(),
+  createdYear:      z.preprocess(toOptionalNumber, z.number().int().min(1900).max(2100).optional()),
+  createdMonth:     z.preprocess(toOptionalNumber, z.number().int().min(1).max(12).optional()),
+  typeId:           z.preprocess(toOptionalNumber, z.number().int().positive().optional()),
+  mediumId:         z.preprocess(toOptionalNumber, z.number().int().positive().optional()),
+  widthCm:          z.preprocess(toOptionalNumber, z.number().positive().optional()),
+  heightCm:         z.preprocess(toOptionalNumber, z.number().positive().optional()),
+  basePrice:        z.preprocess(toOptionalNumber, z.number().positive().optional()),
+  priceHoursSpent:  z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceFormat:      z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceFraming:     z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceMaterials:   z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceTechnicality:z.preprocess(toOptionalNumber, z.number().int().min(1).max(5).optional()),
+  priceAttachment:  z.preprocess(toOptionalNumber, z.number().int().min(1).max(5).optional()),
 })
 
 /** Type de retour de updateArtwork — compatible avec useActionState */
@@ -166,7 +157,6 @@ export async function updateArtwork(
         createdYear: data.createdYear ?? null,
         createdMonth: data.createdMonth ?? null,
         typeId: data.typeId ?? null,
-        mediumId: data.mediumId ?? null,
         // CRITIQUE : colonnes numeric Drizzle → .toString() OBLIGATOIRE
         // Drizzle attend une string pour les colonnes numeric PostgreSQL,
         // même si le type TypeScript semble être "number | string | null"
@@ -249,20 +239,21 @@ export async function updateArtworkDescription(
 // (date, type, médium, dimensions, prix — sans titre ni description)
 // ============================================================
 
+// mediumId est intentionnellement absent : les médiums multiples sont lus
+// via formData.getAll('mediumId') et traités séparément de ce schéma.
 const updateArtworkMetaSchema = z.object({
-  createdYear: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1900).max(2100).optional()),
-  createdMonth: z.preprocess(v => (v === '' || v == null) ? undefined : Number(v), z.number().int().min(1).max(12).optional()),
-  typeId: z.coerce.number().int().positive().optional(),
-  mediumId: z.coerce.number().int().positive().optional(),
-  widthCm: z.coerce.number().positive().optional(),
-  heightCm: z.coerce.number().positive().optional(),
-  basePrice: z.coerce.number().positive().optional(),
-  priceHoursSpent: z.coerce.number().min(0).optional(),
-  priceFormat: z.coerce.number().min(0).optional(),
-  priceFraming: z.coerce.number().min(0).optional(),
-  priceMaterials: z.coerce.number().min(0).optional(),
-  priceTechnicality: z.coerce.number().int().min(1).max(5).optional(),
-  priceAttachment: z.coerce.number().int().min(1).max(5).optional(),
+  createdYear:      z.preprocess(toOptionalNumber, z.number().int().min(1900).max(2100).optional()),
+  createdMonth:     z.preprocess(toOptionalNumber, z.number().int().min(1).max(12).optional()),
+  typeId:           z.preprocess(toOptionalNumber, z.number().int().positive().optional()),
+  widthCm:          z.preprocess(toOptionalNumber, z.number().positive().optional()),
+  heightCm:         z.preprocess(toOptionalNumber, z.number().positive().optional()),
+  basePrice:        z.preprocess(toOptionalNumber, z.number().positive().optional()),
+  priceHoursSpent:  z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceFormat:      z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceFraming:     z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceMaterials:   z.preprocess(toOptionalNumber, z.number().min(0).optional()),
+  priceTechnicality:z.preprocess(toOptionalNumber, z.number().int().min(1).max(5).optional()),
+  priceAttachment:  z.preprocess(toOptionalNumber, z.number().int().min(1).max(5).optional()),
 })
 
 /**
@@ -284,13 +275,18 @@ export async function updateArtworkMeta(
   }
   const data = parseResult.data
 
+  // Les médiums multiples ne passent pas par Object.fromEntries (dernier value seulement).
+  // getAll('mediumId') collecte TOUTES les valeurs cochées, filtre les invalides.
+  const mediumIds = formData.getAll('mediumId')
+    .map(v => parseInt(String(v), 10))
+    .filter(n => !isNaN(n) && n > 0)
+
   try {
     await db.update(artworks)
       .set({
         createdYear: data.createdYear ?? null,
         createdMonth: data.createdMonth ?? null,
         typeId: data.typeId ?? null,
-        mediumId: data.mediumId ?? null,
         widthCm: data.widthCm?.toString() ?? null,
         heightCm: data.heightCm?.toString() ?? null,
         basePrice: data.basePrice?.toString() ?? null,
@@ -303,8 +299,17 @@ export async function updateArtworkMeta(
       })
       .where(eq(artworks.id, artworkId))
 
+    // Synchroniser la table de jonction artwork_mediums
+    await db.delete(artworkMediums).where(eq(artworkMediums.artworkId, artworkId))
+    if (mediumIds.length > 0) {
+      await db.insert(artworkMediums)
+        .values(mediumIds.map(mediumId => ({ artworkId, mediumId })))
+        .onConflictDoNothing()
+    }
+
     revalidatePath(`/admin/artworks/${artworkId}`)
     revalidatePath(`/artworks/${artworkId}`)
+    revalidatePath('/')
     return { success: true }
   } catch (error) {
     console.error('[updateArtworkMeta] Erreur serveur :', error)

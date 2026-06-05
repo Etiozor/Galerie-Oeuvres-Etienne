@@ -23,6 +23,7 @@ import {
   tags,
   artworks,
   artworkTags,
+  artworkMediums,
   visitors,
   offers,
 } from './schema'
@@ -35,6 +36,7 @@ async function seed() {
   // --------------------------------------------------------
   console.log('  Nettoyage des tables...')
   await db.delete(artworkTags)
+  await db.delete(artworkMediums)
   await db.delete(offers)
   await db.delete(artworks)
   await db.delete(visitors)
@@ -54,12 +56,13 @@ async function seed() {
   // --------------------------------------------------------
   // Médiums artistiques (extensibles depuis l'admin)
   // --------------------------------------------------------
-  console.log('  Insertion des médiums...')
+  console.log('  Insertion des médiums (liste fixe)...')
   const insertedMediums = await db.insert(mediums).values([
-    { name: 'Crayon graphite', slug: 'crayon', sortOrder: 1 },
-    { name: 'Encre de Chine', slug: 'encre', sortOrder: 2 },
-    { name: 'Acrylique', slug: 'acrylique', sortOrder: 3 },
-    { name: 'Huile sur toile', slug: 'huile', sortOrder: 4 },
+    { name: 'Peinture à l\'huile',   slug: 'huile',    sortOrder: 1 },
+    { name: 'Peinture acrylique',    slug: 'acrylique', sortOrder: 2 },
+    { name: 'Crayon de graphite',    slug: 'graphite',  sortOrder: 3 },
+    { name: 'Crayon à encre',        slug: 'encre',     sortOrder: 4 },
+    { name: 'Aquarelle',             slug: 'aquarelle', sortOrder: 5 },
   ]).returning()
 
   // --------------------------------------------------------
@@ -81,10 +84,11 @@ async function seed() {
   // Sécurité TypeScript : vérifier que les inserts ont bien retourné des lignes
   const dessin = insertedTypes[0]
   const peinture = insertedTypes[1]
-  const crayon = insertedMediums[0]
-  const huile = insertedMediums[3]
+  const huile = insertedMediums[0]
+  const graphite = insertedMediums[2]
+  const aquarelle = insertedMediums[4]
 
-  if (!dessin || !peinture || !crayon || !huile) {
+  if (!dessin || !peinture || !huile || !graphite || !aquarelle) {
     throw new Error('Échec de l\'insertion des types/médiums de référence')
   }
 
@@ -96,7 +100,6 @@ async function seed() {
       widthCm: '21',
       heightCm: '29.7',
       typeId: dessin.id,
-      mediumId: crayon.id,
       status: 'available' as const,
       basePrice: '350',
       originalPath: 'originals/seed-portrait-1.jpg',
@@ -109,7 +112,6 @@ async function seed() {
       widthCm: '40',
       heightCm: '30',
       typeId: peinture.id,
-      mediumId: huile.id,
       status: 'available' as const,
       basePrice: '800',
       originalPath: 'originals/seed-paysage-1.jpg',
@@ -122,7 +124,6 @@ async function seed() {
       widthCm: '15',
       heightCm: '20',
       typeId: dessin.id,
-      mediumId: crayon.id,
       status: 'available' as const,
       basePrice: '150',
       originalPath: 'originals/seed-etude-1.jpg',
@@ -146,6 +147,14 @@ async function seed() {
   await db.insert(artworkTags).values([
     { artworkId: portrait1.id, tagId: portraitTag.id },
     { artworkId: paysage1.id, tagId: paysageTag.id },
+  ])
+
+  // Association œuvres ↔ médiums (many-to-many)
+  console.log('  Association des médiums...')
+  await db.insert(artworkMediums).values([
+    { artworkId: portrait1.id, mediumId: graphite.id },
+    { artworkId: paysage1.id, mediumId: huile.id },
+    { artworkId: paysage1.id, mediumId: aquarelle.id }, // technique mixte exemple
   ])
 
   // --------------------------------------------------------
@@ -195,9 +204,10 @@ async function seed() {
 
   console.log('✅ Seed terminé avec succès !')
   console.log('   - 2 types créés (Dessin, Peinture)')
-  console.log('   - 4 médiums créés')
+  console.log('   - 5 médiums créés (liste fixe)')
   console.log('   - 4 tags créés')
   console.log('   - 3 œuvres créées (2 publiées, 1 en attente de validation)')
+  console.log('   - 3 liaisons médiums créées')
   console.log('   - 2 visiteurs créés')
   console.log('   - 2 offres créées')
 

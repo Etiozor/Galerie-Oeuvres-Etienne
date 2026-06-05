@@ -20,8 +20,8 @@
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { db } from '@/db'
-import { artworks, artworkTags, tags, mediums } from '@/db/schema'
-import { eq, ilike } from 'drizzle-orm'
+import { artworks, artworkTags, artworkMediums, tags } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
 import { randomUUID } from 'crypto'
 
@@ -40,10 +40,9 @@ async function parseMetadata(formData: FormData) {
   const typeIdRaw = formData.get('typeId') as string
   const typeId = typeIdRaw ? (parseInt(typeIdRaw) || null) : null
   const year = ((formData.get('year') as string) ?? '').trim()
-  // EXIF fournit l'année seulement — le mois n'est pas disponible dans les métadonnées EXIF standard
   const createdYear = year && /^\d{4}$/.test(year) ? parseInt(year) : null
-  const createdMonth: number | null = null
-  const medium = ((formData.get('medium') as string) ?? '').trim()
+  const monthRaw = ((formData.get('month') as string) ?? '').trim()
+  const createdMonth = monthRaw ? (parseInt(monthRaw) || null) : null
   const widthCm = ((formData.get('widthCm') as string) ?? '').trim() || null
   const heightCm = ((formData.get('heightCm') as string) ?? '').trim() || null
   const status = ((formData.get('status') as string) ?? 'available') as 'available' | 'sold' | 'given' | 'reserved'
@@ -54,25 +53,22 @@ async function parseMetadata(formData: FormData) {
   const artworkIdRaw = formData.get('artworkId') as string
   const artworkId = artworkIdRaw ? (parseInt(artworkIdRaw) || null) : null
 
-  // Find-or-create medium
-  let mediumId: number | null = null
-  if (medium) {
-    const [existing] = await db.select({ id: mediums.id }).from(mediums).where(ilike(mediums.name, medium)).limit(1)
-    if (existing) {
-      mediumId = existing.id
-    } else {
-      const slug = medium.toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 100)
-      const [newMedium] = await db.insert(mediums)
-        .values({ name: medium, slug, sortOrder: 99 })
-        .onConflictDoNothing()
-        .returning({ id: mediums.id })
-      mediumId = newMedium?.id ?? null
-    }
-  }
+  // Les médiums multiples sont envoyés via plusieurs champs 'mediumId' (un par médium coché)
+  const mediumIds = formData.getAll('mediumId')
+    .map(v => parseInt(String(v), 10))
+    .filter(n => !isNaN(n) && n > 0)
 
-  return { title, typeId, createdYear, createdMonth, mediumId, widthCm, heightCm, status, basePrice, description, tagNames, artworkId }
+  return { title, typeId, createdYear, createdMonth, mediumIds, widthCm, heightCm, status, basePrice, description, tagNames, artworkId }
+}
+
+// Synchronise la table artwork_mediums : supprime les anciennes liaisons puis insère les nouvelles.
+async function saveArtworkMediums(artworkId: number, mediumIds: number[]) {
+  await db.delete(artworkMediums).where(eq(artworkMediums.artworkId, artworkId))
+  if (mediumIds.length > 0) {
+    await db.insert(artworkMediums)
+      .values(mediumIds.map(mediumId => ({ artworkId, mediumId })))
+      .onConflictDoNothing()
+  }
 }
 
 // ── Sauvegarde des tags (many-to-many, find-or-create) ────────────────────────
@@ -121,7 +117,6 @@ export async function saveArtworkDraft(formData: FormData): Promise<DocumentResu
     const values = {
       title: meta.title,
       typeId: meta.typeId,
-      mediumId: meta.mediumId,
       createdYear: meta.createdYear,
       createdMonth: meta.createdMonth,
       widthCm: meta.widthCm,
@@ -144,6 +139,7 @@ export async function saveArtworkDraft(formData: FormData): Promise<DocumentResu
     if (!id) return { success: false, error: 'Erreur lors de la sauvegarde.' }
 
     await saveTags(id, meta.tagNames)
+    await saveArtworkMediums(id, meta.mediumIds)
     return { success: true, artworkId: id }
   } catch (err) {
     console.error('[saveArtworkDraft] Erreur inattendue :', err)
@@ -187,7 +183,6 @@ export async function publishArtwork(formData: FormData): Promise<DocumentResult
     const metaValues = {
       title: meta.title,
       typeId: meta.typeId,
-      mediumId: meta.mediumId,
       createdYear: meta.createdYear,
       createdMonth: meta.createdMonth,
       widthCm: meta.widthCm,
@@ -213,6 +208,7 @@ export async function publishArtwork(formData: FormData): Promise<DocumentResult
     if (!id) return { success: false, error: "Erreur lors de la création de l'œuvre." }
 
     await saveTags(id, meta.tagNames)
+    await saveArtworkMediums(id, meta.mediumIds)
 
     // Upload de l'original — si le stockage échoue, on supprime l'entrée DB
     // pour éviter une œuvre publiée sans image associée.

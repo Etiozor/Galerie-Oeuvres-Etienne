@@ -154,7 +154,8 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
   const [title, setTitle] = useState('')
   const [typeId, setTypeId] = useState<number | null>(null)
   const [year, setYear] = useState(String(new Date().getFullYear()))
-  const [medium, setMedium] = useState('')
+  const [month, setMonth] = useState('')
+  const [selectedMediumIds, setSelectedMediumIds] = useState<number[]>([])
   const [widthCm, setWidthCm] = useState('')
   const [heightCm, setHeightCm] = useState('')
   const [saleStatus, setSaleStatus] = useState<'available' | 'reserved' | 'sold' | 'given'>('available')
@@ -198,7 +199,9 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
     fd.set('title', title)
     fd.set('typeId', typeId !== null ? String(typeId) : '')
     fd.set('year', year)
-    fd.set('medium', medium)
+    fd.set('month', month)
+    // Un champ 'mediumId' par médium sélectionné — lus avec formData.getAll('mediumId')
+    selectedMediumIds.forEach(id => fd.append('mediumId', String(id)))
     fd.set('widthCm', widthCm)
     fd.set('heightCm', heightCm)
     fd.set('status', saleStatus)
@@ -219,7 +222,8 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
     setTitle('')
     setTypeId(null)
     setYear(String(new Date().getFullYear()))
-    setMedium('')
+    setMonth('')
+    setSelectedMediumIds([])
     setWidthCm('')
     setHeightCm('')
     setSaleStatus('available')
@@ -364,13 +368,34 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   aria-invalid={!!errFor('title')}
                 />
               </Field>
+              <Field label="Type">
+                <TypeSegmented
+                  types={artworkTypes}
+                  value={typeId}
+                  onChange={(v) => { setTypeId(v); markEditing() }}
+                />
+              </Field>
               <div className="row-2">
-                <Field label="Type">
-                  <TypeSegmented
-                    types={artworkTypes}
-                    value={typeId}
-                    onChange={(v) => { setTypeId(v); markEditing() }}
-                  />
+                <Field label="Mois">
+                  <select
+                    className="input"
+                    value={month}
+                    onChange={(e) => { setMonth(e.target.value); markEditing() }}
+                  >
+                    <option value="">— Non défini —</option>
+                    <option value="1">Janvier</option>
+                    <option value="2">Février</option>
+                    <option value="3">Mars</option>
+                    <option value="4">Avril</option>
+                    <option value="5">Mai</option>
+                    <option value="6">Juin</option>
+                    <option value="7">Juillet</option>
+                    <option value="8">Août</option>
+                    <option value="9">Septembre</option>
+                    <option value="10">Octobre</option>
+                    <option value="11">Novembre</option>
+                    <option value="12">Décembre</option>
+                  </select>
                 </Field>
                 <Field label="Année" error={errFor('year')}>
                   <input
@@ -391,19 +416,37 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
           {/* 02 — Format & médium */}
           <Section title="Format & médium" step="02 / 04">
             <div style={{ display: 'grid', gap: 16 }}>
-              <Field label="Médium" hint="Saisie libre — un seul matériau principal suffit.">
-                <input
-                  className="input"
-                  value={medium}
-                  onChange={(e) => { setMedium(e.target.value); markEditing() }}
-                  placeholder="Encre de Chine, huile sur toile, aquarelle…"
-                  list="medium-suggestions"
-                />
-                <datalist id="medium-suggestions">
-                  {mediums.map((m) => (
-                    <option key={m.id} value={m.name} />
-                  ))}
-                </datalist>
+              <Field label="Médium" hint="Sélectionnez un ou plusieurs médiums (technique mixte autorisée).">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {mediums.map((m) => {
+                    const active = selectedMediumIds.includes(m.id)
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMediumIds(prev =>
+                            prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id]
+                          )
+                          markEditing()
+                        }}
+                        style={{
+                          padding: '7px 14px',
+                          border: active ? '1px solid var(--color-teal)' : 'var(--border-hairline)',
+                          borderRadius: 'var(--radius-sm)',
+                          background: active ? 'var(--color-teal)' : 'var(--color-bg)',
+                          color: active ? '#fff' : 'var(--color-ink)',
+                          fontFamily: 'var(--font-geist-sans)',
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          transition: 'background 120ms, border-color 120ms, color 120ms',
+                        }}
+                      >
+                        {m.name}
+                      </button>
+                    )
+                  })}
+                </div>
               </Field>
               <Field
                 label="Dimensions"

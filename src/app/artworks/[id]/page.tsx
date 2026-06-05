@@ -55,18 +55,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       eq(a.id, artworkId),
       isNotNull(a.publishedAt)
     ),
-    with: { type: true, medium: true },
+    with: { type: true, artworkMediums: { with: { medium: true } } },
   })
 
   if (!artwork) return { title: '404 — Galerie POF' }
 
   const storage = getStorage()
   const imageUrl = artwork.originalPath ? storage.getUrl(artwork.originalPath) : undefined
+  const mediumLabel = artwork.artworkMediums.map(am => am.medium.name).join(', ')
 
   // Description : texte de l'œuvre (tronqué) ou fallback type · médium · dimensions
   const description =
     artwork.description?.slice(0, 160) ??
-    `${artwork.type?.name ?? ''} · ${artwork.medium?.name ?? ''} · ${artwork.widthCm ?? '?'}×${artwork.heightCm ?? '?'} cm`
+    `${artwork.type?.name ?? ''} · ${mediumLabel} · ${artwork.widthCm ?? '?'}×${artwork.heightCm ?? '?'} cm`
 
   return {
     title: `${artwork.title} — Galerie POF`,
@@ -95,7 +96,7 @@ export default async function ArtworkDetailPage({ params }: Props) {
       eq(a.id, artworkId),
       isNotNull(a.publishedAt)
     ),
-    with: { type: true, medium: true },
+    with: { type: true, artworkMediums: { with: { medium: true } } },
   })
 
   // 404 si l'œuvre n'existe pas OU n'est pas publiée
@@ -397,7 +398,7 @@ export default async function ArtworkDetailPage({ params }: Props) {
               heightCm={artwork.heightCm}
               description={artwork.description}
               typeName={artwork.type?.name ?? null}
-              mediumName={artwork.medium?.name ?? null}
+              mediumName={artwork.artworkMediums.map(am => am.medium.name).join(', ') || null}
               basePrice={artwork.basePrice}
               prev={prevArtwork ?? null}
               next={nextArtwork ?? null}

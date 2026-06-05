@@ -28,7 +28,7 @@ interface ArtworkWithUrls {
   widthCmNum: number
   heightCmNum: number
   typeId: number | null
-  mediumId: number | null
+  mediumIds: number[]
   typeName: string | null
   mediumName: string | null
   basePriceNum: number
@@ -98,7 +98,7 @@ export function GalleryClient({ artworks, types, mediums, visitorId, savedArtwor
         list = list.filter(a => a.typeId === typeId)
       } else if (activeFilter.startsWith('medium:')) {
         const mediumId = parseInt(activeFilter.slice(7), 10)
-        list = list.filter(a => a.mediumId === mediumId)
+        list = list.filter(a => a.mediumIds.includes(mediumId))
       } else if (activeFilter.startsWith('status:')) {
         const statusVal = activeFilter.slice(7)
         list = list.filter(a => a.status === statusVal)
@@ -206,16 +206,32 @@ export function GalleryClient({ artworks, types, mediums, visitorId, savedArtwor
         <span style={sectionLabel}>Filtrer</span>
         <Chip value="all" label="Tous" active={activeFilter === 'all'} onToggle={handleFilterChange} />
 
-        {/* Section Médium — types de la DB */}
+        {/* Section Type */}
         {types.length > 0 && (
           <>
-            <span style={{ ...sectionLabel, marginLeft: 4 }}>Médium</span>
+            <span style={{ ...sectionLabel, marginLeft: 4 }}>Type</span>
             {types.map(t => (
               <Chip
                 key={t.id}
                 value={`type:${t.id}`}
                 label={t.name}
                 active={activeFilter === `type:${t.id}`}
+                onToggle={handleFilterChange}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Section Médium */}
+        {mediums.length > 0 && (
+          <>
+            <span style={{ ...sectionLabel, marginLeft: 4 }}>Médium</span>
+            {mediums.map(m => (
+              <Chip
+                key={m.id}
+                value={`medium:${m.id}`}
+                label={m.name}
+                active={activeFilter === `medium:${m.id}`}
                 onToggle={handleFilterChange}
               />
             ))}

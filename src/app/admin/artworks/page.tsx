@@ -17,7 +17,7 @@ import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { db } from '@/db'
-import { artworks, artworkTypes, mediums, offers, visitors, savedArtworks } from '@/db/schema'
+import { artworks, artworkTypes, mediums, artworkMediums, offers, visitors, savedArtworks } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
 import type { ArtworkRow, OfferDetail } from './_components/ArtworksClient'
@@ -30,9 +30,8 @@ export default async function AdminArtworksPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/admin/login')
 
-  // ── 2. Charger les œuvres avec noms de type et de médium ──
-  // LEFT JOIN pour ne pas exclure les œuvres sans type/médium assigné
-  const artworkRows = await db
+  // ── 2. Charger les œuvres avec nom de type ──
+  const rawArtworkRows = await db
     .select({
       id:           artworks.id,
       title:        artworks.title,
@@ -46,12 +45,27 @@ export default async function AdminArtworksPage() {
       createdMonth: artworks.createdMonth,
       createdAt:    artworks.createdAt,
       typeName:     artworkTypes.name,
-      mediumName:   mediums.name,
     })
     .from(artworks)
     .leftJoin(artworkTypes, eq(artworks.typeId, artworkTypes.id))
-    .leftJoin(mediums, eq(artworks.mediumId, mediums.id))
     .orderBy(desc(artworks.createdAt))
+
+  // Médiums multiples — table de jonction séparée, regroupés par œuvre
+  const mediumLinkRows = await db
+    .select({ artworkId: artworkMediums.artworkId, mediumName: mediums.name })
+    .from(artworkMediums)
+    .leftJoin(mediums, eq(artworkMediums.mediumId, mediums.id))
+
+  const mediumNamesByArtwork = new Map<number, string[]>()
+  for (const row of mediumLinkRows) {
+    if (!mediumNamesByArtwork.has(row.artworkId)) mediumNamesByArtwork.set(row.artworkId, [])
+    if (row.mediumName) mediumNamesByArtwork.get(row.artworkId)!.push(row.mediumName)
+  }
+
+  const artworkRows = rawArtworkRows.map(a => ({
+    ...a,
+    mediumName: mediumNamesByArtwork.get(a.id)?.join(', ') ?? null,
+  }))
 
   // ── 3. Charger toutes les offres avec les infos visiteur ──
   // Trié par montant décroissant pour que la meilleure offre soit en tête dans le drawer

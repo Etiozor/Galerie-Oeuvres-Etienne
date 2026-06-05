@@ -214,9 +214,6 @@ export const artworks = pgTable('artworks', {
   // Niveau 1 : type (dessin / peinture / ...) — référence artwork_types
   typeId: integer('type_id').references(() => artworkTypes.id),
 
-  // Niveau 2 : médium (crayon / huile / ...) — référence mediums
-  mediumId: integer('medium_id').references(() => mediums.id),
-
   // Niveau 3 : tags libres — via la table de jonction artwork_tags [D-02]
 
   // === Statut ===
@@ -278,6 +275,31 @@ export const artworks = pgTable('artworks', {
   index('artworks_status_idx').on(table.status),
   // Index pour accélérer le filtre published_at IS NOT NULL (galerie publique)
   index('artworks_published_idx').on(table.publishedAt),
+])
+
+// ============================================================
+// TABLE : artwork_mediums — Relation many-to-many œuvres ↔ médiums
+// ============================================================
+
+/**
+ * Table de jonction entre œuvres et médiums.
+ *
+ * Une œuvre peut combiner plusieurs médiums (ex : crayon + aquarelle).
+ * Même pattern que artwork_tags.
+ *
+ * POURQUOI many-to-many et pas un enum ou une FK simple ?
+ * L'artiste peut créer une œuvre en technique mixte — une FK unique
+ * ne peut pas représenter "crayon de graphite + aquarelle".
+ */
+export const artworkMediums = pgTable('artwork_mediums', {
+  artworkId: integer('artwork_id')
+    .notNull()
+    .references(() => artworks.id, { onDelete: 'cascade' }),
+  mediumId: integer('medium_id')
+    .notNull()
+    .references(() => mediums.id, { onDelete: 'cascade' }),
+}, (table) => [
+  primaryKey({ columns: [table.artworkId, table.mediumId] }),
 ])
 
 // ============================================================
@@ -456,10 +478,7 @@ export const artworkRelations = relations(artworks, ({ one, many }) => ({
     fields: [artworks.typeId],
     references: [artworkTypes.id],
   }),
-  medium: one(mediums, {
-    fields: [artworks.mediumId],
-    references: [mediums.id],
-  }),
+  artworkMediums: many(artworkMediums),
   artworkTags: many(artworkTags),
   offers: many(offers),
 }))
@@ -469,7 +488,18 @@ export const artworkTypeRelations = relations(artworkTypes, ({ many }) => ({
 }))
 
 export const mediumRelations = relations(mediums, ({ many }) => ({
-  artworks: many(artworks),
+  artworkMediums: many(artworkMediums),
+}))
+
+export const artworkMediumRelations = relations(artworkMediums, ({ one }) => ({
+  artwork: one(artworks, {
+    fields: [artworkMediums.artworkId],
+    references: [artworks.id],
+  }),
+  medium: one(mediums, {
+    fields: [artworkMediums.mediumId],
+    references: [mediums.id],
+  }),
 }))
 
 export const tagRelations = relations(tags, ({ many }) => ({

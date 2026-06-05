@@ -15,7 +15,7 @@ import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { db } from '@/db'
-import { artworks, artworkTypes, mediums, offers, visitors } from '@/db/schema'
+import { artworks, artworkTypes, mediums, artworkMediums, offers, visitors } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getStorage } from '@/lib/storage'
 import Link from 'next/link'
@@ -92,16 +92,20 @@ export default async function ArtworkDetailPage({
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/admin/login')
 
-  const [rows, allTypes, allMediums, offerRows] = await Promise.all([
+  const [rows, allTypes, allMediums, currentMediumRows, offerRows] = await Promise.all([
     db
-      .select({ artwork: artworks, type: artworkTypes, medium: mediums })
+      .select({ artwork: artworks, type: artworkTypes })
       .from(artworks)
       .leftJoin(artworkTypes, eq(artworks.typeId, artworkTypes.id))
-      .leftJoin(mediums, eq(artworks.mediumId, mediums.id))
       .where(eq(artworks.id, artworkId))
       .limit(1),
     db.select().from(artworkTypes).orderBy(artworkTypes.sortOrder),
     db.select().from(mediums).orderBy(mediums.sortOrder),
+    // Médiums actuels de l'œuvre via la table de jonction
+    db.select({ mediumId: artworkMediums.mediumId, mediumName: mediums.name })
+      .from(artworkMediums)
+      .leftJoin(mediums, eq(artworkMediums.mediumId, mediums.id))
+      .where(eq(artworkMediums.artworkId, artworkId)),
     db
       .select({
         id: offers.id,
@@ -119,7 +123,9 @@ export default async function ArtworkDetailPage({
   ])
 
   if (rows.length === 0) notFound()
-  const { artwork, type, medium } = rows[0]!
+  const { artwork, type } = rows[0]!
+  const currentMediumIds = currentMediumRows.map(r => r.mediumId)
+  const currentMediumNames = currentMediumRows.map(r => r.mediumName).filter(Boolean).join(', ')
 
   const storage = getStorage()
   const imageUrl = artwork.originalPath ? storage.getUrl(artwork.originalPath) : null
@@ -288,7 +294,7 @@ export default async function ArtworkDetailPage({
                 {artwork.widthCm && artwork.heightCm
                   ? `${artwork.widthCm} × ${artwork.heightCm} cm`
                   : '—'}
-                {medium?.name ? ` · ${medium.name}` : ''}
+                {currentMediumNames ? ` · ${currentMediumNames}` : ''}
               </span>
             </div>
           </div>
@@ -298,7 +304,7 @@ export default async function ArtworkDetailPage({
             artwork={{
               description: artwork.description ?? '',
               type: type?.name ?? null,
-              medium: medium?.name ?? null,
+              medium: currentMediumNames || null,
               widthCm: artwork.widthCm,
               heightCm: artwork.heightCm,
               createdYear: artwork.createdYear,
@@ -495,7 +501,7 @@ export default async function ArtworkDetailPage({
             initialCreatedYear={artwork.createdYear ?? null}
             initialCreatedMonth={artwork.createdMonth ?? null}
             initialTypeId={artwork.typeId}
-            initialMediumId={artwork.mediumId}
+            initialMediumIds={currentMediumIds}
             initialWidthCm={artwork.widthCm}
             initialHeightCm={artwork.heightCm}
             initialBasePrice={artwork.basePrice}

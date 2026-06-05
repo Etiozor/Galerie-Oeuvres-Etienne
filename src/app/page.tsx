@@ -21,6 +21,7 @@ import { Suspense } from 'react'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { artworkTypes, mediums, savedArtworks } from '@/db/schema'
+
 import { getStorage } from '@/lib/storage'
 import { getVisitorSession } from '@/lib/session'
 import { GalleryClient } from '@/components/gallery/GalleryClient'
@@ -64,7 +65,7 @@ export default async function GalleryPage() {
     where: (artworks, { isNotNull }) => isNotNull(artworks.publishedAt),
     with: {
       type: true,
-      medium: true,
+      artworkMediums: { with: { medium: true } },
     },
     orderBy: (artworks, { desc }) => [desc(artworks.publishedAt)],
   })
@@ -86,10 +87,10 @@ export default async function GalleryPage() {
     title: a.title,
     status: a.status,
     typeId: a.typeId,
-    mediumId: a.mediumId,
-    // Noms du type et du médium pour l'overlay de la carte galerie
+    mediumIds: a.artworkMediums.map(am => am.mediumId),
     typeName: a.type?.name ?? null,
-    mediumName: a.medium?.name ?? null,
+    // Médiums joints en chaîne pour l'affichage (ex: "Aquarelle, Crayon de graphite")
+    mediumName: a.artworkMediums.map(am => am.medium.name).join(', ') || null,
     // parseFloat car Drizzle retourne numeric comme string
     widthCmNum: a.widthCm ? parseFloat(a.widthCm) || 1 : 1,
     heightCmNum: a.heightCm ? parseFloat(a.heightCm) || 1 : 1,
