@@ -411,11 +411,14 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
         </div>
 
         {/* ── Grille masonry + drawer ── */}
-        <div style={{
-          display: 'flex',
-          paddingRight: selectedArtwork ? `${drawerWidth}px` : 0,
-          transition: 'padding-right .15s',
-        }}>
+        {/* admin-grid-padding : sur mobile ≤767px, le padding-right est annulé via @media car le drawer prend 100% de la largeur */}
+        <div
+          className="admin-grid-padding"
+          style={{
+            display: 'flex',
+            paddingRight: selectedArtwork ? `${drawerWidth}px` : 0,
+            transition: 'padding-right .15s',
+          }}>
           <main style={{ flex: 1, padding: '8px 24px 40px', minWidth: 0 }}>
 
             {/* État vide */}
@@ -441,6 +444,25 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
                   @media (max-width: 1024px) { .gal-admin-cols { column-count: 2; } }
                   @media (max-width: 640px)  { .gal-admin-cols { column-count: 1; } }
                   .gal-admin-card:hover .gal-admin-overlay { opacity: 1 !important; }
+
+                  /*
+                   * Drawer pleine largeur sur mobile (≤767px).
+                   * POURQUOI !important ? Le width du drawer est défini en style inline React
+                   * (width: drawerWidth — valeur JS entre 360 et 720px). CSS ne peut pas
+                   * overrider un style inline sans !important. DRAWER_MIN = 360 déborderait
+                   * sur les écrans < 375px sans cette règle.
+                   * [08-RESEARCH.md Pitfall 5, Pattern 5]
+                   */
+                  @media (max-width: 767px) {
+                    .admin-drawer-panel {
+                      width: 100% !important;
+                      min-width: 0 !important;
+                    }
+                    /* Retirer le padding-right de la grille quand le drawer occupe toute la largeur */
+                    .admin-grid-padding {
+                      padding-right: 0 !important;
+                    }
+                  }
                 `}</style>
                 <div className="gal-admin-cols">
                   {filtered.map(a => {
@@ -575,8 +597,10 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
       {selectedArtwork && (() => {
         const drawerStatus = STATUS_CFG[selectedArtwork.status] ?? { bg: 'rgba(91,142,125,0.12)', fg: '#5b8e7d', label: 'Disponible' }
         return (
+        /* admin-drawer-panel : classe CSS cible pour les règles @media mobile (width: 100% !important sur ≤767px) */
         <div
           ref={drawerRef}
+          className="admin-drawer-panel"
           style={{
             position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 100,
             width: drawerWidth,
