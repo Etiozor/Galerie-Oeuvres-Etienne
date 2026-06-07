@@ -324,6 +324,8 @@ export default async function ArtworkDetailPage({
           background: 'var(--color-surface)',
           border: '1px solid rgba(0,0,0,0.08)',
           borderRadius: 'var(--radius-sm)',
+          position: 'relative',
+          zIndex: 1,
         }}>
           <div style={{
             display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
@@ -477,7 +479,7 @@ export default async function ArtworkDetailPage({
         {/* ══════════════════════════════════════════════════════════════
             FORMULAIRE MÉTADONNÉES
             ══════════════════════════════════════════════════════════════ */}
-        <section style={{ marginBottom: 56 }}>
+        <section style={{ marginBottom: 56, position: 'relative', zIndex: 1 }}>
           <div style={{ marginBottom: 18 }}>
             <div style={{
               font: '400 11px var(--font-space-mono)',
@@ -519,7 +521,7 @@ export default async function ArtworkDetailPage({
         {/* ══════════════════════════════════════════════════════════════
             ZONE DANGEREUSE
             ══════════════════════════════════════════════════════════════ */}
-        <section style={{ marginBottom: 24, paddingTop: 28, borderTop: '2px solid var(--color-red)' }}>
+        <section style={{ marginBottom: 24, paddingTop: 28, borderTop: '2px solid var(--color-red)', position: 'relative', zIndex: 1 }}>
           <h2 style={{ margin: '0 0 8px', font: '700 16px var(--font-geist-sans)', color: 'var(--color-red)' }}>
             Zone dangereuse
           </h2>
