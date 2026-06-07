@@ -29,6 +29,7 @@
  */
 import Link from 'next/link'
 import { getVisitorSession } from '@/lib/session'
+import { HamburgerMenu } from './HamburgerMenu'
 
 /**
  * Barre de navigation principale — async Server Component.
@@ -44,20 +45,42 @@ export async function SiteNav() {
   const isLoggedIn = !!session.visitorId
 
   return (
-    <nav
-      style={{
-        height: '56px',
-        backgroundColor: 'var(--color-surface)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 24px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        // D-03 : zéro coins arrondis, D-05 : aucune ombre
-      }}
-    >
+    <>
+      {/*
+       * Règles CSS responsive — masquage navigation desktop/mobile.
+       * POURQUOI une balise <style> inline ?
+       * SiteNav est un Server Component — Tailwind ou CSS Modules nécessiteraient
+       * un rechargement. Le pattern <style> inline avec @media est établi dans le projet
+       * (voir MasonryGrid.tsx). C'est la méthode retenue pour les breakpoints.
+       *
+       * .sitenav-desktop-links — div des liens Galerie/À propos/S'identifier (desktop)
+       * .sitenav-hamburger — div contenant HamburgerMenu (mobile uniquement)
+       */}
+      <style>{`
+        /* Navigation desktop — masquée sur mobile ≤768px */
+        .sitenav-desktop-links { display: flex; }
+        /* Navigation mobile hamburger — masquée sur desktop ≥769px */
+        .sitenav-hamburger { display: none; }
+
+        @media (max-width: 768px) {
+          .sitenav-desktop-links { display: none; }
+          .sitenav-hamburger { display: flex; }
+        }
+      `}</style>
+      <nav
+        style={{
+          height: '56px',
+          backgroundColor: 'var(--color-surface)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 24px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          // D-03 : zéro coins arrondis, D-05 : aucune ombre
+        }}
+      >
       {/* Logo — nom du site en Oswald uppercase */}
       <Link
         href="/"
@@ -75,7 +98,8 @@ export async function SiteNav() {
       </Link>
 
       {/* Liens de navigation + indicateur connexion — Space Mono uppercase (D-02) */}
-      <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+      {/* Masqués sur mobile ≤768px via .sitenav-desktop-links (voir <style> ci-dessus) */}
+      <div className="sitenav-desktop-links" style={{ gap: '24px', alignItems: 'center' }}>
         <Link
           href="/"
           style={{
@@ -158,6 +182,17 @@ export async function SiteNav() {
           </Link>
         )}
       </div>
+
+      {/* Menu hamburger mobile — visible seulement sur mobile ≤768px via .sitenav-hamburger */}
+      {/* HamburgerMenu est un Client Component fils — gère l'état ouvert/fermé du panneau */}
+      {/* SiteNav transmet isLoggedIn et displayName depuis la session iron-session */}
+      <div className="sitenav-hamburger" style={{ alignItems: 'center' }}>
+        <HamburgerMenu
+          isLoggedIn={isLoggedIn}
+          displayName={session.displayName ?? undefined}
+        />
+      </div>
     </nav>
+    </>
   )
 }
