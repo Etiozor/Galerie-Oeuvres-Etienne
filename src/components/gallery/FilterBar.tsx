@@ -8,8 +8,13 @@
  * - Chips à 0 résultat = désactivés et atténués
  * - borderRadius: var(--radius-sm) — D-03 révisé (3px)
  *
- * POURQUOI pas de scroll horizontal ?
- * La barre se replie naturellement (flexWrap: 'wrap') — conforme au design mock.
+ * Comportement responsive (08-02) :
+ * - Desktop (>768px) : les chips peuvent passer à la ligne (flexWrap: wrap)
+ * - Mobile (≤768px) : scroll horizontal sur une seule ligne, scrollbar masquée
+ *   POURQUOI @media et pas style inline ?
+ *   flexWrap et overflow-x doivent avoir des valeurs différentes desktop/mobile.
+ *   CSS @media est la seule façon d'exprimer deux valeurs conditionnelles.
+ *   [08-RESEARCH.md Pattern 2]
  */
 'use client'
 import type { ArtworkType, Medium } from '@/db/schema'
@@ -32,8 +37,36 @@ export function FilterBar({ types, mediums, activeFilter, onFilterChange, counts
   ]
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-      {chips.map((c) => {
+    <>
+      {/*
+       * Règles CSS responsive du conteneur filterbar.
+       * Sur mobile (≤768px) : flex-wrap: nowrap + overflow-x: auto → scroll horizontal.
+       * Scrollbar masquée (cosmétique) via scrollbar-width: none et ::-webkit-scrollbar.
+       * Sur desktop (>768px) : flex-wrap: wrap → les chips passent à la ligne normalement.
+       */}
+      <style>{`
+        .filterbar-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          align-items: center;
+        }
+        @media (max-width: 768px) {
+          .filterbar-container {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            /* Défilement tactile fluide sur iOS */
+            -webkit-overflow-scrolling: touch;
+            /* Masquer la scrollbar horizontale — cosmétique uniquement */
+            scrollbar-width: none;
+          }
+          .filterbar-container::-webkit-scrollbar {
+            display: none;
+          }
+        }
+      `}</style>
+      <div className="filterbar-container">
+        {chips.map((c) => {
         const isActive = activeFilter === c.id
         const isEmpty = c.count === 0 && !isActive
         return (
@@ -69,6 +102,7 @@ export function FilterBar({ types, mediums, activeFilter, onFilterChange, counts
           </button>
         )
       })}
-    </div>
+      </div>
+    </>
   )
 }

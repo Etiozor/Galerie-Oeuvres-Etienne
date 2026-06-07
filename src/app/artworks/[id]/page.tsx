@@ -275,6 +275,28 @@ export default async function ArtworkDetailPage({ params }: Props) {
               grid-template-columns: 1fr;
             }
           }
+
+          /*
+           * Panel info : non-sticky sur mobile (≤1023px).
+           * POURQUOI désactiver sticky sur mobile ?
+           * En layout 1-colonne, le panel est empilé sous l'image — sticky + maxHeight: 100vh
+           * confine le contenu dans 100vh et peut masquer le formulaire d'offre sous le fold.
+           * Sur desktop (≥1024px), sticky + maxHeight: 100vh reste actif (comportement voulu :
+           * le panel reste visible en parallèle de l'image pendant le scroll).
+           * [08-RESEARCH.md Pitfall 7 — panel sticky bloque scroll vers OfferForm]
+           *
+           * scroll-padding-bottom : réserve 80px en bas du scroll container.
+           * Quand le clavier virtuel s'ouvre sur mobile, le navigateur scrolle pour révéler
+           * le champ focused — le padding garantit que le champ n'est pas coupé par le clavier.
+           */
+          @media (max-width: 1023px) {
+            .detail-info-panel {
+              position: static;
+              max-height: none;
+              overflow-y: visible;
+              scroll-padding-bottom: 80px;
+            }
+          }
         `}</style>
 
         <div className="detail-grid">
@@ -372,7 +394,13 @@ export default async function ArtworkDetailPage({ params }: Props) {
           </div>
 
           {/* ── Colonne droite : panel info (D-14) ─────────────────────────── */}
+          {/*
+           * detail-info-panel : sur mobile ≤1023px, le CSS @media annule sticky + maxHeight
+           * pour permettre le scroll naturel jusqu'au formulaire d'offre.
+           * Sur desktop ≥1024px, le style inline sticky + maxHeight: 100vh s'applique.
+           */}
           <div
+            className="detail-info-panel"
             style={{
               backgroundColor: 'var(--color-surface)',
               padding: '32px 32px 28px',
