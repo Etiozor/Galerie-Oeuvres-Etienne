@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 05-03-PLAN.md — section Offres reçues dans /admin/artworks/[id] avec visitorPhone/visitorEmail. 4 tests TDD passent, TypeScript 0 erreur. Prochaine étape : 05-04 (profil visiteur /mon-profil)."
-last_updated: "2026-05-12T02:37:00Z"
-last_activity: 2026-05-12
+stopped_at: "Phase 8 UI-SPEC approved — 08-UI-SPEC.md créé et vérifié (6/6 dimensions PASS). Prochaine étape : /gsd-plan-phase 8"
+last_updated: "2026-06-07T00:00:00Z"
+last_activity: 2026-06-07
 progress:
   total_phases: 6
   completed_phases: 4
@@ -121,6 +121,10 @@ Phase 3 human-verification items (toujours en attente — navigateur requis) :
 
 - Phase 4: Offer history display format (anonymization of visitor names) needs artist preference before building UI
 - Phase 3 human verification: 6 visual/behavioral tests require a running browser — see 03-VERIFICATION.md
+
+## Roadmap Evolution
+
+- Phase 8 added: Responsive Mobile/Tablette — adapter l'ensemble du site pour une consultation optimale sur mobile et tablette (2026-06-07)
 
 ## Deferred Items
 
