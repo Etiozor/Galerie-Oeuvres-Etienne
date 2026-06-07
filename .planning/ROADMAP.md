@@ -130,6 +130,16 @@ Plans:
 - [ ] 06-02: Railway project setup — managed PostgreSQL addon, environment variables, build configuration, domain
 - [ ] 06-03: End-to-end smoke test script (upload → gallery → offer → email), production environment validation
 
+### Phase 8: Responsive Mobile/Tablette
+**Goal**: Adapter l'ensemble du site pour une consultation optimale sur mobile et tablette : navigation, galerie, pages détail, formulaires d'offres, et back-office admin.
+**Depends on**: Phase 5
+**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — HamburgerMenu Client Component + SiteNav mobile (masquage CSS @media, panneau latéral 280px, tests TDD)
+- [ ] 08-02-PLAN.md — CSS fixes responsive : drawer admin 100% largeur mobile, FilterBar scroll horizontal, panel info artworks/[id] non-sticky mobile
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -138,9 +148,10 @@ Plans:
 | 2. Image Pipeline | 4/4 | Complete | 2026-04-26 |
 | 3. Public Gallery | 4/4 | Complete | 2026-05-02 |
 | 4. Visitor Profiles & Offers | 4/4 | Complete | 2026-05-10 |
-| 5. Admin Back-office | 3/5 | In Progress|  |
+| 5. Admin Back-office | 5/5 | Complete | 2026-05-12 |
 | 6. Production Readiness | 0/3 | Not started | - |
-| 7. UI/UX Refonte | 1/? | In Progress | - |
+| 7. UI/UX Refonte | 2/? | In Progress | - |
+| 8. Responsive Mobile/Tablette | 0/2 | Not started | - |
 
 ### Phase 7: UI/UX Refonte
 **Goal**: Refondre visuellement les pages clés du site en utilisant les prototypes Claude Design comme spec de référence. Chaque plan correspond à une page redesignée.
