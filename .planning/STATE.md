@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 8 UI-SPEC approved — 08-UI-SPEC.md créé et vérifié (6/6 dimensions PASS). Prochaine étape : /gsd-plan-phase 8"
-last_updated: "2026-06-07T00:00:00Z"
-last_activity: 2026-06-07
+stopped_at: "09-01 terminé — FilterDrawer + GalleryClient responsive (commits 3f0865a, 2832153). Prochaine étape : 09-02 (responsive pages /about, /mon-profil, admin)"
+last_updated: "2026-06-08T00:00:00Z"
+last_activity: 2026-06-08
 progress:
   total_phases: 6
   completed_phases: 4
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: 5 of 6 (Admin Back-office)
-Plan: 4 of 5 in current phase
-Status: Executing — 05-03 completed
-Last activity: 2026-05-12
+Phase: 9 of 9 (Responsive Pages Restantes)
+Plan: 2 of 2 in wave 1 (09-01 terminé)
+Status: Executing — 09-01 completed
+Last activity: 2026-06-08
 
 Progress: [█████████░] 86%
 
@@ -97,6 +97,9 @@ Recent decisions affecting current work:
 - 05-02: Promise.all pour artwork + artworkTypes + mediums en parallèle dans la page détail admin
 - 05-03: Tests d'isolation PII via readFileSync — vérifie statiquement que visitorPhone/visitorEmail sont absents de la page publique sans serveur Next.js
 - 05-03: Promise.all étendu de 3 à 4 branches pour inclure la query offers JOIN visitors en parallèle
+- 09-01: FilterDrawer séparé de GalleryClient — pattern HamburgerMenu (état ouvert/fermé isolé du filtrage URL)
+- 09-01: Bottom sheet (slideInFromBottom) choisi plutôt que panneau latéral — plus naturel mobile portrait galerie
+- 09-01: CSS @media .filterbar-desktop/.filterbar-mobile dans GalleryClient — D-14 cohérent avec SiteNav, MasonryGrid
 
 ### Pending Todos
 
@@ -138,6 +141,6 @@ Phase 3 human-verification items (toujours en attente — navigateur requis) :
 
 ## Session Continuity
 
-Last session: 2026-05-12
-Stopped at: Completed 05-03-PLAN.md — section "Offres reçues" dans /admin/artworks/[id] avec jointure visitors (visitorPhone/visitorEmail). 4 tests TDD passent, TypeScript 0 erreur. Prochaine étape : 05-04 (profil visiteur /mon-profil).
+Last session: 2026-06-08
+Stopped at: Completed 09-01-PLAN.md — FilterDrawer + GalleryClient responsive (2 commits: 3f0865a, 2832153). 10 tests TDD passent, TypeScript 0 erreur sur les fichiers modifiés. Prochaine étape : 09-02 (responsive /about, /mon-profil, admin pages).
 Resume file: None

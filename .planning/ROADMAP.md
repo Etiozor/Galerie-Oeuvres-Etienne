@@ -147,7 +147,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — FilterDrawer Client Component + GalleryClient mobile (bouton compact + bottom sheet, tests TDD)
+- [x] 09-01-PLAN.md — FilterDrawer Client Component + GalleryClient mobile (bouton compact + bottom sheet, tests TDD)
 - [ ] 09-02-PLAN.md — CSS responsive : about, mon-profil, admin/upload (globals.css), admin/artworks/[id]
 
 ## Progress
