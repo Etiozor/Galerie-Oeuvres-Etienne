@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { updateArtworkStatus, deleteArtwork } from '@/actions/artworkAdmin'
 import { SignOutButton } from '@/app/admin/_components/SignOutButton'
+import { AdminHamburgerMenu } from '@/components/layout/AdminHamburgerMenu'
 
 // ============================================================
 // Types
@@ -209,6 +210,21 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
       <div style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ── Nav galerie-admin ── */}
+        {/*
+         * Responsive mobile : .admin-nav-links masqué sur ≤768px, .admin-nav-hamburger visible.
+         * POURQUOI <style> inline et pas globals.css ?
+         * ArtworksClient est un Client Component — les règles @media doivent être colocalisées
+         * avec le composant pour éviter des dépendances implicites vers un fichier CSS global.
+         * Pattern identique à SiteNav.tsx (sitenav-desktop-links / sitenav-hamburger).
+         */}
+        <style>{`
+          .admin-nav-links    { display: flex; }
+          .admin-nav-hamburger { display: none; }
+          @media (max-width: 768px) {
+            .admin-nav-links    { display: none; }
+            .admin-nav-hamburger { display: flex; }
+          }
+        `}</style>
         <header style={{
           position: 'sticky', top: 0, zIndex: 10,
           height: 56,
@@ -222,12 +238,15 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
               fontFamily: 'var(--font-oswald)', fontWeight: 700, fontSize: 22,
               letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-ink)',
             }}>Galerie POF</span>
-            <span style={{
+            {/* Sous-titre masqué sur mobile pour économiser l'espace horizontal */}
+            <span className="admin-nav-links" style={{
               fontFamily: 'var(--font-space-mono)', fontSize: 11,
               letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-ink-muted)',
+              alignItems: 'baseline',
             }}>· Administration</span>
           </div>
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          {/* Liens desktop — masqués sur mobile ≤768px via .admin-nav-links */}
+          <nav className="admin-nav-links" style={{ alignItems: 'center', gap: 28 }}>
             {[
               { href: '/admin', label: 'Tableau de bord', active: false },
               { href: '/admin/artworks', label: 'Mes œuvres', active: true },
@@ -247,6 +266,10 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
             }}>↗ Galerie</Link>
             <SignOutButton />
           </nav>
+          {/* Hamburger mobile — visible uniquement sur ≤768px via .admin-nav-hamburger */}
+          <div className="admin-nav-hamburger" style={{ alignItems: 'center' }}>
+            <AdminHamburgerMenu activeHref="/admin/artworks" />
+          </div>
         </header>
 
         {/* ── Titre de page ── */}

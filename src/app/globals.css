@@ -30,9 +30,19 @@
 }
 
 /* Base : fond et texte par défaut du site */
+html {
+  /*
+   * Bloquer le scroll horizontal global.
+   * POURQUOI html ET body ?
+   * Sur iOS Safari, overflow-x sur body seul ne suffit pas — il faut aussi html.
+   * Empêche la scrollbar horizontale qui apparaît quand un élément dépasse le viewport.
+   */
+  overflow-x: hidden;
+}
 body {
   background-color: var(--color-bg);
   color: var(--color-ink);
+  overflow-x: hidden;
 }
 
 /**

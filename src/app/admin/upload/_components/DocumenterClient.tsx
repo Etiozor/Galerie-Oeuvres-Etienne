@@ -25,6 +25,7 @@ import { StatusSegmented } from '@/components/admin/StatusSegmented'
 import { TagInput } from '@/components/admin/TagInput'
 import { ImageDropZone, type ImageDropZoneHandle } from '@/components/admin/ImageDropZone'
 import { saveArtworkDraft, publishArtwork } from '@/actions/document'
+import { AdminHamburgerMenu } from '@/components/layout/AdminHamburgerMenu'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -292,18 +293,36 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
 
       <BackgroundDecor />
 
-      {/* Nav galerie (miroir SiteNav public, branche « admin ») */}
+      {/*
+       * Nav galerie — responsive mobile.
+       * .pof-gallery .site-nav nav : liens desktop masqués sur ≤768px (globals.css).
+       * .doc-nav-hamburger : hamburger visible sur ≤768px uniquement.
+       * POURQUOI <style> inline ici et pas seulement globals.css ?
+       * .doc-nav-hamburger n'est pas dans globals.css — ajout minimal localisé.
+       */}
+      <style>{`
+        .doc-nav-hamburger { display: none; }
+        @media (max-width: 768px) {
+          .pof-gallery .site-nav nav { display: none !important; }
+          .doc-nav-hamburger { display: flex; align-items: center; }
+        }
+      `}</style>
       <header className="site-nav">
         <Link href="/" className="brand">
           Galerie POF
           <span className="brand-sub">Administration</span>
         </Link>
+        {/* Liens desktop — masqués sur mobile via globals.css + style ci-dessus */}
         <nav>
           <Link href="/admin/artworks" className="nav-link">Mes œuvres</Link>
           <Link href="/admin/upload" className="nav-link is-active">Ajouter</Link>
           <Link href="/admin/artworks" className="nav-link">Offres reçues</Link>
           <GallerySignOutButton />
         </nav>
+        {/* Hamburger mobile — visible uniquement sur ≤768px */}
+        <div className="doc-nav-hamburger">
+          <AdminHamburgerMenu activeHref="/admin/upload" />
+        </div>
       </header>
 
       {/* Hero : fil d'Ariane + titre Oswald + badge état */}
