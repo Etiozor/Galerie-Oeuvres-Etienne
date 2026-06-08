@@ -32,18 +32,40 @@ export default function AboutPage() {
               grid-template-columns: 1fr;
             }
           }
+
+          /*
+           * Phase 9 — Réduction paddings sur mobile (≤768px).
+           * Desktop : padding: 48px 32px/40px — conservé en style inline.
+           * Mobile : @media override — réduit à 24px horizontal, 32px top.
+           * [09-CONTEXT.md D-06 — Claude discretion padding mobile]
+           */
+          @media (max-width: 768px) {
+            .about-photo-col {
+              padding: 32px 24px;
+              min-height: 220px;
+            }
+            .about-text-col {
+              padding: 32px 24px;
+            }
+            .about-text-col h1 {
+              /* Réduction de 28px → 22px sur mobile — D-08-UI-SPEC.md Typography mobile */
+              font-size: 22px;
+            }
+          }
         `}</style>
 
         <div className="about-grid">
           {/* Colonne gauche : photo placeholder (D-18) */}
+          {/* className="about-photo-col" — ciblé par @media mobile dans le <style> ci-dessus */}
           <div
+            className="about-photo-col"
             style={{
               backgroundColor: 'var(--color-surface)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               minHeight: '400px',
-              padding: '48px 32px',
+              padding: '48px 32px',    // desktop — overridé sur mobile par @media
             }}
           >
             <p
@@ -60,10 +82,12 @@ export default function AboutPage() {
           </div>
 
           {/* Colonne droite : texte placeholder (D-18) */}
+          {/* className="about-text-col" — ciblé par @media mobile dans le <style> ci-dessus */}
           <div
+            className="about-text-col"
             style={{
               backgroundColor: 'var(--color-bg)',
-              padding: '48px 40px',
+              padding: '48px 40px',    // desktop — overridé sur mobile par @media
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',

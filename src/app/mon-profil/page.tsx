@@ -61,14 +61,53 @@ export default async function MonProfilPage() {
   return (
     <>
       <SiteNav />
-      <main style={{
-        maxWidth: '680px',
-        margin: '0 auto',
-        padding: '48px 24px 80px',
-        fontFamily: 'var(--font-geist-sans)',
-        backgroundColor: 'var(--color-bg)',
-        minHeight: '100vh',
-      }}>
+
+      {/*
+       * Responsive mobile — règles CSS @media pour /mon-profil.
+       * La page est déjà en colonne unique (maxWidth 680px) — ajustements mineurs.
+       * [09-CONTEXT.md D-07 — Claude discretion]
+       */}
+      <style>{`
+        /*
+         * Réduction du padding-top sur mobile.
+         * Desktop : padding: 48px 24px 80px (style inline).
+         * Mobile : padding-top réduit à 24px — plus de "grand vide" en haut sur téléphone.
+         */
+        @media (max-width: 768px) {
+          .profil-main {
+            padding-top: 24px;
+          }
+          /*
+           * Ligne offre (titre + montant en flex-row) : autoriser le wrap sur très petit écran.
+           * flex-wrap: wrap — si le titre est long, le montant passe à la ligne suivante.
+           * Mieux que de tronquer le titre (overflow: ellipsis existe déjà sur le span titre).
+           * [09-CONTEXT.md D-07 — flex-wrap wrap sur ligne offre]
+           */
+          .profil-offer-row {
+            flex-wrap: wrap;
+          }
+          /*
+           * Grille œuvres enregistrées — réduire minmax sur très petit écran.
+           * Desktop : minmax(160px, 1fr) — 2-3 cartes par ligne.
+           * Mobile très petit (<360px) : minmax(140px, 1fr) — toujours 2 cartes par ligne.
+           */
+          .profil-saved-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          }
+        }
+      `}</style>
+
+      {/* className="profil-main" — ciblé par @media mobile dans le <style> ci-dessus */}
+      <main
+        className="profil-main"
+        style={{
+          maxWidth: '680px',
+          margin: '0 auto',
+          padding: '48px 24px 80px',   // desktop — padding-top overridé sur mobile
+          fontFamily: 'var(--font-geist-sans)',
+          backgroundColor: 'var(--color-bg)',
+          minHeight: '100vh',
+        }}>
 
         {/* ── En-tête profil ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '48px' }}>
@@ -143,14 +182,18 @@ export default async function MonProfilPage() {
           ) : (
             <div style={{ border: '1px solid rgba(0,0,0,0.08)' }}>
               {myOffers.map((offer, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  gap: '16px',
-                  alignItems: 'center',
-                  padding: '16px 20px',
-                  borderBottom: i < myOffers.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                  backgroundColor: '#fff',
-                }}>
+                <div
+                  key={i}
+                  className="profil-offer-row" /* flex-wrap: wrap sur mobile via @media */
+                  style={{
+                    display: 'flex',
+                    gap: '16px',
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    borderBottom: i < myOffers.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                    backgroundColor: '#fff',
+                  }}
+                >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <Link
                       href={`/artworks/${offer.artworkId}`}
@@ -238,7 +281,11 @@ export default async function MonProfilPage() {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
+            /* className="profil-saved-grid" — minmax réduit à 140px sur mobile via @media */
+            <div
+              className="profil-saved-grid"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}
+            >
               {mySavedArtworks.map(({ artwork }, i) => artwork && (
                 <Link key={i} href={`/artworks/${artwork.id}`} style={{ textDecoration: 'none', color: 'var(--color-ink)', display: 'block' }}>
                   <div style={{ border: '1px solid rgba(0,0,0,0.08)', backgroundColor: '#fff' }}>
