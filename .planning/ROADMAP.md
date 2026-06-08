@@ -144,10 +144,11 @@ Plans:
 **Goal**: Étendre le responsive aux pages encore non adaptées : /about, /mon-profil, et /admin/upload — même exigences que Phase 8 (D-03 zéro coins arrondis, touch targets 44px, CSS inline @media, commentaires français).
 **Depends on**: Phase 8
 **UI hint**: yes
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 09-01-PLAN.md — FilterDrawer Client Component + GalleryClient mobile (bouton compact + bottom sheet, tests TDD)
+- [ ] 09-02-PLAN.md — CSS responsive : about, mon-profil, admin/upload (globals.css), admin/artworks/[id]
 
 ## Progress
 
@@ -161,7 +162,7 @@ Plans:
 | 6. Production Readiness | 0/3 | Not started | - |
 | 7. UI/UX Refonte | 2/? | In Progress | - |
 | 8. Responsive Mobile/Tablette | 2/2 | Human Verification | 2026-06-07 |
-| 9. Responsive Pages restantes | 0/? | Not started | - |
+| 9. Responsive Pages restantes | 0/2 | Not started | - |
 
 ### Phase 7: UI/UX Refonte
 **Goal**: Refondre visuellement les pages clés du site en utilisant les prototypes Claude Design comme spec de référence. Chaque plan correspond à une page redesignée.
