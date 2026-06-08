@@ -145,17 +145,53 @@ export default async function ArtworkDetailPage({
     <>
       <BackgroundDecor />
 
+      {/*
+       * Responsive tablette et mobile — règles CSS @media pour /admin/artworks/[id].
+       * D-10 : hero split → 1 colonne sur tablette ≤1023px.
+       * D-11 : pas cassé sur mobile — objectif "acceptable", pas "optimisé".
+       * [09-CONTEXT.md D-10, D-11, D-14]
+       */}
+      <style>{`
+        /*
+         * Hero split en 1 colonne sur tablette (≤1023px).
+         * POURQUOI !important ?
+         * gridTemplateColumns est défini en style inline React ('minmax(0,1fr) 400px').
+         * CSS @media ne peut pas overrider un style inline sans !important.
+         * Utilisation justifiée — même pattern que admin-drawer-panel (08-02).
+         */
+        @media (max-width: 1023px) {
+          .admin-detail-hero {
+            grid-template-columns: 1fr !important;
+          }
+          /* Réduction padding main sur tablette */
+          .admin-detail-main {
+            padding: 24px 20px 60px;
+          }
+        }
+
+        /* Réduction padding supplémentaire sur mobile */
+        @media (max-width: 768px) {
+          .admin-detail-main {
+            padding: 16px 16px 60px;
+          }
+        }
+      `}</style>
+
       <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
 
       {/* ── Barre admin sticky ── */}
       <AdminHeaderStrip userEmail={session.user.email} />
 
-      <main style={{
-        padding: '44px 32px 80px',
-        maxWidth: 1200,
-        margin: '0 auto',
-        fontFamily: 'var(--font-geist-sans)',
-      }}>
+      {/* className="admin-detail-main" — padding overridé sur tablette/mobile par @media */}
+      <main
+        className="admin-detail-main"
+        style={{
+          padding: '44px 32px 80px',   // desktop — overridé sur tablette/mobile par @media
+          maxWidth: 1200,
+          margin: '0 auto',
+          fontFamily: 'var(--font-geist-sans)',
+        }}
+      >
 
         {/* ══════════════════════════════════════════════════════════════
             BLOC TITRE
@@ -221,13 +257,18 @@ export default async function ArtworkDetailPage({
 
         {/* ══════════════════════════════════════════════════════════════
             HERO SPLIT — image gauche + panneau info droite (sticky)
+            Sur tablette (≤1023px) : 1 colonne via .admin-detail-hero @media
             ══════════════════════════════════════════════════════════════ */}
-        <section style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 400px',
-          gap: 40,
-          marginBottom: 56,
-        }}>
+        {/* className="admin-detail-hero" — grid-template-columns overridé par !important @media */}
+        <section
+          className="admin-detail-hero"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 400px',   // desktop — overridé sur tablette
+            gap: 40,
+            marginBottom: 56,
+          }}
+        >
           {/* Image gauche sur surface sable */}
           <div>
             <div style={{

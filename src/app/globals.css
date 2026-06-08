@@ -622,6 +622,49 @@ body {
 }
 @media (max-width: 1023px) { .pof-gallery .split { grid-template-columns: 1fr; } }
 
+/*
+ * Phase 9 — Responsive mobile pour la page upload (/admin/upload).
+ * La règle tablette (max-width: 1023px) au-dessus passe le split en 1 colonne.
+ * Ces règles mobile complètent : réduction paddings + annulation sticky form-col.
+ * [09-CONTEXT.md D-08, D-09]
+ *
+ * ORDRE EN 1 COLONNE : image-col EN PREMIER dans le HTML (D-09 — déjà respecté).
+ * DocumenterClient.tsx place .image-col avant .form-col — aucune modification HTML requise.
+ */
+@media (max-width: 768px) {
+  /* Réduction padding colonne image sur mobile */
+  .pof-gallery .image-col {
+    padding: 24px 16px 32px;
+  }
+
+  /*
+   * Annuler le sticky sur form-col sur mobile.
+   * POURQUOI position: static sur mobile ?
+   * En layout 1-colonne, position: sticky + max-height confine le formulaire
+   * dans 100vh et masque les champs du bas. Le formulaire doit défiler normalement.
+   * Identique à la correction detail-info-panel de la Phase 8 (08-02-PLAN.md).
+   */
+  .pof-gallery .form-col {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding: 24px 16px 80px;
+  }
+
+  /* Réduction padding hero sur mobile */
+  .pof-gallery .hero {
+    padding: 24px 16px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Réduction taille titre h1 du hero sur mobile */
+  .pof-gallery .hero h1 {
+    font-size: 26px;
+  }
+}
+
 .pof-gallery .image-col {
   padding: 40px 32px 56px; background: var(--color-bg);
   display: flex; flex-direction: column; gap: 18px;
