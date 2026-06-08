@@ -162,14 +162,19 @@ export function FilterDrawer({ activeFilter, onFilterChange, types, mediums }: F
 
           {/*
            * Bottom sheet — glisse depuis le bas, pleine largeur.
-           * role="dialog" pour accessibilité.
+           * role="dialog" + aria-modal="true" pour accessibilité.
+           * aria-modal="true" indique aux lecteurs d'écran (VoiceOver, NVDA) que seul
+           * le contenu du tiroir est accessible — ils ne lisent pas le fond de page.
            * D-03 : borderRadius: 0 — pas de coins arrondis sur le tiroir.
-           * Safe area iPhone : paddingBottom env(safe-area-inset-bottom, 16px).
+           * Safe area iPhone : max(16px, env(safe-area-inset-bottom, 16px)).
+           * max() garantit un paddingBottom minimum de 16px même si env() vaut 0
+           * (appareils sans encoche qui supportent la propriété env() mais retournent 0).
            * z-index: 51 — au-dessus de l'overlay (50) et de la SiteNav sticky (10).
            */}
           <div
             role="dialog"
             aria-label="Filtres de la galerie"
+            aria-modal="true"
             className="filter-drawer-sheet"
             style={{
               position: 'fixed',
@@ -180,7 +185,7 @@ export function FilterDrawer({ activeFilter, onFilterChange, types, mediums }: F
               background: 'var(--color-surface)',
               borderRadius: 0,
               padding: '16px 24px',
-              paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+              paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
