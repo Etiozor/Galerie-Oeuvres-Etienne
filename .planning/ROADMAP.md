@@ -162,7 +162,7 @@ Plans:
 | 6. Production Readiness | 0/3 | Not started | - |
 | 7. UI/UX Refonte | 2/? | In Progress | - |
 | 8. Responsive Mobile/Tablette | 2/2 | Human Verification | 2026-06-07 |
-| 9. Responsive Pages restantes | 0/2 | Not started | - |
+| 9. Responsive Pages restantes | 0/2 | Ready to execute | - |
 
 ### Phase 7: UI/UX Refonte
 **Goal**: Refondre visuellement les pages clés du site en utilisant les prototypes Claude Design comme spec de référence. Chaque plan correspond à une page redesignée.
