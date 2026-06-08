@@ -19,11 +19,12 @@ vi.mock('next/link', () => ({
 }))
 
 // Props minimales pour le composant
+// sortOrder est requis par le type ArtworkType/Medium (champ DB sort_order)
 const baseProps = {
   activeFilter: 'all',
   onFilterChange: vi.fn(),
-  types: [{ id: 1, name: 'Dessin', slug: 'dessin', createdAt: new Date() }],
-  mediums: [{ id: 1, name: 'Crayon', slug: 'crayon', createdAt: new Date() }],
+  types: [{ id: 1, name: 'Dessin', slug: 'dessin', sortOrder: 0, createdAt: new Date() }],
+  mediums: [{ id: 1, name: 'Crayon', slug: 'crayon', sortOrder: 0, createdAt: new Date() }],
 }
 
 describe('FilterDrawer', () => {
