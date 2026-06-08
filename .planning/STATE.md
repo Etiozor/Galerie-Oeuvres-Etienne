@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "09-01 terminé — FilterDrawer + GalleryClient responsive (commits 3f0865a, 2832153). Prochaine étape : 09-02 (responsive pages /about, /mon-profil, admin)"
-last_updated: "2026-06-08T00:00:00Z"
+stopped_at: "09-02 terminé — CSS responsive about + mon-profil + globals.css upload + admin/artworks/[id] (commits 8b4f138, e234b4c). Phase 09 complète."
+last_updated: "2026-06-08T23:08:00Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 21
-  completed_plans: 19
-  percent: 90
+  completed_plans: 20
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 9 of 9 (Responsive Pages Restantes)
-Plan: 2 of 2 in wave 1 (09-01 terminé)
-Status: Executing — 09-01 completed
+Plan: 2 of 2 — COMPLETED
+Status: Phase 09 complete — all responsive pages done
 Last activity: 2026-06-08
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 95%
 
 ## Performance Metrics
 
@@ -100,6 +100,8 @@ Recent decisions affecting current work:
 - 09-01: FilterDrawer séparé de GalleryClient — pattern HamburgerMenu (état ouvert/fermé isolé du filtrage URL)
 - 09-01: Bottom sheet (slideInFromBottom) choisi plutôt que panneau latéral — plus naturel mobile portrait galerie
 - 09-01: CSS @media .filterbar-desktop/.filterbar-mobile dans GalleryClient — D-14 cohérent avec SiteNav, MasonryGrid
+- 09-02: position: static sur .pof-gallery .form-col à ≤768px — annule sticky mobile (même pattern que detail-info-panel Phase 8)
+- 09-02: grid-template-columns: 1fr !important dans .admin-detail-hero — nécessaire car gridTemplateColumns est un style inline React non-overridable sans !important
 
 ### Pending Todos
 
@@ -142,5 +144,5 @@ Phase 3 human-verification items (toujours en attente — navigateur requis) :
 ## Session Continuity
 
 Last session: 2026-06-08
-Stopped at: Completed 09-01-PLAN.md — FilterDrawer + GalleryClient responsive (2 commits: 3f0865a, 2832153). 10 tests TDD passent, TypeScript 0 erreur sur les fichiers modifiés. Prochaine étape : 09-02 (responsive /about, /mon-profil, admin pages).
+Stopped at: Completed 09-02-PLAN.md — CSS responsive about + mon-profil + globals.css upload + admin/artworks/[id] (2 commits: 8b4f138, e234b4c). TypeScript 0 erreur sur les fichiers modifiés. Phase 09 entièrement complète.
 Resume file: None
