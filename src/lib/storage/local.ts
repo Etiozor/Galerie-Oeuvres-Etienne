@@ -185,6 +185,24 @@ export class LocalStorageAdapter implements StorageProvider {
    * @returns    URL complète pour afficher le fichier dans le navigateur
    */
   getUrl(key: string): string {
+    /**
+     * Garde de sécurité : rejeter toute clé qui ressemble déjà à une URL externe.
+     *
+     * POURQUOI ce contrôle ?
+     * La clé vient de la base de données (champ originalPath). Si un chemin
+     * mal formé ou malveillant y est stocké (ex: "//evil.com/img.jpg" ou
+     * "http://evil.com/img.jpg"), le construire en URL produirait une URL
+     * pointant vers un domaine externe — rendu direct dans un <img src> sans contrôle.
+     * Ce guard lève une erreur explicite plutôt que de produire silencieusement
+     * une URL incorrecte.
+     */
+    if (!key || key.startsWith('http://') || key.startsWith('https://') || key.startsWith('//')) {
+      throw new Error(
+        `Clé de stockage invalide : "${key}". ` +
+        'La clé doit être un chemin relatif (ex: "originals/abc123.jpg"), pas une URL.'
+      )
+    }
+
     // Normaliser les séparateurs de chemin Windows → les URLs utilisent toujours /
     const normalizedKey = key.replace(/\\/g, '/')
     return `${this.baseUrl}/api/uploads/${normalizedKey}`
