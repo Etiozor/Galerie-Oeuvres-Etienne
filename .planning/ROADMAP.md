@@ -140,6 +140,15 @@ Plans:
 - [x] 08-01-PLAN.md — HamburgerMenu Client Component + SiteNav mobile (masquage CSS @media, panneau latéral 280px, tests TDD)
 - [x] 08-02-PLAN.md — CSS fixes responsive : drawer admin 100% largeur mobile, FilterBar scroll horizontal, panel info artworks/[id] non-sticky mobile
 
+### Phase 9: Responsive — Pages restantes
+**Goal**: Étendre le responsive aux pages encore non adaptées : /about, /mon-profil, et /admin/upload — même exigences que Phase 8 (D-03 zéro coins arrondis, touch targets 44px, CSS inline @media, commentaires français).
+**Depends on**: Phase 8
+**UI hint**: yes
+**Plans**: TBD
+
+Plans:
+- [ ] TBD
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -152,6 +161,7 @@ Plans:
 | 6. Production Readiness | 0/3 | Not started | - |
 | 7. UI/UX Refonte | 2/? | In Progress | - |
 | 8. Responsive Mobile/Tablette | 2/2 | Human Verification | 2026-06-07 |
+| 9. Responsive Pages restantes | 0/? | Not started | - |
 
 ### Phase 7: UI/UX Refonte
 **Goal**: Refondre visuellement les pages clés du site en utilisant les prototypes Claude Design comme spec de référence. Chaque plan correspond à une page redesignée.
