@@ -75,4 +75,12 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after initialization*
+*Last updated: 2026-06-08 — Phase 9 complete (Responsive Pages restantes)*
+
+## Current State
+
+Phase 9 complete — Site entièrement responsive : navigation hamburger (Phase 8), FilterDrawer galerie mobile (Phase 9), toutes les pages publiques et admin adaptées mobile/tablette.
+
+Phases complétées : 1 Foundation, 2 Image Pipeline, 3 Public Gallery, 4 Visitor Profiles & Offers, 5 Admin Back-office, 8 Responsive Mobile/Tablette, 9 Responsive Pages restantes.
+
+Prochaine étape : Phase 6 (Production Readiness — R2, Railway, smoke test).
