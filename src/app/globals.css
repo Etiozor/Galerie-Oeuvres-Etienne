@@ -632,14 +632,23 @@ body {
 }
 @media (max-width: 1023px) { .pof-gallery .split { grid-template-columns: 1fr; } }
 
+.pof-gallery .image-col {
+  padding: 40px 32px 56px; background: var(--color-bg);
+  display: flex; flex-direction: column; gap: 18px;
+}
+.pof-gallery .form-col {
+  background: var(--color-surface); padding: 32px 32px 0;
+  position: sticky; top: 56px; align-self: start;
+  max-height: calc(100vh - 56px); overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+
 /*
  * Phase 9 — Responsive mobile pour la page upload (/admin/upload).
- * La règle tablette (max-width: 1023px) au-dessus passe le split en 1 colonne.
- * Ces règles mobile complètent : réduction paddings + annulation sticky form-col.
- * [09-CONTEXT.md D-08, D-09]
- *
- * ORDRE EN 1 COLONNE : image-col EN PREMIER dans le HTML (D-09 — déjà respecté).
- * DocumenterClient.tsx place .image-col avant .form-col — aucune modification HTML requise.
+ * Ce bloc doit rester APRÈS les règles de base .image-col et .form-col ci-dessus.
+ * POURQUOI ? En CSS, deux règles de même spécificité : la plus tardive gagne.
+ * Si ce bloc était placé avant les règles de base, les bases les écraseraient.
+ * [09-CONTEXT.md D-08, D-09 — ordre CSS corrigé]
  */
 @media (max-width: 768px) {
   /* Réduction padding colonne image sur mobile */
@@ -673,17 +682,12 @@ body {
   .pof-gallery .hero h1 {
     font-size: 26px;
   }
-}
 
-.pof-gallery .image-col {
-  padding: 40px 32px 56px; background: var(--color-bg);
-  display: flex; flex-direction: column; gap: 18px;
-}
-.pof-gallery .form-col {
-  background: var(--color-surface); padding: 32px 32px 0;
-  position: sticky; top: 56px; align-self: start;
-  max-height: calc(100vh - 56px); overflow-y: auto;
-  display: flex; flex-direction: column;
+  /* Pipeline strip scrollable horizontalement sur mobile */
+  .pof-gallery .pipeline {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ── Image stage (zone dépôt dans contexte galerie) ── */

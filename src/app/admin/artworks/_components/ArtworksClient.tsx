@@ -223,6 +223,25 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
           @media (max-width: 768px) {
             .admin-nav-links    { display: none; }
             .admin-nav-hamburger { display: flex; }
+            /* Titre page + bouton upload : colonne sur mobile */
+            .artworks-title-bar {
+              padding: 24px 16px 4px !important;
+              flex-direction: column !important;
+              align-items: flex-start !important;
+            }
+            /* Stat tiles : padding réduit sur mobile */
+            .artworks-stat-row {
+              padding: 16px 16px 8px !important;
+            }
+            /* Barre filtres : padding réduit sur mobile */
+            .artworks-filter-bar {
+              padding: 12px 16px 10px !important;
+            }
+            /* Zone grille : padding réduit sur mobile */
+            .artworks-main-area {
+              padding-left: 16px !important;
+              padding-right: 16px !important;
+            }
           }
         `}</style>
         <header style={{
@@ -273,7 +292,7 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
         </header>
 
         {/* ── Titre de page ── */}
-        <div style={{
+        <div className="artworks-title-bar" style={{
           padding: '32px 32px 4px',
           display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24,
         }}>
@@ -307,7 +326,7 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
         </div>
 
         {/* ── Tuiles stat ── */}
-        <div style={{ padding: '28px 32px 8px', display: 'flex', gap: 14 }}>
+        <div className="artworks-stat-row" style={{ padding: '28px 32px 8px', display: 'flex', gap: 14 }}>
           {([
             { key: 'all',       label: 'Toutes',      hint: 'au catalogue',   accent: 'var(--color-ink)',    bg: 'var(--color-surface)', count: counts.all },
             { key: 'offers',    label: 'Avec offres', hint: 'à arbitrer',     accent: 'var(--color-red)',    bg: '#f4a259',             count: counts.offers },
@@ -356,7 +375,7 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
         </div>
 
         {/* ── Barre filtres + tri ── */}
-        <div style={{
+        <div className="artworks-filter-bar" style={{
           padding: '20px 32px 14px',
           display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         }}>
@@ -442,7 +461,7 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
             paddingRight: selectedArtwork ? `${drawerWidth}px` : 0,
             transition: 'padding-right .15s',
           }}>
-          <main style={{ flex: 1, padding: '8px 24px 40px', minWidth: 0 }}>
+          <main className="artworks-main-area" style={{ flex: 1, padding: '8px 24px 40px', minWidth: 0 }}>
 
             {/* État vide */}
             {filtered.length === 0 && (

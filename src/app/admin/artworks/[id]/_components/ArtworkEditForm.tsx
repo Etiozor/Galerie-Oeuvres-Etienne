@@ -197,6 +197,19 @@ export function ArtworkEditForm({
 
   return (
     <form action={formAction}>
+      {/*
+       * Grille responsive : 6 colonnes sur desktop, 2 colonnes sur mobile.
+       * !important nécessaire pour override le gridTemplateColumns appliqué en style inline.
+       * POURQUOI 2 colonnes et pas 1 ? Mois + Année côte à côte restent lisibles.
+       */}
+      <style>{`
+        @media (max-width: 768px) {
+          .artwork-edit-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            padding: 20px 16px !important;
+          }
+        }
+      `}</style>
 
       {/* ── Erreur globale ── */}
       {state && !state.success && state.errors?._form && (
@@ -215,7 +228,7 @@ export function ArtworkEditForm({
       )}
 
       {/* ── Grille principale — 6 colonnes ── */}
-      <div style={gridStyle}>
+      <div className="artwork-edit-grid" style={gridStyle}>
         {/* Mois de création — 1 col */}
         <Field id="createdMonth" label="Mois" span={1} error={err('createdMonth')}>
           <select
@@ -370,7 +383,7 @@ export function ArtworkEditForm({
         </div>
 
         {/* Les inputs sont toujours dans le DOM pour la soumission, juste masqués */}
-        <div style={{ display: priceOpen ? 'grid' : 'none', ...gridStyle, marginTop: 0 }}>
+        <div className="artwork-edit-grid" style={{ display: priceOpen ? 'grid' : 'none', ...gridStyle, marginTop: 0 }}>
           {/* Heures passées */}
           <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
             <InputWithSuffix id="priceHoursSpent" name="Heures passées" suffix="h" defaultValue={initialPriceHoursSpent} placeholder="ex : 8" step="0.5" min="0" error={err('priceHoursSpent')} />
