@@ -45,8 +45,10 @@ async function parseMetadata(formData: FormData) {
   const createdMonth = monthRaw ? (parseInt(monthRaw) || null) : null
   const widthCm = ((formData.get('widthCm') as string) ?? '').trim() || null
   const heightCm = ((formData.get('heightCm') as string) ?? '').trim() || null
+  const dimensionUnit = ((formData.get('dimensionUnit') as string) ?? '').trim() || 'cm'
   const status = ((formData.get('status') as string) ?? 'available') as 'available' | 'sold' | 'given' | 'reserved'
   const basePrice = ((formData.get('basePrice') as string) ?? '').trim() || null
+  const priceCurrency = ((formData.get('priceCurrency') as string) ?? '').trim() || 'EUR'
   const description = ((formData.get('description') as string) ?? '').trim() || null
   const tagsJson = (formData.get('tags') as string) ?? '[]'
   const tagNames: string[] = JSON.parse(tagsJson)
@@ -58,7 +60,7 @@ async function parseMetadata(formData: FormData) {
     .map(v => parseInt(String(v), 10))
     .filter(n => !isNaN(n) && n > 0)
 
-  return { title, typeId, createdYear, createdMonth, mediumIds, widthCm, heightCm, status, basePrice, description, tagNames, artworkId }
+  return { title, typeId, createdYear, createdMonth, mediumIds, widthCm, heightCm, dimensionUnit, status, basePrice, priceCurrency, description, tagNames, artworkId }
 }
 
 // Synchronise la table artwork_mediums : supprime les anciennes liaisons puis insère les nouvelles.
@@ -121,8 +123,10 @@ export async function saveArtworkDraft(formData: FormData): Promise<DocumentResu
       createdMonth: meta.createdMonth,
       widthCm: meta.widthCm,
       heightCm: meta.heightCm,
+      dimensionUnit: meta.dimensionUnit,
       status: meta.status,
       basePrice: meta.basePrice,
+      priceCurrency: meta.priceCurrency,
       description: meta.description,
     }
 
@@ -187,8 +191,10 @@ export async function publishArtwork(formData: FormData): Promise<DocumentResult
       createdMonth: meta.createdMonth,
       widthCm: meta.widthCm,
       heightCm: meta.heightCm,
+      dimensionUnit: meta.dimensionUnit,
       status: meta.status,
       basePrice: meta.basePrice,
+      priceCurrency: meta.priceCurrency,
       description: meta.description,
       originalPath: originalKey,
       publishedAt: new Date(),

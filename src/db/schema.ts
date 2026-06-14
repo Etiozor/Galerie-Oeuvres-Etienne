@@ -206,9 +206,13 @@ export const artworks = pgTable('artworks', {
   createdYear: smallint('created_year'),
   createdMonth: smallint('created_month'),
 
-  // Dimensions en centimètres (null si non renseigné)
+  // Dimensions (valeur brute saisie par l'artiste — l'unité est dans dimensionUnit)
   widthCm: numeric('width_cm', { precision: 6, scale: 1 }),
   heightCm: numeric('height_cm', { precision: 6, scale: 1 }),
+
+  // Unité de saisie des dimensions : 'cm' (centimètres), 'in' (pouces), 'mm' (millimètres)
+  // Stockée pour afficher la valeur brute telle qu'entrée par l'artiste, sans conversion forcée.
+  dimensionUnit: varchar('dimension_unit', { length: 10 }).notNull().default('cm'),
 
   // === Classification — 3 niveaux [D-03] ===
   // Niveau 1 : type (dessin / peinture / ...) — référence artwork_types
@@ -222,6 +226,10 @@ export const artworks = pgTable('artworks', {
   // === Prix ===
   // Prix de base (plancher souple) — les offres sous ce montant affichent un avertissement
   basePrice: numeric('base_price', { precision: 10, scale: 2 }),
+
+  // Devise du prix : code ISO 4217 à 3 lettres (EUR, USD, GBP, CHF…)
+  // Séparée du montant pour ne pas forcer l'artiste à travailler en euros.
+  priceCurrency: varchar('price_currency', { length: 3 }).notNull().default('EUR'),
 
   // === Décomposition du prix de base (MARKET-01) ===
   // Ces 6 facteurs expliquent comment l'artiste a calculé le base_price.

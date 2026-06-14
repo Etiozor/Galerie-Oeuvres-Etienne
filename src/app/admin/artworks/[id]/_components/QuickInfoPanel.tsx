@@ -10,9 +10,11 @@ interface QuickInfoPanelProps {
     medium: string | null
     widthCm: string | null
     heightCm: string | null
+    dimensionUnit: string | null
     createdYear: number | null
     createdMonth: number | null
     basePrice: string | null
+    priceCurrency: string | null
   }
   updateDescriptionAction: (value: string) => Promise<{ success: boolean; error?: string }>
 }
@@ -76,7 +78,7 @@ export function QuickInfoPanel({ artwork, updateDescriptionAction }: QuickInfoPa
         <KV label="Médium">{artwork.medium ?? '—'}</KV>
         <KV label="Dimensions">
           {artwork.widthCm && artwork.heightCm
-            ? <span style={{ fontFamily: 'var(--font-space-mono)' }}>{artwork.widthCm} × {artwork.heightCm} cm</span>
+            ? <span style={{ fontFamily: 'var(--font-space-mono)' }}>{artwork.widthCm} × {artwork.heightCm} {artwork.dimensionUnit ?? 'cm'}</span>
             : '—'}
         </KV>
         <KV label="Créée">
@@ -110,7 +112,7 @@ export function QuickInfoPanel({ artwork, updateDescriptionAction }: QuickInfoPa
             lineHeight: 1,
           }}>
             {parseFloat(artwork.basePrice).toLocaleString('fr-FR')}
-            <span style={{ color: 'var(--color-ink-muted)', marginLeft: 4, fontWeight: 400 }}>€</span>
+            <span style={{ color: 'var(--color-ink-muted)', marginLeft: 4, fontWeight: 400 }}>{artwork.priceCurrency ?? '€'}</span>
           </span>
         ) : (
           <span style={{ font: '400 14px var(--font-geist-sans)', color: 'var(--color-ink-muted)' }}>—</span>

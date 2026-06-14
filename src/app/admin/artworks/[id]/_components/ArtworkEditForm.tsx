@@ -28,7 +28,9 @@ interface ArtworkEditFormProps {
   initialMediumIds: number[]
   initialWidthCm: string | null
   initialHeightCm: string | null
+  initialDimensionUnit: string | null
   initialBasePrice: string | null
+  initialPriceCurrency: string | null
   initialPriceHoursSpent: string | null
   initialPriceFormat: string | null
   initialPriceFraming: string | null
@@ -86,14 +88,28 @@ const fieldErrorStyle: React.CSSProperties = {
   margin: '4px 0 0',
 }
 
-// Champ avec suffixe (cm, €, h)
+// Champ avec suffixe (cm, €, h) — suffix peut être un nœud React (ex: un <select>)
 function InputWithSuffix({
-  id, name, type = 'number', suffix, defaultValue, placeholder, step, min, max,
+  id, name, type = 'number', suffix, suffixNode, defaultValue, placeholder, step, min, max,
   error,
 }: {
-  id: string; name: string; type?: string; suffix: string; defaultValue?: string | number | null
+  id: string; name: string; type?: string; suffix?: string; suffixNode?: React.ReactNode
+  defaultValue?: string | number | null
   placeholder?: string; step?: string; min?: string; max?: string; error?: string
 }) {
+  const suffixStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '0 12px',
+    background: '#fafafa',
+    border: '1px solid rgba(0,0,0,0.14)',
+    borderLeft: 0,
+    borderRadius: `0 var(--radius-sm) var(--radius-sm) 0`,
+    font: '400 12px var(--font-space-mono)',
+    letterSpacing: '0.05em',
+    color: 'var(--color-ink-muted)',
+    whiteSpace: 'nowrap',
+  }
   return (
     <label htmlFor={id} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
       <span style={eyebrowStyle}>{name}</span>
@@ -112,19 +128,10 @@ function InputWithSuffix({
             borderRadius: `var(--radius-sm) 0 0 var(--radius-sm)`,
           }}
         />
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          padding: '0 12px',
-          background: '#fafafa',
-          border: '1px solid rgba(0,0,0,0.14)',
-          borderLeft: 0,
-          borderRadius: `0 var(--radius-sm) var(--radius-sm) 0`,
-          font: '400 12px var(--font-space-mono)',
-          letterSpacing: '0.05em',
-          color: 'var(--color-ink-muted)',
-          whiteSpace: 'nowrap',
-        }}>{suffix}</span>
+        {suffixNode
+          ? suffixNode
+          : <span style={suffixStyle}>{suffix}</span>
+        }
       </div>
       {error && <p role="alert" style={fieldErrorStyle}>{error}</p>}
     </label>
@@ -162,7 +169,9 @@ export function ArtworkEditForm({
   initialMediumIds,
   initialWidthCm,
   initialHeightCm,
+  initialDimensionUnit,
   initialBasePrice,
+  initialPriceCurrency,
   initialPriceHoursSpent,
   initialPriceFormat,
   initialPriceFraming,
@@ -175,6 +184,8 @@ export function ArtworkEditForm({
   const [state, formAction, isPending] = useActionState(updateAction, null)
   const [priceOpen, setPriceOpen] = useState(false)
   const [selectedMediumIds, setSelectedMediumIds] = useState<number[]>(initialMediumIds)
+  const [dimensionUnit, setDimensionUnit] = useState(initialDimensionUnit ?? 'cm')
+  const [priceCurrency, setPriceCurrency] = useState(initialPriceCurrency ?? 'EUR')
 
   function toggleMedium(id: number) {
     setSelectedMediumIds(prev =>
@@ -273,6 +284,9 @@ export function ArtworkEditForm({
           {selectedMediumIds.map(id => (
             <input key={id} type="hidden" name="mediumId" value={id} />
           ))}
+          {/* Inputs cachés pour unité et devise — contrôlés par les selects ci-dessous */}
+          <input type="hidden" name="dimensionUnit" value={dimensionUnit} />
+          <input type="hidden" name="priceCurrency" value={priceCurrency} />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {mediums.map(m => {
               const active = selectedMediumIds.includes(m.id)
@@ -304,21 +318,44 @@ export function ArtworkEditForm({
           <InputWithSuffix
             id="widthCm"
             name="Largeur"
-            suffix="cm"
             defaultValue={initialWidthCm}
             placeholder="ex : 42.5"
             step="0.1"
             min="0"
             error={err('widthCm')}
+            suffixNode={
+              <select
+                value={dimensionUnit}
+                onChange={(e) => setDimensionUnit(e.target.value)}
+                aria-label="Unité des dimensions"
+                style={{
+                  padding: '0 8px',
+                  background: '#fafafa',
+                  border: '1px solid rgba(0,0,0,0.14)',
+                  borderLeft: 0,
+                  borderRadius: `0 var(--radius-sm) var(--radius-sm) 0`,
+                  font: '400 12px var(--font-space-mono)',
+                  color: 'var(--color-ink-muted)',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  minWidth: 46,
+                }}
+              >
+                <option value="cm">cm</option>
+                <option value="in">in</option>
+                <option value="mm">mm</option>
+              </select>
+            }
           />
         </div>
 
-        {/* Hauteur — 2 col */}
+        {/* Hauteur — 2 col (partage l'unité choisie dans le select Largeur) */}
         <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
           <InputWithSuffix
             id="heightCm"
             name="Hauteur"
-            suffix="cm"
+            suffix={dimensionUnit}
             defaultValue={initialHeightCm}
             placeholder="ex : 60"
             step="0.1"
@@ -332,12 +369,36 @@ export function ArtworkEditForm({
           <InputWithSuffix
             id="basePrice"
             name="Prix de base"
-            suffix="€"
             defaultValue={initialBasePrice}
             placeholder="ex : 350"
             step="0.01"
             min="0"
             error={err('basePrice')}
+            suffixNode={
+              <select
+                value={priceCurrency}
+                onChange={(e) => setPriceCurrency(e.target.value)}
+                aria-label="Devise"
+                style={{
+                  padding: '0 8px',
+                  background: '#fafafa',
+                  border: '1px solid rgba(0,0,0,0.14)',
+                  borderLeft: 0,
+                  borderRadius: `0 var(--radius-sm) var(--radius-sm) 0`,
+                  font: '400 12px var(--font-space-mono)',
+                  color: 'var(--color-ink-muted)',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  minWidth: 60,
+                }}
+              >
+                <option value="EUR">€ EUR</option>
+                <option value="USD">$ USD</option>
+                <option value="GBP">£ GBP</option>
+                <option value="CHF">CHF</option>
+              </select>
+            }
           />
         </div>
       </div>

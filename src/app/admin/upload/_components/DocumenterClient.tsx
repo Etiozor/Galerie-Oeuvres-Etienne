@@ -159,8 +159,10 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
   const [selectedMediumIds, setSelectedMediumIds] = useState<number[]>([])
   const [widthCm, setWidthCm] = useState('')
   const [heightCm, setHeightCm] = useState('')
+  const [dimensionUnit, setDimensionUnit] = useState<'cm' | 'in' | 'mm'>('cm')
   const [saleStatus, setSaleStatus] = useState<'available' | 'reserved' | 'sold' | 'given'>('available')
   const [price, setPrice] = useState('')
+  const [priceCurrency, setPriceCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [hasImage, setHasImage] = useState(false)
@@ -205,8 +207,10 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
     selectedMediumIds.forEach(id => fd.append('mediumId', String(id)))
     fd.set('widthCm', widthCm)
     fd.set('heightCm', heightCm)
+    fd.set('dimensionUnit', dimensionUnit)
     fd.set('status', saleStatus)
     fd.set('basePrice', price)
+    fd.set('priceCurrency', priceCurrency)
     fd.set('description', description)
     fd.set('tags', JSON.stringify(tags))
     if (artworkId) fd.set('artworkId', String(artworkId))
@@ -227,8 +231,10 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
     setSelectedMediumIds([])
     setWidthCm('')
     setHeightCm('')
+    setDimensionUnit('cm')
     setSaleStatus('available')
     setPrice('')
+    setPriceCurrency('EUR')
     setDescription('')
     setTags([])
     setHasImage(false)
@@ -479,7 +485,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                     placeholder="—"
                     value={widthCm}
                     onChange={(e) => { setWidthCm(e.target.value); markEditing() }}
-                    aria-label="Largeur en cm"
+                    aria-label="Largeur"
                     aria-invalid={!!errFor('widthCm')}
                   />
                   <span className="x">×</span>
@@ -489,10 +495,31 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                     placeholder="—"
                     value={heightCm}
                     onChange={(e) => { setHeightCm(e.target.value); markEditing() }}
-                    aria-label="Hauteur en cm"
+                    aria-label="Hauteur"
                     aria-invalid={!!errFor('heightCm')}
                   />
-                  <span className="unit">cm</span>
+                  <select
+                    className="unit"
+                    value={dimensionUnit}
+                    onChange={(e) => { setDimensionUnit(e.target.value as 'cm' | 'in' | 'mm'); markEditing() }}
+                    aria-label="Unité des dimensions"
+                    style={{
+                      background: 'var(--color-bg)',
+                      border: 'var(--border-hairline)',
+                      borderLeft: 0,
+                      borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
+                      font: '400 12px var(--font-space-mono)',
+                      color: 'var(--color-ink-muted)',
+                      cursor: 'pointer',
+                      padding: '0 8px',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                    }}
+                  >
+                    <option value="cm">cm</option>
+                    <option value="in">in</option>
+                    <option value="mm">mm</option>
+                  </select>
                 </div>
               </Field>
             </div>
@@ -511,20 +538,42 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                 label="Prix de base"
                 hint="Plancher indicatif en dessous duquel une offre est signalée. Modifiable plus tard."
               >
-                <div className="price-input">
+                <div className="price-input" style={{ display: 'flex', alignItems: 'stretch' }}>
                   <input
                     className="input input--mono"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     placeholder="0"
                     value={price}
                     onChange={(e) => {
-                      setPrice(e.target.value.replace(/[^\d]/g, ''))
+                      setPrice(e.target.value.replace(/[^\d.,]/g, ''))
                       markEditing()
                     }}
-                    aria-label="Prix de base en euros"
-                    style={{ paddingRight: 34 }}
+                    aria-label="Prix de base"
+                    style={{ borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)', borderRight: 0 }}
                   />
-                  <span className="suffix">€</span>
+                  <select
+                    value={priceCurrency}
+                    onChange={(e) => { setPriceCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF'); markEditing() }}
+                    aria-label="Devise"
+                    style={{
+                      padding: '0 10px',
+                      background: '#fafafa',
+                      border: 'var(--border-hairline)',
+                      borderLeft: 0,
+                      borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
+                      font: '400 12px var(--font-space-mono)',
+                      color: 'var(--color-ink-muted)',
+                      cursor: 'pointer',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      minWidth: 52,
+                    }}
+                  >
+                    <option value="EUR">€ EUR</option>
+                    <option value="USD">$ USD</option>
+                    <option value="GBP">£ GBP</option>
+                    <option value="CHF">CHF</option>
+                  </select>
                 </div>
               </Field>
             </div>

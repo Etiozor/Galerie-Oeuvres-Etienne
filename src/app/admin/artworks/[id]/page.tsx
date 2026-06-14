@@ -348,9 +348,11 @@ export default async function ArtworkDetailPage({
               medium: currentMediumNames || null,
               widthCm: artwork.widthCm,
               heightCm: artwork.heightCm,
+              dimensionUnit: artwork.dimensionUnit,
               createdYear: artwork.createdYear,
               createdMonth: artwork.createdMonth,
               basePrice: artwork.basePrice,
+              priceCurrency: artwork.priceCurrency,
             }}
             updateDescriptionAction={updateDescriptionAction}
           />
@@ -547,7 +549,9 @@ export default async function ArtworkDetailPage({
             initialMediumIds={currentMediumIds}
             initialWidthCm={artwork.widthCm}
             initialHeightCm={artwork.heightCm}
+            initialDimensionUnit={artwork.dimensionUnit}
             initialBasePrice={artwork.basePrice}
+            initialPriceCurrency={artwork.priceCurrency}
             initialPriceHoursSpent={artwork.priceHoursSpent}
             initialPriceFormat={artwork.priceFormat}
             initialPriceFraming={artwork.priceFraming}
