@@ -7,6 +7,7 @@
  * → Bouton pleine largeur : "{N} offre(s) reçue(s) · Meilleure {montant}" + ↓/↑
  * → Badge jaune "Meilleure" sur la première ligne de la liste
  * → Message et date par offre
+ * → Bouton "Retirer" visible uniquement sur les offres du visiteur connecté (isOwn)
  *
  * DÉCISION (CLAUDE.md, MARKET-04) :
  * - Résumé TOUJOURS visible : nombre + meilleure offre
@@ -14,9 +15,13 @@
  *
  * D-03 : aucun border-radius.
  * SÉCURITÉ (T-04-04-01) : aucun numéro de téléphone dans le rendu.
+ * SÉCURITÉ suppression : isOwn calculé côté serveur — jamais côté client.
+ *   La Server Action deleteOfferAsVisitor re-vérifie l'ownership en DB.
  */
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { deleteOfferAsVisitor } from '@/actions/offers'
 
 export interface OfferHistoryItem {
   id: number
@@ -24,6 +29,11 @@ export interface OfferHistoryItem {
   message: string | null
   visitorName: string
   createdAt: Date
+  /**
+   * true si l'offre appartient au visiteur actuellement connecté.
+   * Calculé côté serveur dans la page — jamais envoyé de visiteurId brut au client.
+   */
+  isOwn?: boolean
 }
 
 interface OfferHistoryProps {
@@ -34,6 +44,8 @@ interface OfferHistoryProps {
 
 export function OfferHistory({ offerCount, bestOffer, allOffers }: OfferHistoryProps) {
   const [showAll, setShowAll] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   if (offerCount === 0) return null
 
@@ -41,6 +53,25 @@ export function OfferHistory({ offerCount, bestOffer, allOffers }: OfferHistoryP
   const bestFormatted = bestOffer
     ? parseFloat(bestOffer).toLocaleString('fr-FR') + ' €'
     : null
+
+  /**
+   * Supprime l'offre du visiteur après confirmation.
+   * router.refresh() force Next.js à re-fetcher les Server Components —
+   * la liste se met à jour sans rechargement de page complet.
+   */
+  function handleDeleteOffer(offerId: number) {
+    if (!confirm('Retirer votre offre ? Cette action est définitive.')) return
+
+    startTransition(async () => {
+      const result = await deleteOfferAsVisitor(offerId)
+      if ('error' in result) {
+        alert(result.error)
+      } else {
+        // Rafraîchit les Server Components pour que la liste reflète la suppression
+        router.refresh()
+      }
+    })
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -115,14 +146,15 @@ export function OfferHistory({ offerCount, bestOffer, allOffers }: OfferHistoryP
                 gap: 4,
               }}
             >
-              {/* Nom + badge "Meilleure" + montant */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              {/* Nom + badge "Meilleure" + montant + bouton retirer (si isOwn) */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
                 <span
                   style={{
                     fontFamily: 'var(--font-geist-sans)',
                     fontWeight: 600,
                     fontSize: '13px',
                     color: 'var(--color-ink)',
+                    minWidth: 0,
                   }}
                 >
                   {offer.visitorName}
@@ -145,17 +177,45 @@ export function OfferHistory({ offerCount, bestOffer, allOffers }: OfferHistoryP
                     </span>
                   )}
                 </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-space-mono)',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--color-ink)',
-                  }}
-                >
-                  {parseFloat(offer.amount).toLocaleString('fr-FR')} €
-                </span>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexShrink: 0 }}>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-space-mono)',
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      fontVariantNumeric: 'tabular-nums',
+                      color: 'var(--color-ink)',
+                    }}
+                  >
+                    {parseFloat(offer.amount).toLocaleString('fr-FR')} €
+                  </span>
+
+                  {/* Bouton "Retirer" — visible uniquement pour le visiteur propriétaire */}
+                  {offer.isOwn && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOffer(offer.id)}
+                      disabled={isPending}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(188,75,81,0.4)',
+                        borderRadius: 0,  // D-03
+                        padding: '2px 8px',
+                        fontFamily: 'var(--font-space-mono)',
+                        fontSize: '10px',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: '#bc4b51',
+                        cursor: isPending ? 'not-allowed' : 'pointer',
+                        opacity: isPending ? 0.5 : 1,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                    >
+                      {isPending ? '…' : 'Retirer'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Message optionnel — italic Cormorant */}

@@ -26,8 +26,10 @@ import {
   updateArtworkTitle,
   updateArtworkDescription,
 } from '@/actions/artworkAdmin'
+import { deleteOfferAsAdmin } from '@/actions/offers'
 import { StatusChangeForm } from './_components/StatusChangeForm'
 import { DeleteArtworkButton } from './_components/DeleteArtworkButton'
+import { DeleteOfferButton } from './_components/DeleteOfferButton'
 import { ArtworkEditForm } from './_components/ArtworkEditForm'
 import { InlineEditField } from './_components/InlineEditField'
 import { AdminHeaderStrip } from './_components/AdminHeaderStrip'
@@ -439,6 +441,7 @@ export default async function ArtworkDetailPage({
                       { label: 'Montant', align: 'right' as const },
                       { label: 'Message', align: 'left' as const },
                       { label: 'Date', align: 'left' as const },
+                      { label: '', align: 'right' as const },
                     ].map(col => (
                       <th key={col.label} style={{
                         padding: '12px 14px',
@@ -510,6 +513,12 @@ export default async function ArtworkDetailPage({
                         color: 'var(--color-ink-muted)', whiteSpace: 'nowrap',
                       }}>
                         {new Date(offer.createdAt).toLocaleDateString('fr-FR')}
+                      </td>
+                      {/* Colonne Actions — bouton supprimer bindé avec l'ID de l'offre */}
+                      <td style={{ padding: '12px 14px', verticalAlign: 'top', textAlign: 'right' }}>
+                        <DeleteOfferButton
+                          deleteAction={deleteOfferAsAdmin.bind(null, offer.id)}
+                        />
                       </td>
                     </tr>
                   ))}

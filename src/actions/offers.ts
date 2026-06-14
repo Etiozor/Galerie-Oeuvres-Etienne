@@ -1,7 +1,7 @@
 'use server'
 
 /**
- * Server Action pour la soumission d'offres d'achat — Galerie POF.
+ * Server Actions pour les offres d'achat — Galerie POF.
  *
  * POURQUOI une Server Action et pas une API REST ?
  * Les Server Actions s'exécutent côté serveur, sont appelées directement
@@ -15,6 +15,8 @@
  * - Garde session : visitorId requis avant tout traitement (T-04-03-04)
  * - Garde statut : artwork.status === 'available' requis (T-04-03-05)
  * - Le message est stocké en texte brut, rendu via React (échappement XSS automatique) (T-04-03-07)
+ * - deleteOfferAsAdmin : session artiste requise (T-05-01-01)
+ * - deleteOfferAsVisitor : ownership vérifié en DB — jamais côté client
  */
 
 import { z } from 'zod'
@@ -24,6 +26,8 @@ import { offers, artworks, visitors } from '@/db/schema'
 import { getVisitorSession } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import { sendNewOfferEmail } from '@/lib/email'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
 
 // ── Schéma de validation Zod ─────────────────────────────────────────────────
 
@@ -249,4 +253,86 @@ export async function submitOffer(
       },
     }
   }
+}
+
+// ── deleteOfferAsAdmin — Suppression par l'artiste ───────────────────────────
+
+/**
+ * Supprime une offre depuis l'interface admin.
+ *
+ * SÉCURITÉ :
+ * - Session artiste vérifiée via Better Auth en première ligne (T-05-01-01)
+ * - L'offerId est vérifié en DB avant suppression (pas de confiance côté client)
+ * - Les deux pages sont revalidées pour que le cache soit à jour
+ *
+ * @param offerId  ID de l'offre à supprimer (passé via .bind(null, offer.id))
+ */
+export async function deleteOfferAsAdmin(
+  offerId: number
+): Promise<{ success: true } | { error: string }> {
+  // ── 1. Vérification session artiste — DOIT être la première instruction ──
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return { error: 'Non autorisé.' }
+
+  // ── 2. Récupérer l'offre pour obtenir artworkId (nécessaire pour revalidatePath) ──
+  const offer = await db.query.offers.findFirst({
+    where: eq(offers.id, offerId),
+    columns: { artworkId: true },
+  })
+
+  if (!offer) return { error: 'Offre introuvable.' }
+
+  // ── 3. Supprimer l'offre ──
+  await db.delete(offers).where(eq(offers.id, offerId))
+
+  // ── 4. Invalider le cache des deux pages concernées ──
+  revalidatePath(`/artworks/${offer.artworkId}`)
+  revalidatePath(`/admin/artworks/${offer.artworkId}`)
+
+  return { success: true }
+}
+
+// ── deleteOfferAsVisitor — Suppression par le visiteur propriétaire ──────────
+
+/**
+ * Supprime une offre depuis la galerie publique.
+ *
+ * SÉCURITÉ :
+ * - Session visiteur requise (visitorId depuis iron-session chiffrée)
+ * - Ownership vérifié en DB : WHERE id = offerId AND visitorId = session.visitorId
+ *   → Un visiteur ne peut jamais supprimer l'offre d'un autre
+ * - La double condition dans le DELETE est redondante mais défensive (defense in depth)
+ *
+ * @param offerId  ID de l'offre à supprimer
+ */
+export async function deleteOfferAsVisitor(
+  offerId: number
+): Promise<{ success: true } | { error: string }> {
+  // ── 1. Vérification session visiteur ──
+  const session = await getVisitorSession()
+  if (!session.visitorId) return { error: 'Non autorisé.' }
+
+  // ── 2. Vérifier que l'offre existe ET appartient à ce visiteur ──
+  // POURQUOI vérifier en DB et pas se fier à l'offerId seul ?
+  // Un visiteur pourrait forger un offerId appartenant à quelqu'un d'autre.
+  // La condition AND visitorId = session.visitorId garantit l'ownership côté serveur.
+  const offer = await db.query.offers.findFirst({
+    where: and(
+      eq(offers.id, offerId),
+      eq(offers.visitorId, session.visitorId)
+    ),
+    columns: { artworkId: true },
+  })
+
+  if (!offer) return { error: 'Offre introuvable ou non autorisée.' }
+
+  // ── 3. Supprimer avec double condition — defense in depth ──
+  await db
+    .delete(offers)
+    .where(and(eq(offers.id, offerId), eq(offers.visitorId, session.visitorId)))
+
+  // ── 4. Invalider le cache de la page publique ──
+  revalidatePath(`/artworks/${offer.artworkId}`)
+
+  return { success: true }
 }

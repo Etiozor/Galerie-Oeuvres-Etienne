@@ -184,6 +184,8 @@ export default async function ArtworkDetailPage({ params }: Props) {
     // Requête 2 : liste complète triée par montant décroissant pour l'opt-in
     // LEFT JOIN visitors pour récupérer le displayName
     // SÉCURITÉ : on sélectionne UNIQUEMENT visitors.displayName — jamais visitors.phone (T-04-04-01)
+    // offers.visitorId est sélectionné uniquement pour calculer isOwn côté serveur —
+    // il n'est JAMAIS transmis au client dans les props (comparaison faite ici en map())
     db
       .select({
         id: offers.id,
@@ -191,6 +193,7 @@ export default async function ArtworkDetailPage({ params }: Props) {
         message: offers.message,
         visitorName: visitors.displayName,
         createdAt: offers.createdAt,
+        visitorId: offers.visitorId,
       })
       .from(offers)
       .leftJoin(visitors, eq(offers.visitorId, visitors.id))
@@ -205,6 +208,8 @@ export default async function ArtworkDetailPage({ params }: Props) {
   // Mapper les résultats vers le type OfferHistoryItem
   // Filtrer les lignes où le visiteur aurait été supprimé (LEFT JOIN → visitorName peut être null)
   // SÉCURITÉ : .filter() garantit que visitorName est non-null avant l'affichage
+  // SÉCURITÉ isOwn : visitorId utilisé uniquement pour la comparaison serveur —
+  // il n'est JAMAIS transmis dans les props (isOwn est un boolean calculé ici)
   const allOffers: OfferHistoryItem[] = allOffersRaw
     .filter((o) => o.visitorName !== null)
     .map((o) => ({
@@ -213,6 +218,9 @@ export default async function ArtworkDetailPage({ params }: Props) {
       message: o.message,
       visitorName: o.visitorName!,
       createdAt: o.createdAt,
+      isOwn: visitorSession.visitorId != null
+        ? o.visitorId === visitorSession.visitorId
+        : undefined,
     }))
 
   // ── Session visiteur — lecture côté serveur ───────────────────────────────
