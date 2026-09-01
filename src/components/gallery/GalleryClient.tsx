@@ -117,7 +117,9 @@ export function GalleryClient({ artworks, types, mediums, visitorId, savedArtwor
     if (sort === 'date-asc')   return [...list].sort((a, b) => a.createdTimestamp - b.createdTimestamp)
     if (sort === 'price-desc') return [...list].sort((a, b) => b.basePriceNum - a.basePriceNum)
     if (sort === 'price-asc')  return [...list].sort((a, b) => a.basePriceNum - b.basePriceNum)
-    return list
+    // date-desc (défaut) : du plus récent au plus ancien. Tri explicite —
+    // ne pas dépendre de l'ordre serveur, sinon le tri « de base » est faux.
+    return [...list].sort((a, b) => b.createdTimestamp - a.createdTimestamp)
   }, [artworks, activeFilter, search, sort])
 
   const visibleArtworks = filteredArtworks.slice(0, visibleCount)

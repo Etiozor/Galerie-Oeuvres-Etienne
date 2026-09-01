@@ -13,9 +13,16 @@
  * Client car le survol (useState) et la navigation au clic sont interactifs.
  * Les données arrivent déjà résolues du serveur (URLs d'images incluses).
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MONTHS_FR } from '@/db/schema'
+
+/** Convertit une clé mois (année*12 + mois-1) en libellé court « janv. 2024 ». */
+function keyLabel(k: number): string {
+  const year = Math.floor(k / 12)
+  const month = k % 12
+  return `${MONTHS_FR[month] ?? ''} ${year}`
+}
 
 export interface FriseItem {
   id: number
@@ -132,11 +139,12 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
       return { label: String(y), pos: 6 + ((y * 12 - kMin) / span) * 88 }
     }).filter((y) => y.pos >= 0 && y.pos <= 100)
 
-    const above: Array<FriseItem & { pos: number; stem: string; dateShort: string }> = []
+    const above: Array<FriseItem & { k: number; pos: number; stem: string; dateShort: string }> = []
     const below: typeof above = []
     sorted.forEach((a, i) => {
       const entry = {
         ...a,
+        k: key(a),
         pos: pos(a),
         // Alterne les longueurs de tige pour aérer les vignettes voisines.
         stem: i % 4 === 0 || i % 4 === 1 ? '28px' : '72px',
@@ -145,8 +153,18 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
       ;(i % 2 === 0 ? above : below).push(entry)
     })
 
-    return { sorted, years, above, below, minYear, maxYear }
+    return { sorted, years, above, below, minYear, maxYear, kMin, kMax }
   }, [items])
+
+  // Plage de dates sélectionnée [lo, hi] en clés mois. Une œuvre est affichée
+  // seulement si sa clé est dans la plage. Initialisée à l'étendue complète.
+  const [range, setRange] = useState<[number, number]>([0, 0])
+  // Resynchronise la plage sur l'étendue des œuvres quand les données changent.
+  useEffect(() => {
+    if (model) setRange([model.kMin, model.kMax])
+  }, [model])
+  const [lo, hi] = range
+  const inRange = (k: number) => k >= lo && k <= hi
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -159,6 +177,35 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
           .frise-canvas { width: 1500px; height: 400px; }
           .frise-thumb { width: 92px; }
         }
+
+        /* Curseur de plage : deux <input range> empilés sur la même piste.
+           La piste des inputs est transparente ; on dessine track + fill nous-mêmes.
+           pointer-events: none sur l'input laisse passer les clics, sauf sur le pouce. */
+        .frise-range { position: relative; height: 28px; }
+        .frise-range-track, .frise-range-fill {
+          position: absolute; top: 50%; height: 4px; border-radius: 2px;
+          transform: translateY(-50%); pointer-events: none;
+        }
+        .frise-range-track { left: 0; right: 0; background: rgba(0,0,0,0.14); }
+        .frise-range-fill { background: var(--color-primary); }
+        .frise-range input[type="range"] {
+          position: absolute; top: 0; left: 0; width: 100%; height: 28px;
+          margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none;
+        }
+        .frise-range input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none; appearance: none; pointer-events: auto; cursor: pointer;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: var(--color-surface); border: 2px solid var(--color-primary);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        .frise-range input[type="range"]::-moz-range-thumb {
+          pointer-events: auto; cursor: pointer;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: var(--color-surface); border: 2px solid var(--color-primary);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        .frise-range input[type="range"]::-webkit-slider-runnable-track { background: none; }
+        .frise-range input[type="range"]::-moz-range-track { background: none; }
       `}</style>
 
       {/* Hero éditorial */}
@@ -209,6 +256,26 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
             {/* Ligne centrale */}
             <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, background: 'rgba(0,0,0,0.14)' }} />
 
+            {/* Bande de la plage sélectionnée sur l'axe */}
+            {(() => {
+              const span = Math.max(1, model.kMax - model.kMin)
+              const posOf = (k: number) => 6 + ((k - model.kMin) / span) * 88
+              const left = posOf(lo)
+              return (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${left}%`,
+                    width: `${posOf(hi) - left}%`,
+                    top: '50%',
+                    height: 3,
+                    transform: 'translateY(-1px)',
+                    background: 'var(--color-primary)',
+                  }}
+                />
+              )
+            })()}
+
             {/* Graduations d'années */}
             {model.years.map((y) => (
               <div
@@ -240,7 +307,7 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
             ))}
 
             {/* Vignettes au-dessus de la ligne */}
-            {model.above.map((a) => {
+            {model.above.filter((a) => inRange(a.k)).map((a) => {
               const hovered = hover === a.id
               return (
                 <div
@@ -275,7 +342,7 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
             })}
 
             {/* Vignettes en-dessous de la ligne */}
-            {model.below.map((a) => {
+            {model.below.filter((a) => inRange(a.k)).map((a) => {
               const hovered = hover === a.id
               return (
                 <div
@@ -308,6 +375,47 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Curseur de plage : deux poignées (début / fin) superposées sur une piste. */}
+      {model && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', ...eyebrow }}>
+            <span>{keyLabel(lo)}</span>
+            <span>{keyLabel(hi)}</span>
+          </div>
+          <div className="frise-range">
+            {/* Piste + segment sélectionné */}
+            <div className="frise-range-track" />
+            <div
+              className="frise-range-fill"
+              style={{
+                left: `${((lo - model.kMin) / Math.max(1, model.kMax - model.kMin)) * 100}%`,
+                right: `${((model.kMax - hi) / Math.max(1, model.kMax - model.kMin)) * 100}%`,
+              }}
+            />
+            {/* Poignée de début : ne peut pas dépasser la fin */}
+            <input
+              type="range"
+              min={model.kMin}
+              max={model.kMax}
+              step={1}
+              value={lo}
+              aria-label="Date de début"
+              onChange={(e) => setRange(([, h]) => [Math.min(Number(e.target.value), h), h])}
+            />
+            {/* Poignée de fin : ne peut pas passer sous le début */}
+            <input
+              type="range"
+              min={model.kMin}
+              max={model.kMax}
+              step={1}
+              value={hi}
+              aria-label="Date de fin"
+              onChange={(e) => setRange(([l]) => [l, Math.max(Number(e.target.value), l)])}
+            />
           </div>
         </div>
       )}
