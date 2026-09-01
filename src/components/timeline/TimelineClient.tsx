@@ -82,7 +82,7 @@ function ThumbCard({
             src={item.imageUrl}
             alt={item.title}
             loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
         )}
       </div>

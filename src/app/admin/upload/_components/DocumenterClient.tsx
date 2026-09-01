@@ -145,7 +145,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
   const [dimensionUnit, setDimensionUnit] = useState<'cm' | 'in' | 'mm'>('cm')
   const [saleStatus, setSaleStatus] = useState<'available' | 'reserved' | 'sold' | 'given'>('available')
   const [price, setPrice] = useState('')
-  const [priceCurrency, setPriceCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR')
+  const [priceCurrency, setPriceCurrency] = useState<'EUR' | 'USD' | 'CAD' | 'GBP' | 'CHF'>('EUR')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [hasImage, setHasImage] = useState(false)
@@ -512,7 +512,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   />
                   <select
                     value={priceCurrency}
-                    onChange={(e) => { setPriceCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF'); markEditing() }}
+                    onChange={(e) => { setPriceCurrency(e.target.value as 'EUR' | 'USD' | 'CAD' | 'GBP' | 'CHF'); markEditing() }}
                     aria-label="Devise"
                     style={{
                       padding: '0 10px',
@@ -530,6 +530,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   >
                     <option value="EUR">€ EUR</option>
                     <option value="USD">$ USD</option>
+                    <option value="CAD">$ CAD</option>
                     <option value="GBP">£ GBP</option>
                     <option value="CHF">CHF</option>
                   </select>
