@@ -129,23 +129,15 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
     const last = sorted[sorted.length - 1]!
     const kMin = key(first)
     const kMax = key(last)
-    const span = Math.max(1, kMax - kMin)
-    const pos = (a: FriseItem) => 6 + ((key(a) - kMin) / span) * 88
-
     const minYear = first.year
     const maxYear = last.year
-    const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) => {
-      const y = minYear + i
-      return { label: String(y), pos: 6 + ((y * 12 - kMin) / span) * 88 }
-    }).filter((y) => y.pos >= 0 && y.pos <= 100)
 
-    const above: Array<FriseItem & { k: number; pos: number; stem: string; dateShort: string }> = []
+    const above: Array<FriseItem & { k: number; stem: string; dateShort: string }> = []
     const below: typeof above = []
     sorted.forEach((a, i) => {
       const entry = {
         ...a,
         k: key(a),
-        pos: pos(a),
         // Alterne les longueurs de tige pour aérer les vignettes voisines.
         stem: i % 4 === 0 || i % 4 === 1 ? '28px' : '72px',
         dateShort: `${(MONTHS_FR[a.month - 1] ?? '').slice(0, 4)} ${a.year}`,
@@ -153,11 +145,10 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
       ;(i % 2 === 0 ? above : below).push(entry)
     })
 
-    return { sorted, years, above, below, minYear, maxYear, kMin, kMax }
+    return { sorted, above, below, minYear, maxYear, kMin, kMax }
   }, [items])
 
-  // Plage de dates sélectionnée [lo, hi] en clés mois. Une œuvre est affichée
-  // seulement si sa clé est dans la plage. Initialisée à l'étendue complète.
+  // Plage de dates sélectionnée [lo, hi] en clés mois. Initialisée à l'étendue complète.
   const [range, setRange] = useState<[number, number]>([0, 0])
   // Resynchronise la plage sur l'étendue des œuvres quand les données changent.
   useEffect(() => {
@@ -165,6 +156,20 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
   }, [model])
   const [lo, hi] = range
   const inRange = (k: number) => k >= lo && k <= hi
+
+  // La frise « zoome » sur la plage sélectionnée : l'axe mappe lo→début, hi→fin.
+  // Positions recalculées à chaque rendu sur les bornes [lo, hi], pas sur l'étendue totale.
+  const effSpan = Math.max(1, hi - lo)
+  const posOf = (k: number) => 6 + ((k - lo) / effSpan) * 88
+
+  // Graduations d'années visibles dans la fenêtre [lo, hi].
+  const years: Array<{ label: string; pos: number }> = []
+  if (model) {
+    for (let y = Math.floor(lo / 12); y <= Math.floor(hi / 12); y++) {
+      const pos = posOf(y * 12)
+      if (pos >= 0 && pos <= 100) years.push({ label: String(y), pos })
+    }
+  }
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -256,28 +261,8 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
             {/* Ligne centrale */}
             <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, background: 'rgba(0,0,0,0.14)' }} />
 
-            {/* Bande de la plage sélectionnée sur l'axe */}
-            {(() => {
-              const span = Math.max(1, model.kMax - model.kMin)
-              const posOf = (k: number) => 6 + ((k - model.kMin) / span) * 88
-              const left = posOf(lo)
-              return (
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: `${left}%`,
-                    width: `${posOf(hi) - left}%`,
-                    top: '50%',
-                    height: 3,
-                    transform: 'translateY(-1px)',
-                    background: 'var(--color-primary)',
-                  }}
-                />
-              )
-            })()}
-
             {/* Graduations d'années */}
-            {model.years.map((y) => (
+            {years.map((y) => (
               <div
                 key={y.label}
                 style={{
@@ -317,7 +302,7 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
                   onMouseLeave={() => setHover((h) => (h === a.id ? null : h))}
                   style={{
                     position: 'absolute',
-                    left: `${a.pos}%`,
+                    left: `${posOf(a.k)}%`,
                     bottom: '50%',
                     transform: 'translateX(-50%)',
                     display: 'flex',
@@ -352,7 +337,7 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
                   onMouseLeave={() => setHover((h) => (h === a.id ? null : h))}
                   style={{
                     position: 'absolute',
-                    left: `${a.pos}%`,
+                    left: `${posOf(a.k)}%`,
                     top: '50%',
                     transform: 'translateX(-50%)',
                     display: 'flex',
