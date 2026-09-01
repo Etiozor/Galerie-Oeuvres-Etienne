@@ -68,9 +68,9 @@ function ThumbCard({
       }}
     >
       <div
+        className="frise-thumb-img"
         style={{
           width: '100%',
-          aspectRatio: `${item.widthCmNum} / ${item.heightCmNum}`,
           background: 'var(--color-desk)',
           borderRadius: 'var(--radius-sm)',
           overflow: 'hidden',
@@ -96,6 +96,11 @@ function ThumbCard({
           lineHeight: 1.2,
           color: 'var(--color-ink)',
           textAlign: 'center',
+          // Borne le titre à 2 lignes → hauteur de bulle prévisible (pas de troncature).
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
         }}
       >
         {item.title}
@@ -139,7 +144,7 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
         ...a,
         k: key(a),
         // Alterne les longueurs de tige pour aérer les vignettes voisines.
-        stem: i % 4 === 0 || i % 4 === 1 ? '28px' : '72px',
+        stem: i % 4 === 0 || i % 4 === 1 ? '28px' : '44px',
         dateShort: `${(MONTHS_FR[a.month - 1] ?? '').slice(0, 4)} ${a.year}`,
       }
       ;(i % 2 === 0 ? above : below).push(entry)
@@ -177,10 +182,14 @@ export function TimelineClient({ items }: { items: FriseItem[] }) {
         .frise-scroll { overflow-x: hidden; overflow-y: hidden; padding-bottom: 10px; }
         .frise-canvas { position: relative; width: 100%; height: 460px; }
         .frise-thumb { width: 104px; }
+        /* Hauteur d'image FIXE : borne la hauteur totale de la bulle pour qu'elle
+           ne dépasse jamais la moitié du canvas (sinon overflow:hidden la tronque). */
+        .frise-thumb-img { height: 92px; }
         @media (max-width: 768px) {
           .frise-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
           .frise-canvas { width: 1500px; height: 400px; }
           .frise-thumb { width: 92px; }
+          .frise-thumb-img { height: 76px; }
         }
 
         /* Curseur de plage : deux <input range> empilés sur la même piste.
