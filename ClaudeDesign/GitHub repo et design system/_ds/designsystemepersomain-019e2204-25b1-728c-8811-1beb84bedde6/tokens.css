@@ -1,0 +1,139 @@
+/* ============================================================
+ * DesignSystemePersoMain — jetons
+ * ============================================================
+ * Système chaud sur fond crème : trois fontes, un seul rayon,
+ * des accents utilisés en aplat vif ou en teinte + texte foncé.
+ * Aucun jeton n'est lié à un produit ; les noms sont sémantiques.
+ * ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,400;1,500;1,600&display=swap');
+
+@font-face {
+  font-family: 'Merriweather Sans';
+  src: url('fonts/MerriweatherSans-Italic-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  /* ---------- Surfaces (60 / 30 / 10) ---------- */
+  --color-bg:      #fdf8e8;  /* 60 % — fond de page et de champ */
+  --color-surface: #f0e6c8;  /* 30 % — cartes, barres, panneaux */
+  --color-desk:    #e6dfcb;  /* fond hors-cadre, autour d'une planche */
+  --color-ink-surface: #1a1a1a; /* bandeau sombre, en-tête de marque */
+
+  /* ---------- Accents (10 %) — aplats vifs ---------- */
+  --color-teal:   #5b8e7d;
+  --color-green:  #8cb369;
+  --color-orange: #f4a259;
+  --color-yellow: #f4e285;
+  --color-red:    #bc4b51;
+
+  /* Variantes foncées — texte, liens, chiffres posés sur clair ou sur teinte.
+     Règle : un accent vif ne sert jamais de couleur de texte. */
+  --color-teal-ink:   #3f6b5c;
+  --color-green-ink:  #4a6b2f;
+  --color-orange-ink: #7a3f14;
+  --color-red-ink:    #9c3b41;
+
+  /* Rôles sémantiques — préférer ces noms dans les composants. */
+  --color-primary:      var(--color-teal);
+  --color-primary-ink:  var(--color-teal-ink);
+  --color-success:      var(--color-green);
+  --color-success-ink:  var(--color-green-ink);
+  --color-warning:      var(--color-orange);
+  --color-warning-ink:  var(--color-orange-ink);
+  --color-critical:     var(--color-red);
+  --color-critical-ink: var(--color-red-ink);
+  --color-highlight:    var(--color-yellow); /* bandeau « à faire », fond seul */
+
+  /* ---------- Texte ---------- */
+  --color-ink:         #1a1a1a;
+  --color-ink-muted:   #5a5244;
+  --color-ink-inverse: #fdf8e8;
+
+  /* ---------- Teintes de pastille ----------
+     Recette : fond de l'accent ~16 %, bordure ~50 %, texte en variante foncée. */
+  --tint-primary-bg:  rgba(91,142,125,0.16);  --tint-primary-bc:  rgba(91,142,125,0.55);
+  --tint-success-bg:  rgba(140,179,105,0.18); --tint-success-bc:  rgba(140,179,105,0.50);
+  --tint-warning-bg:  rgba(244,162,89,0.22);  --tint-warning-bc:  rgba(244,162,89,0.60);
+  --tint-critical-bg: rgba(188,75,81,0.14);   --tint-critical-bc: rgba(188,75,81,0.45);
+  --tint-neutral-bg:  rgba(26,26,26,0.08);    --tint-neutral-bc:  rgba(26,26,26,0.28);
+
+  /* ---------- Traits, bordures, ombres ---------- */
+  --border-hairline:      1px solid rgba(0, 0, 0, 0.08); /* @kind other */ /* séparateurs, contour de carte */
+  --border-hairline-soft: 1px solid rgba(0, 0, 0, 0.06); /* @kind other */ /* grille interne d'un bloc de tuiles */
+  --border-input:         1px solid rgba(0, 0, 0, 0.14); /* @kind other */ /* champs, boutons secondaires */
+  --border-dashed:        1px dashed rgba(0, 0, 0, 0.20); /* @kind other */ /* zone d'ajout, emplacement vide */
+  --edge-accent-width:    6px;  /* arête colorée à gauche d'une carte */
+  --shadow-soft: 0 2px 16px rgba(26, 26, 26, 0.12);  /* objet posé à plat */
+  --shadow-lift: 0 18px 44px rgba(26, 26, 26, 0.28); /* objet détaché du fond */
+
+  /* ---------- Rayons ---------- */
+  --radius-sm: 8px;  /* valeur unique : boutons, cartes, champs, pastilles, avatars, barres */
+  --radius-xs: 2px;  /* micro-traits, poignées */
+  --radius-0:  0;    /* coin franc — exception assumée */
+
+  /* ---------- Rythme ----------
+     Base 4 px. Les paddings de carte tombent le plus souvent sur 14-16 px,
+     les gaps sur 8-12 px. */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 36px;
+
+  /* ---------- Cibles de frappe ---------- */
+  --hit-lg: 44px; /* champs et actions principales */
+  --hit-md: 38px; /* actions secondaires en ligne */
+  --hit-sm: 32px; /* actions compactes dans un en-tête */
+
+  /* ---------- Fontes ---------- */
+  --font-display:   'Oswald', 'Arial Narrow', sans-serif;
+  --font-interface: 'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-editorial: 'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+  --font-mono:      ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Alias */
+  --font-oswald:    var(--font-display);
+  --font-barlow:    var(--font-interface);
+  --font-cormorant: var(--font-editorial);
+}
+
+/* ============================================================
+ * Rôles typographiques
+ * Oswald porte les titres, Barlow l'interface, Cormorant la voix.
+ * ============================================================ */
+
+.t-display { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 4vw, 32px); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.05; color: var(--color-ink); }
+.t-h1 { font-family: var(--font-display); font-weight: 700; font-size: 24px; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; color: var(--color-ink); }
+.t-h2 { font-family: var(--font-display); font-weight: 600; font-size: 18px; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.15; color: var(--color-ink); }
+
+/* Le label le plus fréquent du système : au-dessus d'un champ, en tête d'une
+   section, comme titre de tuile. Toujours en majuscules. */
+.t-eyebrow { font-family: var(--font-interface); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-ink-muted); }
+
+.t-caption { font-family: var(--font-interface); font-size: 12px; letter-spacing: 0.04em; color: var(--color-ink-muted); }
+.t-caption--xs { font-family: var(--font-interface); font-size: 11px; line-height: 1.6; letter-spacing: 0.04em; color: var(--color-ink-muted); }
+
+/* La voix : phrases écrites par un humain pour un humain. */
+.t-editorial { font-family: var(--font-editorial); font-style: italic; font-weight: 400; font-size: 18px; line-height: 1.5; color: var(--color-ink); }
+.t-editorial--sm { font-family: var(--font-editorial); font-style: italic; font-size: 16px; line-height: 1.45; color: var(--color-ink); }
+
+.t-body { font-family: var(--font-interface); font-size: 15px; line-height: 1.5; color: var(--color-ink); }
+.t-body--sm { font-family: var(--font-interface); font-size: 14px; line-height: 1.5; color: var(--color-ink); }
+.t-body--xs { font-family: var(--font-interface); font-size: 13px; line-height: 1.5; color: var(--color-ink-muted); }
+
+.t-num { font-family: var(--font-interface); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+.t-num--lg { font-family: var(--font-interface); font-weight: 700; font-size: 24px; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+
+/* ============================================================
+ * Défauts d'élément — ajouter .ds-typography sur un conteneur.
+ * ============================================================ */
+.ds-typography h1 { font: 700 24px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-ink); margin: 0 0 18px; }
+.ds-typography h2 { font: 600 18px/1.15 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-ink); margin: 0 0 8px; }
+.ds-typography p { font: italic 400 18px/1.5 var(--font-editorial); color: var(--color-ink); margin: 0 0 16px; }
+.ds-typography small, .ds-typography .meta { font: 400 11px/1.5 var(--font-interface); letter-spacing: 0.04em; color: var(--color-ink-muted); }
+.ds-typography code { font: 400 13px/1.4 var(--font-mono); color: var(--color-ink); }
+
+.ds-page { background-color: var(--color-bg); color: var(--color-ink); min-height: 100vh; font-family: var(--font-interface); }
+
+a { color: var(--color-primary-ink); text-decoration: none; }
+a:hover { color: var(--color-warning); }

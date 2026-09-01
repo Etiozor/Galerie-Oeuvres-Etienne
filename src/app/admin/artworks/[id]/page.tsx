@@ -32,7 +32,7 @@ import { DeleteArtworkButton } from './_components/DeleteArtworkButton'
 import { DeleteOfferButton } from './_components/DeleteOfferButton'
 import { ArtworkEditForm } from './_components/ArtworkEditForm'
 import { InlineEditField } from './_components/InlineEditField'
-import { AdminHeaderStrip } from './_components/AdminHeaderStrip'
+import { AdminHeader } from '@/app/admin/_components/AdminHeader'
 import { QuickInfoPanel } from './_components/QuickInfoPanel'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 
@@ -181,15 +181,15 @@ export default async function ArtworkDetailPage({
 
       <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
 
-      {/* ── Barre admin sticky ── */}
-      <AdminHeaderStrip userEmail={session.user.email} />
+      {/* ── En-tête admin partagé (bandeau sombre + onglets) ── */}
+      <AdminHeader userEmail={session.user.email} activeTab="artworks" />
 
       {/* className="admin-detail-main" — padding overridé sur tablette/mobile par @media */}
       <main
         className="admin-detail-main"
         style={{
-          padding: '44px 32px 80px',   // desktop — overridé sur tablette/mobile par @media
-          maxWidth: 1200,
+          padding: '28px 24px 80px',   // desktop — overridé sur tablette/mobile par @media
+          maxWidth: 1180,
           margin: '0 auto',
           fontFamily: 'var(--font-geist-sans)',
         }}

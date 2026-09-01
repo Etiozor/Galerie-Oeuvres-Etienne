@@ -27,6 +27,7 @@ import type { PriceBreakdownData } from '@/db/schema'
 import { getStorage } from '@/lib/storage'
 import { ArtworkInfoPanel } from '@/components/artwork/ArtworkInfoPanel'
 import { SiteNav } from '@/components/layout/SiteNav'
+import { SiteFooter } from '@/components/layout/SiteFooter'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 import { getVisitorSession } from '@/lib/session'
 import type { OfferHistoryItem } from '@/components/artwork/OfferHistory'
@@ -449,6 +450,8 @@ export default async function ArtworkDetailPage({ params }: Props) {
           </div>
         </div>
       </main>
+
+      <SiteFooter />
     </>
   )
 }

@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation'
  * Bouton de déconnexion.
  * Appelle l'endpoint Better Auth puis redirige vers /admin/login.
  */
-export function SignOutButton() {
+export function SignOutButton({ style, label = 'Se déconnecter' }: { style?: React.CSSProperties; label?: string } = {}) {
   const router = useRouter()
 
   /**
@@ -38,9 +38,9 @@ export function SignOutButton() {
   return (
     <button
       onClick={handleSignOut}
-      style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}
+      style={style ?? { padding: '0.5rem 1rem', cursor: 'pointer' }}
     >
-      Se déconnecter
+      {label}
     </button>
   )
 }

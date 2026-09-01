@@ -11,6 +11,8 @@ import { artworks, offers, savedArtworks, visitors } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import Link from 'next/link'
 import { SiteNav } from '@/components/layout/SiteNav'
+import { SiteFooter } from '@/components/layout/SiteFooter'
+import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 import { getStorage } from '@/lib/storage'
 
 function maskPhone(phone: string): string {
@@ -60,6 +62,7 @@ export default async function MonProfilPage() {
 
   return (
     <>
+      <BackgroundDecor />
       <SiteNav />
 
       {/*
@@ -101,31 +104,33 @@ export default async function MonProfilPage() {
       <main
         className="profil-main"
         style={{
+          position: 'relative',
+          zIndex: 1,
           maxWidth: '680px',
           margin: '0 auto',
           padding: '48px 24px 80px',   // desktop — padding-top overridé sur mobile
-          fontFamily: 'var(--font-geist-sans)',
-          backgroundColor: 'var(--color-bg)',
-          minHeight: '100vh',
+          fontFamily: 'var(--font-interface)',
+          minHeight: 'calc(100vh - 56px)',
         }}>
 
         {/* ── En-tête profil ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '48px' }}>
-          {/* Avatar carré — D-03 : pas de border-radius */}
+          {/* Avatar — carré teal arrondi (nouveau design), initiale crème */}
           <div style={{
             width: '56px',
             height: '56px',
-            backgroundColor: 'var(--color-ink)',
+            backgroundColor: 'var(--color-primary)',
+            borderRadius: 'var(--radius-sm)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}>
             <span style={{
-              fontFamily: 'var(--font-space-mono)',
-              fontSize: '20px',
-              fontWeight: 700,
-              color: '#ffffff',
+              fontFamily: 'var(--font-interface)',
+              fontSize: '22px',
+              fontWeight: 600,
+              color: 'var(--color-ink-inverse)',
               lineHeight: 1,
             }}>
               {initiale}
@@ -171,16 +176,16 @@ export default async function MonProfilPage() {
           </h2>
 
           {myOffers.length === 0 ? (
-            <div style={{ padding: '24px', backgroundColor: '#f5f5f5', textAlign: 'center' }}>
+            <div style={{ padding: '24px', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
               <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-ink-muted)' }}>
                 Aucune offre pour l&apos;instant.
               </p>
-              <Link href="/" style={{ display: 'inline-block', marginTop: '8px', fontSize: '13px', color: 'var(--color-ink)', fontFamily: 'var(--font-space-mono)' }}>
+              <Link href="/" style={{ display: 'inline-block', marginTop: '8px', fontSize: '13px', color: 'var(--color-ink)', fontFamily: 'var(--font-interface)' }}>
                 Voir la galerie →
               </Link>
             </div>
           ) : (
-            <div style={{ border: '1px solid rgba(0,0,0,0.08)' }}>
+            <div style={{ border: '1px solid rgba(0,0,0,0.08)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', backgroundColor: 'var(--color-surface)' }}>
               {myOffers.map((offer, i) => (
                 <div
                   key={i}
@@ -191,7 +196,6 @@ export default async function MonProfilPage() {
                     alignItems: 'center',
                     padding: '16px 20px',
                     borderBottom: i < myOffers.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                    backgroundColor: '#fff',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -235,7 +239,7 @@ export default async function MonProfilPage() {
             }}>
               Mes acquisitions ({myAcquisitions.length})
             </h2>
-            <div style={{ border: '1px solid rgba(91,142,125,0.3)', borderLeft: '3px solid #5b8e7d' }}>
+            <div style={{ background: 'var(--color-surface)', border: '1px solid rgba(0,0,0,0.08)', borderLeft: '6px solid var(--color-success)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
               {myAcquisitions.map((acq, i) => (
                 <div key={i} style={{
                   display: 'flex',
@@ -243,7 +247,6 @@ export default async function MonProfilPage() {
                   alignItems: 'center',
                   padding: '14px 20px',
                   borderBottom: i < myAcquisitions.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                  backgroundColor: 'rgba(91,142,125,0.03)',
                 }}>
                   <Link
                     href={`/artworks/${acq.artworkId}`}
@@ -251,7 +254,7 @@ export default async function MonProfilPage() {
                   >
                     {acq.artworkTitle ?? '—'}
                   </Link>
-                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-space-mono)', color: '#5b8e7d', padding: '3px 8px', backgroundColor: 'rgba(91,142,125,0.12)', borderRadius: 0, flexShrink: 0 }}>
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-interface)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-success-ink)', padding: '3px 8px', backgroundColor: 'var(--tint-success-bg)', border: '1px solid var(--tint-success-bc)', borderRadius: 'var(--radius-sm)', flexShrink: 0 }}>
                     Acquis
                   </span>
                 </div>
@@ -275,7 +278,7 @@ export default async function MonProfilPage() {
           </h2>
 
           {mySavedArtworks.length === 0 ? (
-            <div style={{ padding: '24px', backgroundColor: '#f5f5f5', textAlign: 'center' }}>
+            <div style={{ padding: '24px', backgroundColor: 'var(--color-surface)', border: '1px dashed rgba(0,0,0,0.20)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
               <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-ink-muted)' }}>
                 Aucune œuvre enregistrée. Cliquez sur ♡ sur la page d&apos;une œuvre pour la retrouver ici.
               </p>
@@ -288,9 +291,9 @@ export default async function MonProfilPage() {
             >
               {mySavedArtworks.map(({ artwork }, i) => artwork && (
                 <Link key={i} href={`/artworks/${artwork.id}`} style={{ textDecoration: 'none', color: 'var(--color-ink)', display: 'block' }}>
-                  <div style={{ border: '1px solid rgba(0,0,0,0.08)', backgroundColor: '#fff' }}>
+                  <div style={{ border: '1px solid rgba(0,0,0,0.08)', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                     {artwork.originalPath ? (
-                      <div style={{ aspectRatio: '1', overflow: 'hidden', backgroundColor: '#f5f5f5' }}>
+                      <div style={{ aspectRatio: '1', overflow: 'hidden', backgroundColor: 'var(--color-desk)' }}>
                         <img
                           src={storage.getUrl(artwork.originalPath)}
                           alt={artwork.title}
@@ -298,11 +301,11 @@ export default async function MonProfilPage() {
                         />
                       </div>
                     ) : (
-                      <div style={{ aspectRatio: '1', backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '24px', color: '#d4d4d4' }}>♡</span>
+                      <div style={{ aspectRatio: '1', backgroundColor: 'var(--color-desk)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '24px', color: 'var(--color-ink-muted)' }}>♡</span>
                       </div>
                     )}
-                    <div style={{ padding: '8px 10px' }}>
+                    <div style={{ padding: '8px 10px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
                       <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {artwork.title}
                       </p>
@@ -322,6 +325,8 @@ export default async function MonProfilPage() {
         </div>
 
       </main>
+
+      <SiteFooter />
     </>
   )
 }

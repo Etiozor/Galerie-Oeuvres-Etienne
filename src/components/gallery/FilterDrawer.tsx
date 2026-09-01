@@ -114,7 +114,7 @@ export function FilterDrawer({ activeFilter, onFilterChange, types, mediums }: F
           background: activeCount > 0 ? 'var(--color-teal)' : 'var(--color-bg)',
           border: '1px solid rgba(0,0,0,0.12)',
           cursor: 'pointer',
-          borderRadius: 0,
+          borderRadius: 'var(--radius-sm)',
           fontFamily: 'var(--font-space-mono)',
           fontSize: '12px',
           textTransform: 'uppercase',
@@ -132,7 +132,7 @@ export function FilterDrawer({ activeFilter, onFilterChange, types, mediums }: F
               background: 'rgba(255,255,255,0.25)',
               padding: '2px 6px',
               fontSize: '11px',
-              borderRadius: 0,
+              borderRadius: 'var(--radius-sm)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
@@ -183,7 +183,8 @@ export function FilterDrawer({ activeFilter, onFilterChange, types, mediums }: F
               bottom: 0,
               zIndex: 51,
               background: 'var(--color-surface)',
-              borderRadius: 0,
+              borderTopLeftRadius: 'var(--radius-sm)',
+              borderTopRightRadius: 'var(--radius-sm)',
               padding: '16px 24px',
               paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
               display: 'flex',
@@ -313,7 +314,7 @@ function FilterChip({
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
         cursor: 'pointer',
-        borderRadius: 0,
+        borderRadius: 'var(--radius-sm)',
         whiteSpace: 'nowrap',
         transition: 'background 140ms, color 140ms',
       }}

@@ -12,31 +12,32 @@
 import Link from 'next/link'
 import { SaveButton } from '@/components/visitor/SaveButton'
 
-function StatusStamp({ status }: { status: string }) {
-  const cfg: Record<string, { color: string; label: string } | null> = {
+/**
+ * Badge de statut — pastille teintée en haut à gauche de la carte (design de réf.).
+ * available → aucun badge. reserved/sold/given → pastille de la teinte correspondante.
+ */
+function StatusBadge({ status }: { status: string }) {
+  const cfg: Record<string, { bg: string; bc: string; fg: string; label: string } | null> = {
     available: null,
-    reserved: { color: 'var(--color-orange)', label: 'Réservé' },
-    sold:      { color: 'var(--color-red)',    label: 'Vendu'   },
-    given:     { color: 'var(--color-green)',  label: 'Donné'   },
+    reserved: { bg: 'var(--tint-warning-bg)',  bc: 'var(--tint-warning-bc)',  fg: 'var(--color-warning-ink)',  label: 'Réservé' },
+    sold:     { bg: 'var(--tint-critical-bg)', bc: 'var(--tint-critical-bc)', fg: 'var(--color-critical-ink)', label: 'Vendu'   },
+    given:    { bg: 'var(--tint-success-bg)',  bc: 'var(--tint-success-bc)',  fg: 'var(--color-success-ink)',  label: 'Donné'   },
   }
   const c = cfg[status]
   if (!c) return null
   return (
-    <div aria-hidden="true" style={{
-      position: 'absolute', inset: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      pointerEvents: 'none',
-    }}>
-      <span style={{
-        transform: 'rotate(-10deg)',
-        fontFamily: 'var(--font-oswald)', fontSize: '22px', fontWeight: 700,
-        lineHeight: 1, letterSpacing: '0.22em', color: c.color,
-        border: `2.5px solid ${c.color}`,
-        padding: '6px 14px',
-        background: 'rgba(242,232,207,0.75)',
-        textTransform: 'uppercase', borderRadius: 0,
-      }}>{c.label}</span>
-    </div>
+    <span
+      aria-hidden="true"
+      style={{
+        position: 'absolute', top: 10, left: 10, zIndex: 2,
+        display: 'inline-block',
+        fontFamily: 'var(--font-interface)', fontWeight: 600, fontSize: 11,
+        letterSpacing: '0.09em', textTransform: 'uppercase',
+        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+        border: `1px solid ${c.bc}`, background: c.bg, color: c.fg,
+        whiteSpace: 'nowrap',
+      }}
+    >{c.label}</span>
   )
 }
 
@@ -95,7 +96,7 @@ export function ArtworkCard({
         </div>
       )}
 
-      <StatusStamp status={status} />
+      <StatusBadge status={status} />
 
       <div className="artwork-overlay" style={{
         position: 'absolute', inset: 0,

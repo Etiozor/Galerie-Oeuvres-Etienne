@@ -11,6 +11,7 @@
  * Pas de requête DB, pas d'auth — Server Component statique pur.
  */
 import { SiteNav } from '@/components/layout/SiteNav'
+import { SiteFooter } from '@/components/layout/SiteFooter'
 import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 
 export default function AboutPage() {
@@ -125,6 +126,8 @@ export default function AboutPage() {
           </div>
         </div>
       </main>
+
+      <SiteFooter />
     </>
   )
 }

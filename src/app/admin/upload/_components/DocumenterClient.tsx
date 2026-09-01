@@ -18,14 +18,12 @@
 
 import { useRef, useState, useEffect, useTransition, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { BackgroundDecor } from '@/components/layout/BackgroundDecor'
 import { TypeSegmented } from '@/components/admin/TypeSegmented'
 import { StatusSegmented } from '@/components/admin/StatusSegmented'
 import { TagInput } from '@/components/admin/TagInput'
 import { ImageDropZone, type ImageDropZoneHandle } from '@/components/admin/ImageDropZone'
 import { saveArtworkDraft, publishArtwork } from '@/actions/document'
-import { AdminHamburgerMenu } from '@/components/layout/AdminHamburgerMenu'
+import { AdminHeader } from '@/app/admin/_components/AdminHeader'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -133,21 +131,6 @@ function Field({
   )
 }
 
-/** Bouton de déconnexion intégré dans la nav galerie. */
-function GallerySignOutButton() {
-  const router = useRouter()
-  async function handleSignOut() {
-    await fetch('/api/auth/sign-out', { method: 'POST' })
-    router.refresh()
-    router.push('/admin/login')
-  }
-  return (
-    <button onClick={handleSignOut} className="nav-link">
-      Se déconnecter
-    </button>
-  )
-}
-
 // ── Composant principal ───────────────────────────────────────────────────────
 
 export function DocumenterClient({ artworkTypes, mediums, userEmail }: DocumenterClientProps) {
@@ -162,7 +145,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
   const [dimensionUnit, setDimensionUnit] = useState<'cm' | 'in' | 'mm'>('cm')
   const [saleStatus, setSaleStatus] = useState<'available' | 'reserved' | 'sold' | 'given'>('available')
   const [price, setPrice] = useState('')
-  const [priceCurrency, setPriceCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR')
+  const [priceCurrency, setPriceCurrency] = useState<'EUR' | 'USD' | 'CAD' | 'GBP' | 'CHF'>('EUR')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [hasImage, setHasImage] = useState(false)
@@ -297,55 +280,30 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
   return (
     <div className="pof-gallery" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      <BackgroundDecor />
+      {/* En-tête admin partagé (bandeau sombre + onglets) */}
+      <AdminHeader userEmail={userEmail} activeTab="upload" />
 
-      {/*
-       * Nav galerie — responsive mobile.
-       * .pof-gallery .site-nav nav : liens desktop masqués sur ≤768px (globals.css).
-       * .doc-nav-hamburger : hamburger visible sur ≤768px uniquement.
-       * POURQUOI <style> inline ici et pas seulement globals.css ?
-       * .doc-nav-hamburger n'est pas dans globals.css — ajout minimal localisé.
-       */}
-      <style>{`
-        .doc-nav-hamburger { display: none; }
-        @media (max-width: 768px) {
-          .pof-gallery .site-nav nav { display: none !important; }
-          .doc-nav-hamburger { display: flex; align-items: center; }
-        }
-      `}</style>
-      <header className="site-nav">
-        <Link href="/" className="brand">
-          Galerie POF
-          <span className="brand-sub">Administration</span>
-        </Link>
-        {/* Liens desktop — masqués sur mobile via globals.css + style ci-dessus */}
-        <nav>
-          <Link href="/admin/artworks" className="nav-link">Mes œuvres</Link>
-          <Link href="/admin/upload" className="nav-link is-active">Ajouter</Link>
-          <Link href="/admin/artworks" className="nav-link">Offres reçues</Link>
-          <GallerySignOutButton />
-        </nav>
-        {/* Hamburger mobile — visible uniquement sur ≤768px */}
-        <div className="doc-nav-hamburger">
-          <AdminHamburgerMenu activeHref="/admin/upload" />
-        </div>
-      </header>
+      {/* Contenu centré, aligné sur l'en-tête (max-width 1180) */}
+      <div style={{ maxWidth: 1180, margin: '0 auto', width: '100%', padding: '0 24px 40px' }}>
 
       {/* Hero : fil d'Ariane + titre Oswald + badge état */}
-      <div className="hero">
+      <div className="hero" style={{ padding: '24px 0 20px' }}>
         <div>
           <div className="breadcrumb">
             <Link href="/admin/artworks">← Mes œuvres</Link>
             <span> &nbsp;/&nbsp; </span>
             <span>Nouvelle œuvre</span>
           </div>
-          <h1>Documenter une œuvre</h1>
+          <h1 style={{ fontSize: 24 }}>Documenter une œuvre</h1>
         </div>
         <GallerySaveBadge status={saveStatus} />
       </div>
 
-      {/* Layout split 1fr / 460px */}
-      <div className="split">
+      {/* Layout split 1fr / 460px — encadré (design) */}
+      <div className="split" style={{
+        borderTop: 0, border: '1px solid rgba(0,0,0,0.08)',
+        borderRadius: 'var(--radius-sm)', overflow: 'hidden',
+      }}>
 
         {/* ── Colonne image ──────────────────────────────────────────── */}
         <div className="image-col">
@@ -378,8 +336,9 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
           </dl>
         </div>
 
-        {/* ── Colonne formulaire (info panel, sticky) ────────────────── */}
-        <div className="form-col">
+        {/* ── Colonne formulaire ──────────────────────────────────────── */}
+        {/* position static + pas de scroll interne : la page entière défile (design) */}
+        <div className="form-col" style={{ position: 'static', maxHeight: 'none', overflowY: 'visible' }}>
 
           {/* 01 — Identité */}
           <Section title="Identité" step="01 / 04">
@@ -553,7 +512,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   />
                   <select
                     value={priceCurrency}
-                    onChange={(e) => { setPriceCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF'); markEditing() }}
+                    onChange={(e) => { setPriceCurrency(e.target.value as 'EUR' | 'USD' | 'CAD' | 'GBP' | 'CHF'); markEditing() }}
                     aria-label="Devise"
                     style={{
                       padding: '0 10px',
@@ -571,6 +530,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
                   >
                     <option value="EUR">€ EUR</option>
                     <option value="USD">$ USD</option>
+                    <option value="CAD">$ CAD</option>
                     <option value="GBP">£ GBP</option>
                     <option value="CHF">CHF</option>
                   </select>
@@ -632,6 +592,7 @@ export function DocumenterClient({ artworkTypes, mediums, userEmail }: Documente
           </div>
         </div>
       </div>
+      </div>{/* fin contenu centré */}
 
       {/* Footer */}
       <footer className="site-footer">

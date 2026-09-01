@@ -318,7 +318,7 @@ export function ArtworkInfoPanel({
               fontStyle: 'italic',
               fontSize: '14px',
               lineHeight: 1.4,
-              borderRadius: 3,
+              borderRadius: 'var(--radius-sm)',
             }}
           >
             {STATUS_MSG_STYLE[status].text}

@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
             const secure = window.location.protocol === 'https:'
             document.cookie = `better-auth.session_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax${secure ? '; secure' : ''}`
           }
-          window.location.href = '/admin'
+          window.location.href = '/admin/artworks'
         },
         onError: (ctx) => {
           setError(ctx.error.message ?? 'Email ou mot de passe incorrect')
