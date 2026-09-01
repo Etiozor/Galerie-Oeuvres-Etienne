@@ -200,7 +200,7 @@ export function OfferHistory({ offerCount, bestOffer, allOffers }: OfferHistoryP
                       style={{
                         background: 'transparent',
                         border: '1px solid rgba(188,75,81,0.4)',
-                        borderRadius: 0,  // D-03
+                        borderRadius: 'var(--radius-sm)',
                         padding: '2px 8px',
                         fontFamily: 'var(--font-space-mono)',
                         fontSize: '10px',

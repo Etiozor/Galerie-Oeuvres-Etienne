@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/designsystemepersomain-019e2204-25b1-728c-8811-1beb84bedde6/styles.css">
+<script src="_ds/designsystemepersomain-019e2204-25b1-728c-8811-1beb84bedde6/_ds_bundle.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-desk);font-family:var(--font-interface);-webkit-font-smoothing:antialiased}
+a{color:var(--color-primary-ink);text-decoration:none}
+a:hover{color:var(--color-warning)}
+@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;background:var(--color-desk)">
+
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:12px 20px;background:var(--color-desk);border-bottom:1px solid rgba(0,0,0,0.08)">
+    <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Prototype · shell</span>
+    <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ routeTabs }}" value="{{ route }}" onChange="{{ setRoute }}" compact="{{ true }}" hint-size="420px,28px"></x-import>
+    <div style="flex:1"></div>
+    <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ viewportTabs }}" value="{{ viewport }}" onChange="{{ setViewport }}" compact="{{ true }}" hint-size="180px,28px"></x-import>
+  </div>
+
+  <div style="flex:1;display:flex;justify-content:center;padding:{{ framePad }}">
+    <div style="position:relative;width:{{ frameW }};max-width:100%;height:{{ frameH }};border-radius:8px;overflow:hidden;box-shadow:{{ frameShadow }};background:var(--color-bg)">
+      <div style="position:absolute;inset:0;overflow-y:auto">
+
+        <div aria-hidden="true" style="position:absolute;inset:0;z-index:0;pointer-events:none;background-color:var(--color-bg)">
+          <div style="position:absolute;inset:0;opacity:{{ decorOpacity }};background-image:{{ decorUrl }};background-repeat:repeat"></div>
+        </div>
+
+        <sc-if value="{{ isPublicNavDesktop }}" hint-placeholder-val="{{ true }}">
+          <nav style="position:sticky;top:0;z-index:10;height:56px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 24px;background:var(--color-surface);border-bottom:1px solid rgba(0,0,0,0.08)">
+            <div onClick="{{ goGallery }}" style="display:flex;align-items:baseline;gap:10px;cursor:pointer">
+              <span style="font-family:var(--font-display);font-weight:700;font-size:18px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-ink)">Galerie POF</span>
+              <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">{{ navSub }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:20px">
+              <span onClick="{{ goGallery }}" style="font-family:var(--font-interface);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted);cursor:pointer" style-hover="color:var(--color-ink)">Galerie</span>
+              <span onClick="{{ goTimeline }}" style="font-family:var(--font-interface);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted);cursor:pointer" style-hover="color:var(--color-ink)">Frise</span>
+              <span onClick="{{ goAbout }}" style="font-family:var(--font-interface);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted);cursor:pointer" style-hover="color:var(--color-ink)">À propos</span>
+              <sc-if value="{{ isLoggedIn }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ goProfile }}" style="cursor:pointer;display:flex">
+                  <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Avatar" name="Étienne L" tone="primary" size="{{ 32 }}" hint-size="32px,32px"></x-import>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="quiet" compact="{{ true }}" onClick="{{ openIdentify }}" hint-size="auto,32px">S&apos;identifier</x-import>
+              </sc-if>
+            </div>
+          </nav>
+        </sc-if>
+
+        <sc-if value="{{ isPublicNavMobile }}" hint-placeholder-val="{{ false }}">
+          <header style="position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;padding:10px 16px 11px;background:var(--color-surface);border-bottom:1px solid rgba(0,0,0,0.08)">
+            <sc-if value="{{ showBack }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ goGallery }}" style="width:34px;height:34px;flex:none;border:1px solid rgba(0,0,0,0.14);border-radius:8px;background:transparent;color:var(--color-ink);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px">←</button>
+            </sc-if>
+            <sc-if value="{{ hideBack }}" hint-placeholder-val="{{ true }}">
+              <span style="width:34px;flex:none"></span>
+            </sc-if>
+            <div style="flex:1;min-width:0;text-align:center">
+              <div style="font-family:var(--font-display);font-weight:600;font-size:17px;text-transform:uppercase;letter-spacing:0.05em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Galerie POF</div>
+              <div style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.06em;color:var(--color-ink-muted);margin-top:3px">{{ navSub }}</div>
+            </div>
+            <button onClick="{{ openDrawer }}" aria-label="Ouvrir le menu" style="width:34px;height:34px;flex:none;border:1px solid rgba(0,0,0,0.14);border-radius:8px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer">
+              <span style="width:16px;height:1.5px;background:var(--color-ink);display:block"></span>
+              <span style="width:16px;height:1.5px;background:var(--color-ink);display:block"></span>
+              <span style="width:16px;height:1.5px;background:var(--color-ink);display:block"></span>
+            </button>
+          </header>
+        </sc-if>
+
+        <main style="position:relative;z-index:1;padding:{{ mainPad }}">
+
+          <sc-if value="{{ isGallery }}" hint-placeholder-val="{{ true }}">
+            <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Collection · {{ totalCount }} œuvres</span>
+                <h1 style="margin:0;font-family:var(--font-display);font-weight:700;font-size:32px;text-transform:uppercase;letter-spacing:0.05em;line-height:1.05;color:var(--color-ink)">Dessins et peintures</h1>
+                <p style="margin:0;max-width:52ch;font-family:var(--font-editorial);font-style:italic;font-size:18px;line-height:1.5;color:var(--color-ink)">Chaque œuvre est unique. Le prix affiché est un point de départ, pas une condition.</p>
+              </div>
+
+              <div style="display:flex;flex-direction:{{ filterRowDir }};align-items:{{ filterRowAlign }};justify-content:space-between;gap:{{ filterRowGap }};flex-wrap:nowrap">
+                <div style="flex:1;min-width:0;overflow-x:{{ filterOverflow }}">
+                  <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ filterTabs }}" value="{{ filter }}" onChange="{{ setFilter }}" hint-size="auto,32px"></x-import>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex:none;flex-wrap:nowrap;white-space:nowrap">
+                  <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Date de création</span>
+                  <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ sortTabs }}" value="{{ sort }}" onChange="{{ setSort }}" compact="{{ true }}" hint-size="200px,28px"></x-import>
+                </div>
+              </div>
+
+              <div style="columns:{{ cols }};column-gap:20px">
+                <sc-for list="{{ visible }}" as="a" hint-placeholder-count="6">
+                  <div onClick="{{ a.onOpen }}" onMouseEnter="{{ a.onEnter }}" onMouseLeave="{{ a.onLeave }}" style="break-inside:avoid;margin-bottom:20px;position:relative;width:100%;aspect-ratio:{{ a.ratio }};background:var(--color-desk);border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center">
+                    <span style="font-family:var(--font-interface);font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Image à venir</span>
+                    <div style="position:absolute;top:10px;left:10px">
+                      <sc-if value="{{ a.hasBadge }}" hint-placeholder-val="{{ false }}">
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Badge" tone="{{ a.tone }}" hint-size="auto,20px">{{ a.statusLabel }}</x-import>
+                      </sc-if>
+                    </div>
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:14px 16px;background:linear-gradient(to top, rgba(26,26,26,0.82) 0%, rgba(26,26,26,0.45) 55%, rgba(26,26,26,0) 100%);opacity:{{ a.overlay }};transition:opacity 200ms ease">
+                      <div onClick="{{ a.onSave }}" style="position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:8px;background:rgba(253,248,232,0.86);border:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;font-size:14px;color:{{ a.heartColor }}">{{ a.heart }}</div>
+                      <span style="font-family:var(--font-display);font-weight:600;font-size:16px;text-transform:uppercase;letter-spacing:0.05em;line-height:1.15;color:var(--color-ink-inverse)">{{ a.title }}</span>
+                      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:6px">
+                        <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(253,248,232,0.78)">{{ a.meta }}</span>
+                        <span style="font-family:var(--font-interface);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--color-ink-inverse)">{{ a.priceLabel }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ false }}">
+            <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Chronologie · {{ totalCount }} œuvres · {{ friseSpan }}</span>
+                <h1 style="margin:0;font-family:var(--font-display);font-weight:700;font-size:32px;text-transform:uppercase;letter-spacing:0.05em;line-height:1.05;color:var(--color-ink)">Frise chronologique</h1>
+                <p style="margin:0;max-width:52ch;font-family:var(--font-editorial);font-style:italic;font-size:18px;line-height:1.5;color:var(--color-ink)">Chaque œuvre à sa date de réalisation. {{ friseHint }}</p>
+              </div>
+
+              <div style="overflow-x:{{ friseOverflow }};overflow-y:hidden;padding-bottom:10px">
+                <div style="position:relative;width:{{ friseWidth }};height:{{ friseHeight }};min-width:{{ friseMinWidth }}">
+                  <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,0.14)"></div>
+
+                  <sc-for list="{{ friseYears }}" as="y" hint-placeholder-count="4">
+                    <div style="position:absolute;left:{{ y.pos }}%;top:50%;transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;gap:6px">
+                      <span style="width:1px;height:10px;background:rgba(0,0,0,0.2)"></span>
+                      <span style="font-family:var(--font-interface);font-weight:600;font-size:11px;letter-spacing:0.12em;color:var(--color-ink-muted)">{{ y.label }}</span>
+                    </div>
+                  </sc-for>
+
+                  <sc-for list="{{ friseAbove }}" as="a" hint-placeholder-count="5">
+                    <div onClick="{{ a.onOpen }}" onMouseEnter="{{ a.onEnter }}" onMouseLeave="{{ a.onLeave }}" style="position:absolute;left:{{ a.pos }}%;bottom:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:0;cursor:pointer">
+                      <div style="width:{{ friseThumb }};display:flex;flex-direction:column;gap:6px;padding:8px;background:{{ a.cardBg }};border:1px solid {{ a.cardBc }};border-radius:8px;box-shadow:{{ a.shadow }}">
+                        <div style="width:100%;aspect-ratio:{{ a.ratio }};background:var(--color-desk);border-radius:8px"></div>
+                        <span style="font-family:var(--font-display);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;line-height:1.2;color:var(--color-ink);text-align:center">{{ a.title }}</span>
+                        <span style="font-family:var(--font-interface);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-ink-muted);text-align:center">{{ a.dateShort }}</span>
+                      </div>
+                      <span style="width:1px;height:{{ a.stem }};background:rgba(0,0,0,0.2)"></span>
+                      <span style="width:9px;height:9px;border-radius:50%;background:{{ a.dot }};margin-bottom:-5px"></span>
+                    </div>
+                  </sc-for>
+
+                  <sc-for list="{{ friseBelow }}" as="a" hint-placeholder-count="4">
+                    <div onClick="{{ a.onOpen }}" onMouseEnter="{{ a.onEnter }}" onMouseLeave="{{ a.onLeave }}" style="position:absolute;left:{{ a.pos }}%;top:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:0;cursor:pointer">
+                      <span style="width:9px;height:9px;border-radius:50%;background:{{ a.dot }};margin-top:-5px"></span>
+                      <span style="width:1px;height:{{ a.stem }};background:rgba(0,0,0,0.2)"></span>
+                      <div style="width:{{ friseThumb }};display:flex;flex-direction:column;gap:6px;padding:8px;background:{{ a.cardBg }};border:1px solid {{ a.cardBc }};border-radius:8px;box-shadow:{{ a.shadow }}">
+                        <div style="width:100%;aspect-ratio:{{ a.ratio }};background:var(--color-desk);border-radius:8px"></div>
+                        <span style="font-family:var(--font-display);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;line-height:1.2;color:var(--color-ink);text-align:center">{{ a.title }}</span>
+                        <span style="font-family:var(--font-interface);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-ink-muted);text-align:center">{{ a.dateShort }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:{{ detailCols }};min-height:{{ detailMinH }}">
+                <div style="position:relative;background:var(--color-bg);padding:{{ detailImgPad }};display:flex;align-items:center;justify-content:center">
+                  <span onClick="{{ goGallery }}" style="position:absolute;top:20px;left:32px;font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted);cursor:pointer">← Galerie</span>
+                  <div style="position:relative;width:100%;max-width:400px;aspect-ratio:{{ current.ratio }};max-height:{{ detailImgMaxH }};background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 16px rgba(26,26,26,0.12);display:flex;align-items:center;justify-content:center">
+                    <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Image à venir</span>
+                    <sc-if value="{{ current.isSold }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);border:3px solid var(--color-critical);border-radius:8px;color:var(--color-critical-ink);padding:8px 22px;font-family:var(--font-display);font-weight:700;font-size:28px;letter-spacing:0.16em;text-transform:uppercase;background:rgba(253,248,232,0.65);pointer-events:none">Vendu</div>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="background:var(--color-surface);border-left:1px solid rgba(0,0,0,0.08);padding:32px 32px 28px;position:{{ panelPos }};top:0;max-height:{{ panelMaxH }};overflow-y:{{ panelOverflow }};display:flex;flex-direction:column;gap:22px">
+
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Cartel · n°{{ current.num }}</span>
+                    <button onClick="{{ toggleCurrentSave }}" style="min-height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(0,0,0,0.14);border-radius:8px;background:var(--color-bg);cursor:pointer;font-family:var(--font-interface);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:{{ current.heartColor }}">{{ current.heart }} {{ currentSaveLabel }}</button>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <h1 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:30px;text-transform:uppercase;letter-spacing:0.04em;line-height:1.05;color:var(--color-ink)">{{ current.title }}</h1>
+                    <span aria-hidden="true" style="display:block;width:36px;height:2px;border-radius:2px;background:var(--color-warning)"></span>
+                  </div>
+
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="width:9px;height:9px;border-radius:50%;flex:none;background:{{ current.dot }}"></span>
+                    <span style="font-family:var(--font-interface);font-weight:600;font-size:13px;letter-spacing:0.01em;color:var(--color-ink)">{{ current.statusLabel }}</span>
+                    <span style="width:1px;height:12px;background:rgba(0,0,0,0.18)"></span>
+                    <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-ink-muted)">{{ current.cartelMeta }}</span>
+                  </div>
+
+                  <p style="margin:0;font-family:var(--font-editorial);font-style:italic;font-size:18px;line-height:1.5;color:var(--color-ink)">{{ current.note }}</p>
+
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid rgba(0,0,0,0.08);border-bottom:1px solid rgba(0,0,0,0.08)">
+                    <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Dimensions</span>
+                    <span style="font-family:var(--font-interface);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;color:var(--color-ink)">{{ current.dimsLabel }}</span>
+                  </div>
+
+                  <div style="padding-left:14px;border-left:6px solid {{ current.priceEdge }};display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                      <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Prix de base</span>
+                      <span style="font-family:var(--font-interface);font-weight:700;font-size:28px;font-variant-numeric:tabular-nums;color:var(--color-ink)">{{ current.priceLabel }}</span>
+                    </div>
+                    <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="ghost" compact="{{ true }}" onClick="{{ toggleBreakdown }}" hint-size="auto,32px">{{ breakdownLabel }}</x-import>
+                    <sc-if value="{{ showBreakdown }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;flex-direction:column;gap:6px;margin-top:2px">
+                        <sc-for list="{{ current.breakdown }}" as="row" hint-placeholder-count="6">
+                          <div style="display:grid;grid-template-columns:1fr auto;column-gap:12px;align-items:baseline">
+                            <span style="font-family:var(--font-interface);font-size:13px;line-height:1.4;color:var(--color-ink)">{{ row.label }}</span>
+                            <span style="font-family:var(--font-interface);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;color:var(--color-ink-muted)">{{ row.display }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+
+                  <sc-if value="{{ current.isAvailable }}" hint-placeholder-val="{{ true }}">
+                    <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="primary" full="{{ true }}" onClick="{{ openIdentify }}" hint-size="100%,44px">Faire une offre →</x-import>
+                  </sc-if>
+                  <sc-if value="{{ current.notAvailable }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:14px 16px;border-radius:8px;border:1px solid {{ current.msgBorder }};background:{{ current.msgBg }};font-family:var(--font-editorial);font-style:italic;font-size:16px;line-height:1.45;color:{{ current.msgInk }}">{{ current.statusMessage }}</div>
+                  </sc-if>
+
+                  <sc-if value="{{ current.hasOffers }}" hint-placeholder-val="{{ true }}">
+                    <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:15px 16px;display:flex;flex-direction:column;gap:10px">
+                      <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Offres reçues</span>
+                      <div style="display:flex;align-items:baseline;gap:14px">
+                        <span style="font-family:var(--font-interface);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums;color:var(--color-primary-ink)">{{ current.offers }}</span>
+                        <span style="font-family:var(--font-interface);font-size:13px;line-height:1.5;color:var(--color-ink-muted)">meilleure offre {{ current.bestOfferLabel }}</span>
+                      </div>
+                      <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="ghost" compact="{{ true }}" onClick="{{ toggleHistory }}" hint-size="auto,32px">{{ historyLabel }}</x-import>
+                      <sc-if value="{{ showHistory }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;flex-direction:column;border-top:1px solid rgba(0,0,0,0.06)">
+                          <sc-for list="{{ current.offerList }}" as="o" hint-placeholder-count="3">
+                            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,0.06)">
+                              <span style="font-family:var(--font-interface);font-size:12px;letter-spacing:0.04em;color:var(--color-ink-muted)">{{ o.date }}</span>
+                              <span style="font-family:var(--font-interface);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ink)">{{ o.amount }}</span>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:4px;border-top:1px solid rgba(0,0,0,0.08)">
+                    <span onClick="{{ goPrev }}" style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted);cursor:pointer;padding-top:12px">← {{ prevTitle }}</span>
+                    <span onClick="{{ goNext }}" style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted);cursor:pointer;padding-top:12px;text-align:right">{{ nextTitle }} →</span>
+                  </div>
+                </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isAbout }}" hint-placeholder-val="{{ false }}">
+            <div style="max-width:1180px;margin:0 auto;display:grid;grid-template-columns:{{ detailCols }};gap:24px;align-items:stretch">
+              <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;min-height:360px;display:flex;align-items:center;justify-content:center;padding:32px">
+                <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Photo de l&apos;artiste à venir</span>
+              </div>
+              <div style="display:flex;flex-direction:column;justify-content:center;gap:16px;padding:8px 0">
+                <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">L&apos;atelier</span>
+                <h1 style="margin:0;font-family:var(--font-display);font-weight:700;font-size:28px;text-transform:uppercase;letter-spacing:0.04em;line-height:1.1;color:var(--color-ink)">À propos de l&apos;artiste</h1>
+                <p style="margin:0;max-width:48ch;font-family:var(--font-editorial);font-style:italic;font-size:18px;line-height:1.5;color:var(--color-ink)">Bio et démarche artistique à venir.</p>
+                <div style="display:flex;gap:10px;margin-top:4px">
+                  <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="secondary" onClick="{{ goGallery }}" hint-size="auto,44px">Voir la galerie</x-import>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+            <div style="max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:36px">
+              <div style="display:flex;align-items:center;gap:18px">
+                <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Avatar" name="Sophie M" tone="primary" size="{{ 56 }}" hint-size="56px,56px"></x-import>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span style="font-family:var(--font-display);font-weight:600;font-size:26px;text-transform:uppercase;letter-spacing:0.05em;line-height:1.1;color:var(--color-ink)">Sophie M.</span>
+                  <div style="display:flex;gap:12px;flex-wrap:wrap;font-family:var(--font-interface);font-size:12px;letter-spacing:0.04em;color:var(--color-ink-muted)">
+                    <span>••••5678</span>
+                    <span>sophie@exemple.fr</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Mes offres ({{ myOffersCount }})</span>
+                <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden">
+                  <sc-for list="{{ myOffers }}" as="o" hint-placeholder-count="3">
+                    <div onClick="{{ o.onOpen }}" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,0.06);cursor:pointer">
+                      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                        <span style="font-family:var(--font-interface);font-weight:600;font-size:15px;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.title }}</span>
+                        <span style="font-family:var(--font-interface);font-size:12px;letter-spacing:0.04em;color:var(--color-ink-muted)">{{ o.date }}</span>
+                      </div>
+                      <span style="font-family:var(--font-interface);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;color:var(--color-ink);white-space:nowrap">{{ o.amount }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Mes acquisitions ({{ acquisitionsCount }})</span>
+                <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-left:6px solid var(--color-success);border-radius:8px;overflow:hidden">
+                  <sc-for list="{{ acquisitions }}" as="acq" hint-placeholder-count="1">
+                    <div onClick="{{ acq.onOpen }}" style="display:flex;gap:16px;align-items:center;padding:13px 16px;cursor:pointer">
+                      <span style="flex:1;min-width:0;font-family:var(--font-interface);font-weight:600;font-size:15px;color:var(--color-ink)">{{ acq.title }}</span>
+                      <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Badge" tone="success" hint-size="auto,20px">Acquis</x-import>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Œuvres enregistrées ({{ savedCount }})</span>
+                <sc-if value="{{ hasSaved }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+                    <sc-for list="{{ savedList }}" as="s" hint-placeholder-count="2">
+                      <div onClick="{{ s.onOpen }}" style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden;cursor:pointer">
+                        <div style="aspect-ratio:1;background:var(--color-desk);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--color-ink-muted)">♡</div>
+                        <div style="padding:9px 11px;border-top:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column;gap:3px">
+                          <span style="font-family:var(--font-interface);font-weight:600;font-size:13px;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.title }}</span>
+                          <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.06em;color:var(--color-ink-muted)">{{ s.meta }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noSaved }}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.EmptyState" title="Aucune œuvre enregistrée" message="Le ♡ sur la page d&apos;une œuvre la garde ici." dashed="{{ true }}" hint-size="100%,140px"></x-import>
+                </sc-if>
+              </div>
+
+              <span onClick="{{ goGallery }}" style="font-family:var(--font-interface);font-size:12px;letter-spacing:0.04em;color:var(--color-ink-muted);cursor:pointer">← Retour à la galerie</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:0">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 20px;background:var(--color-ink-surface);border-radius:8px">
+                <div style="display:flex;align-items:baseline;gap:10px">
+                  <span style="font-family:var(--font-display);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-inverse)">Galerie POF</span>
+                  <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:rgba(253,248,232,0.6)">· Administration</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                  <span onClick="{{ backToList }}" style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-inverse);cursor:pointer">← Mes œuvres</span>
+                  <span style="width:1px;height:16px;background:rgba(253,248,232,0.25)"></span>
+                  <span onClick="{{ goGallery }}" style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-inverse);cursor:pointer">↗ Galerie</span>
+                  <span style="font-family:var(--font-interface);font-size:12px;letter-spacing:0.04em;color:rgba(253,248,232,0.6)">etienne@galerie-pof.fr</span>
+                  <button onClick="{{ goGallery }}" style="min-height:32px;padding:0 12px;border:1px solid rgba(253,248,232,0.35);border-radius:8px;background:transparent;color:var(--color-ink-inverse);font-family:var(--font-interface);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer">Déconnexion</button>
+                </div>
+              </div>
+              <div style="padding:20px 0 0;display:flex;flex-direction:column;gap:20px">
+                <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ adminTabs }}" value="{{ adminTab }}" onChange="{{ setAdminTab }}" hint-size="100%,32px"></x-import>
+                <sc-if value="{{ isListTab }}" hint-placeholder-val="{{ true }}">
+                <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden">
+                  <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.StatTiles" items="{{ adminTiles }}" columns="{{ 4 }}" hint-size="100%,64px"></x-import>
+                </div>
+                <div style="display:grid;grid-template-columns:{{ adminCols }};gap:12px;margin-top:20px">
+                  <sc-for list="{{ artworks }}" as="a" hint-placeholder-count="4">
+                    <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-left:6px solid {{ a.edge }};border-radius:8px;padding:15px 16px;display:flex;gap:14px">
+                      <div style="width:64px;flex:none;aspect-ratio:{{ a.ratio }};max-height:88px;background:var(--color-desk);border:1px solid rgba(0,0,0,0.06);border-radius:8px"></div>
+                      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                          <span style="font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;line-height:1.15;color:var(--color-ink)">{{ a.title }}</span>
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Badge" tone="{{ a.tone }}" hint-size="auto,20px">{{ a.statusLabel }}</x-import>
+                        </div>
+                        <div style="display:flex;gap:14px;flex-wrap:wrap;font-family:var(--font-interface);font-size:11px;letter-spacing:0.06em;color:var(--color-ink-muted)">
+                          <span>{{ a.meta }}</span>
+                          <span>{{ a.priceLabel }}</span>
+                          <span>{{ a.offersLabel }}</span>
+                        </div>
+                        <div style="display:flex;gap:8px;padding-top:2px">
+                          <button onClick="{{ a.onEdit }}" style="min-height:32px;padding:0 12px;border:1px solid var(--color-warning);border-radius:8px;background:var(--color-warning);color:var(--color-ink);font-family:var(--font-interface);font-weight:600;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap">Éditer</button>
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="ghost" compact="{{ true }}" onClick="{{ a.onOpen }}" hint-size="auto,32px">Voir</x-import>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                </sc-if>
+
+                <sc-if value="{{ isUploadTab }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:4px">
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <div style="display:flex;gap:6px;font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">
+                        <span onClick="{{ backToList }}" style="cursor:pointer;color:var(--color-primary-ink)">← Mes œuvres</span>
+                        <span>/</span>
+                        <span>Nouvelle œuvre</span>
+                      </div>
+                      <h1 style="margin:0;font-family:var(--font-display);font-weight:700;font-size:24px;text-transform:uppercase;letter-spacing:0.04em;line-height:1.1;color:var(--color-ink)">Documenter une œuvre</h1>
+                    </div>
+                    <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Badge" tone="{{ saveTone }}" hint-size="auto,20px">{{ saveLabel }}</x-import>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:{{ uploadCols }};border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden">
+
+                    <div style="background:var(--color-bg);padding:20px;display:flex;flex-direction:column;gap:16px">
+                      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">
+                        <span>Photographie de l&apos;œuvre</span>
+                        <span>JPEG / PNG · 20 Mo max · aucun recadrage</span>
+                      </div>
+                      <div onClick="{{ pickFile }}" style="height:{{ dropHeight }};border:1px dashed rgba(0,0,0,0.2);border-radius:8px;background:var(--color-surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;text-align:center;padding:20px">
+                        <span style="font-family:var(--font-editorial);font-style:italic;font-size:18px;line-height:1.5;color:var(--color-ink)">{{ dropText }}</span>
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="quiet" compact="{{ true }}" onClick="{{ pickFile }}" hint-size="auto,32px">{{ dropAction }}</x-import>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <sc-for list="{{ pipeline }}" as="p" hint-placeholder-count="4">
+                          <div style="display:flex;align-items:center;gap:8px">
+                            <span style="width:20px;height:20px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-interface);font-weight:700;font-size:11px;background:{{ p.bg }};border:1px solid {{ p.bc }};color:{{ p.ink }}">{{ p.n }}</span>
+                            <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:{{ p.labelInk }}">{{ p.label }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display:grid;grid-template-columns:auto 1fr;column-gap:16px;row-gap:8px;padding-top:14px;border-top:1px solid rgba(0,0,0,0.08)">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Fichier</span>
+                        <span style="font-family:var(--font-interface);font-size:12px;letter-spacing:0.04em;color:{{ fileInk }}">{{ fileName }}</span>
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Variantes</span>
+                        <span style="font-family:var(--font-interface);font-size:12px;letter-spacing:0.04em;color:{{ fileInk }}">{{ variants }}</span>
+                      </div>
+                    </div>
+
+                    <div style="background:var(--color-surface);border-left:1px solid rgba(0,0,0,0.08);padding:24px 20px 0;display:flex;flex-direction:column">
+
+                      <div style="display:flex;flex-direction:column;gap:16px;padding-bottom:24px;border-bottom:1px solid rgba(0,0,0,0.08)">
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                          <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink)">Identité</h2>
+                          <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.12em;color:var(--color-ink-muted)">01 / 04</span>
+                        </div>
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Titre" placeholder="Sans titre" value="{{ f.title }}" onChange="{{ setTitle }}" error="{{ f.titleError }}" hint-size="100%,80px"></x-import>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                          <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Type</span>
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ typeItems }}" value="{{ f.type }}" onChange="{{ setType }}" hint-size="100%,32px"></x-import>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                          <div style="display:flex;flex-direction:column;gap:7px">
+                            <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Mois</span>
+                            <select onChange="{{ setMonth }}" value="{{ f.month }}" style="width:100%;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 10px;font-family:var(--font-interface);font-size:14px;color:var(--color-ink)">
+                              <sc-for list="{{ monthOptions }}" as="m" hint-placeholder-count="13">
+                                <option value="{{ m.value }}">{{ m.label }}</option>
+                              </sc-for>
+                            </select>
+                          </div>
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Année" placeholder="2026" value="{{ f.year }}" onChange="{{ setYear }}" error="{{ f.yearError }}" hint-size="100%,80px"></x-import>
+                        </div>
+                      </div>
+
+                      <div style="display:flex;flex-direction:column;gap:16px;padding:24px 0;border-bottom:1px solid rgba(0,0,0,0.08)">
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                          <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink)">Format &amp; médium</h2>
+                          <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.12em;color:var(--color-ink-muted)">02 / 04</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                          <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Médium</span>
+                          <div style="display:flex;flex-wrap:wrap;gap:8px">
+                            <sc-for list="{{ mediumChips }}" as="m" hint-placeholder-count="4">
+                              <button onClick="{{ m.onToggle }}" style="min-height:32px;padding:0 12px;border:1px solid {{ m.bc }};border-radius:8px;background:{{ m.bg }};color:{{ m.ink }};font-family:var(--font-interface);font-weight:600;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer">{{ m.name }}</button>
+                            </sc-for>
+                          </div>
+                          <span style="font-family:var(--font-interface);font-size:11px;line-height:1.6;color:var(--color-ink-muted)">Un ou plusieurs médiums — technique mixte autorisée.</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                          <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Dimensions</span>
+                          <div style="display:flex;align-items:center;gap:10px">
+                            <input value="{{ f.w }}" onChange="{{ setW }}" placeholder="—" style="flex:1;min-width:0;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 12px;font-family:var(--font-interface);font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ink)">
+                            <span style="font-family:var(--font-interface);font-size:14px;color:var(--color-ink-muted)">×</span>
+                            <input value="{{ f.h }}" onChange="{{ setH }}" placeholder="—" style="flex:1;min-width:0;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 12px;font-family:var(--font-interface);font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ink)">
+                            <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ unitItems }}" value="{{ f.unit }}" onChange="{{ setUnit }}" compact="{{ true }}" hint-size="120px,28px"></x-import>
+                          </div>
+                          <span style="font-family:var(--font-interface);font-size:11px;line-height:1.6;color:var(--color-ink-muted)">Largeur × hauteur, à plat. Pour un dessin sur cahier, prendre la feuille.</span>
+                        </div>
+                      </div>
+
+                      <div style="display:flex;flex-direction:column;gap:16px;padding:24px 0;border-bottom:1px solid rgba(0,0,0,0.08)">
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                          <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink)">Édition</h2>
+                          <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.12em;color:var(--color-ink-muted)">03 / 04</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                          <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Statut</span>
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ statusItems }}" value="{{ f.status }}" onChange="{{ setStatus }}" hint-size="100%,32px"></x-import>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                          <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Prix de base</span>
+                          <div style="display:flex;align-items:center;gap:10px">
+                            <input value="{{ f.price }}" onChange="{{ setPrice }}" placeholder="0" style="flex:1;min-width:0;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 12px;font-family:var(--font-interface);font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ink)">
+                            <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ currencyItems }}" value="{{ f.currency }}" onChange="{{ setCurrency }}" compact="{{ true }}" hint-size="180px,28px"></x-import>
+                          </div>
+                          <span style="font-family:var(--font-interface);font-size:11px;line-height:1.6;color:var(--color-ink-muted)">Plancher indicatif en dessous duquel une offre est signalée. Modifiable plus tard.</span>
+                        </div>
+                      </div>
+
+                      <div style="display:flex;flex-direction:column;gap:16px;padding:24px 0">
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                          <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink)">Texte &amp; classement</h2>
+                          <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.12em;color:var(--color-ink-muted)">04 / 04</span>
+                        </div>
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Description" multiline="{{ true }}" placeholder="Quelques lignes pour le visiteur — où, quand, dans quel état d&apos;esprit." value="{{ f.description }}" onChange="{{ setDescription }}" hint="Affichée en italique sur la page publique de l&apos;œuvre. Garder bref." hint-size="100%,150px"></x-import>
+                        <div style="display:flex;flex-direction:column;gap:7px">
+                          <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Tags</span>
+                          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:6px 10px">
+                            <sc-for list="{{ tagChips }}" as="t" hint-placeholder-count="2">
+                              <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:8px;background:var(--tint-primary-bg);border:1px solid var(--tint-primary-bc);font-family:var(--font-interface);font-weight:600;font-size:11px;letter-spacing:0.09em;text-transform:uppercase;color:var(--color-primary-ink)">{{ t.label }}<span onClick="{{ t.onRemove }}" style="cursor:pointer">✕</span></span>
+                            </sc-for>
+                            <input value="{{ f.tagDraft }}" onChange="{{ setTagDraft }}" onKeyDown="{{ tagKeyDown }}" placeholder="Entrée ou virgule pour valider" style="flex:1;min-width:120px;border:0;background:transparent;outline:none;font-family:var(--font-interface);font-size:14px;color:var(--color-ink);padding:4px 0">
+                          </div>
+                          <span style="font-family:var(--font-interface);font-size:11px;line-height:1.6;color:var(--color-ink-muted)">Sert au tri interne uniquement.</span>
+                        </div>
+                      </div>
+
+                      <div style="position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 0;margin-top:auto;background:var(--color-surface);border-top:1px solid rgba(0,0,0,0.08)">
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="ghost" onClick="{{ resetForm }}" hint-size="auto,38px">Réinitialiser</x-import>
+                        <div style="display:flex;gap:8px">
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="quiet" onClick="{{ saveDraft }}" hint-size="auto,44px">Enregistrer</x-import>
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="primary" onClick="{{ publish }}" hint-size="auto,44px">Publier</x-import>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ isEditView }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <div style="display:flex;gap:6px;font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">
+                        <span onClick="{{ backToList }}" style="cursor:pointer;color:var(--color-primary-ink)">← Mes œuvres</span>
+                        <span>/</span>
+                        <span>{{ e.title }}</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Badge" tone="{{ e.tone }}" hint-size="auto,20px">{{ e.statusLabel }}</x-import>
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Cartel · n°{{ e.num }}</span>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                      <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="quiet" compact="{{ true }}" onClick="{{ e.viewPublic }}" hint-size="auto,32px">↗ Voir en galerie</x-import>
+                    </div>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:{{ editHeroCols }};gap:20px;align-items:start">
+                    <div style="display:flex;flex-direction:column;gap:14px">
+                      <div style="width:100%;max-width:520px;aspect-ratio:{{ e.ratio }};background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;box-shadow:0 2px 16px rgba(26,26,26,0.12);display:flex;align-items:center;justify-content:center">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Image à venir</span>
+                      </div>
+                      <input value="{{ e.title }}" onChange="{{ setEditTitle }}" style="width:100%;max-width:520px;background:transparent;border:0;border-bottom:1px solid rgba(0,0,0,0.14);padding:6px 0;font-family:var(--font-display);font-weight:700;font-size:32px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink);outline:none">
+                      <span style="font-family:var(--font-interface);font-size:11px;line-height:1.6;color:var(--color-ink-muted)">Le titre s&apos;enregistre à la sortie du champ.</span>
+                    </div>
+
+                    <aside style="position:{{ panelPos }};top:20px;align-self:start;background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:24px 20px;display:flex;flex-direction:column;gap:22px">
+                      <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Description" multiline="{{ true }}" value="{{ e.description }}" onChange="{{ setEditDescription }}" placeholder="Quelques lignes pour le visiteur." hint-size="100%,140px"></x-import>
+                      <div style="display:flex;flex-direction:column;gap:12px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Infos rapides</span>
+                        <div style="display:grid;grid-template-columns:auto 1fr;row-gap:12px;column-gap:18px;padding:14px 0;border-top:1px solid rgba(0,0,0,0.08);border-bottom:1px solid rgba(0,0,0,0.08)">
+                          <sc-for list="{{ e.quickInfo }}" as="kv" hint-placeholder-count="4">
+                            <span style="align-self:center;font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">{{ kv.label }}</span>
+                            <span style="font-family:var(--font-interface);font-size:14px;color:var(--color-ink)">{{ kv.value }}</span>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Prix de base</span>
+                        <span style="font-family:var(--font-interface);font-weight:700;font-size:26px;font-variant-numeric:tabular-nums;line-height:1;color:var(--color-ink)">{{ e.priceLabel }}</span>
+                      </div>
+                    </aside>
+                  </div>
+
+                  <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:18px">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                      <h2 style="margin:0;font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink)">Fiche de l&apos;œuvre</h2>
+                      <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.12em;color:var(--color-ink-muted)">{{ e.dirtyLabel }}</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:{{ editGridCols }};gap:14px">
+                      <div style="grid-column:span 3;display:flex;flex-direction:column;gap:7px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Type</span>
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ typeItems }}" value="{{ e.type }}" onChange="{{ setEditType }}" hint-size="100%,32px"></x-import>
+                      </div>
+                      <div style="grid-column:span 3;display:flex;flex-direction:column;gap:7px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Statut</span>
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ statusItems }}" value="{{ e.status }}" onChange="{{ setEditStatus }}" hint-size="100%,32px"></x-import>
+                      </div>
+                      <div style="grid-column:span 3;display:flex;flex-direction:column;gap:7px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Médium</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px">
+                          <sc-for list="{{ e.mediumChips }}" as="m" hint-placeholder-count="4">
+                            <button onClick="{{ m.onToggle }}" style="min-height:32px;padding:0 12px;border:1px solid {{ m.bc }};border-radius:8px;background:{{ m.bg }};color:{{ m.ink }};font-family:var(--font-interface);font-weight:600;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer">{{ m.name }}</button>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <div style="grid-column:span 3;display:flex;flex-direction:column;gap:7px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Dimensions</span>
+                        <div style="display:flex;align-items:center;gap:10px">
+                          <input value="{{ e.w }}" onChange="{{ setEditW }}" style="flex:1;min-width:0;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 12px;font-family:var(--font-interface);font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ink)">
+                          <span style="font-family:var(--font-interface);font-size:14px;color:var(--color-ink-muted)">×</span>
+                          <input value="{{ e.h }}" onChange="{{ setEditH }}" style="flex:1;min-width:0;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 12px;font-family:var(--font-interface);font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ink)">
+                          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Tabs" items="{{ unitItems }}" value="{{ e.unit }}" onChange="{{ setEditUnit }}" compact="{{ true }}" hint-size="120px,28px"></x-import>
+                        </div>
+                      </div>
+                      <div style="grid-column:span 2;display:flex;flex-direction:column;gap:7px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Mois</span>
+                        <select onChange="{{ setEditMonth }}" value="{{ e.month }}" style="width:100%;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 10px;font-family:var(--font-interface);font-size:14px;color:var(--color-ink)">
+                          <sc-for list="{{ monthOptions }}" as="m" hint-placeholder-count="13">
+                            <option value="{{ m.value }}">{{ m.label }}</option>
+                          </sc-for>
+                        </select>
+                      </div>
+                      <div style="grid-column:span 2">
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Année" value="{{ e.year }}" onChange="{{ setEditYear }}" hint-size="100%,80px"></x-import>
+                      </div>
+                      <div style="grid-column:span 2;display:flex;flex-direction:column;gap:7px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Prix de base</span>
+                        <div style="display:flex;align-items:center;gap:10px">
+                          <input value="{{ e.price }}" onChange="{{ setEditPrice }}" style="flex:1;min-width:0;min-height:44px;background:var(--color-bg);border:1px solid rgba(0,0,0,0.14);border-radius:8px;padding:0 12px;font-family:var(--font-interface);font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ink)">
+                          <span style="font-family:var(--font-interface);font-size:14px;color:var(--color-ink-muted)">€</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:14px;padding-top:16px;border-top:1px solid rgba(0,0,0,0.08)">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                        <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Composantes du prix</span>
+                        <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="ghost" compact="{{ true }}" onClick="{{ togglePriceOpen }}" hint-size="auto,32px">{{ priceOpenLabel }}</x-import>
+                      </div>
+                      <sc-if value="{{ e.priceOpen }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:grid;grid-template-columns:{{ editGridCols }};gap:14px">
+                          <sc-for list="{{ e.priceFields }}" as="p" hint-placeholder-count="6">
+                            <div style="grid-column:span 2">
+                              <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="{{ p.label }}" value="{{ p.value }}" onChange="{{ p.onChange }}" hint-size="100%,80px"></x-import>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px">
+                      <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="quiet" onClick="{{ backToList }}" hint-size="auto,44px">Annuler</x-import>
+                      <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="primary" onClick="{{ saveEdit }}" hint-size="auto,44px">Enregistrer les modifications</x-import>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:12px">
+                    <span style="font-family:var(--font-interface);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-ink-muted)">Offres reçues ({{ e.offers }})</span>
+                    <sc-if value="{{ e.hasOffers }}" hint-placeholder-val="{{ true }}">
+                      <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-radius:8px;overflow:hidden">
+                        <sc-for list="{{ e.offerRows }}" as="o" hint-placeholder-count="3">
+                          <div style="display:grid;grid-template-columns:{{ offerRowCols }};gap:14px;align-items:center;padding:13px 16px;border-bottom:1px solid rgba(0,0,0,0.06);border-left:6px solid {{ o.edge }};background:{{ o.bg }}">
+                            <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                              <span style="font-family:var(--font-interface);font-weight:600;font-size:14px;color:var(--color-ink)">{{ o.visitor }}</span>
+                              <span style="font-family:var(--font-interface);font-size:11px;letter-spacing:0.04em;color:var(--color-ink-muted)">{{ o.phone }} · {{ o.date }}</span>
+                            </div>
+                            <span style="font-family:var(--font-editorial);font-style:italic;font-size:16px;line-height:1.45;color:var(--color-ink);min-width:0">{{ o.message }}</span>
+                            <span style="font-family:var(--font-interface);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;color:{{ o.amountInk }};white-space:nowrap;text-align:right">{{ o.amount }}</span>
+                            <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="ghost" compact="{{ true }}" onClick="{{ o.onDelete }}" hint-size="auto,32px">Supprimer</x-import>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ e.noOffers }}" hint-placeholder-val="{{ false }}">
+                      <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.EmptyState" title="Aucune offre reçue" message="Les offres des visiteurs apparaîtront ici." dashed="{{ true }}" hint-size="100%,140px"></x-import>
+                    </sc-if>
+                  </div>
+
+                  <div style="background:var(--color-surface);border:1px solid rgba(0,0,0,0.08);border-left:6px solid var(--color-critical);border-radius:8px;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+                    <div style="display:flex;flex-direction:column;gap:4px">
+                      <span style="font-family:var(--font-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-critical-ink)">Supprimer l&apos;œuvre</span>
+                      <span style="font-family:var(--font-interface);font-size:12px;line-height:1.5;color:var(--color-ink-muted)">La suppression est irréversible. Images et offres seront effacées.</span>
+                    </div>
+                    <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="critical" onClick="{{ deleteArtwork }}" hint-size="auto,44px">Supprimer l&apos;œuvre</x-import>
+                  </div>
+
+                  <span style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.02em;color:var(--color-ink-muted)">originals/{{ e.num }}-{{ e.slug }}.jpg</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+        </main>
+
+        <footer style="position:relative;z-index:1;margin-top:36px;padding:28px 24px;text-align:center;border-top:1px solid rgba(0,0,0,0.08)">
+          <a href="mailto:etienne.le.pironnec.1@gmail.com" style="font-family:var(--font-interface);font-size:13px;letter-spacing:0.04em;color:var(--color-ink-muted)">etienne.le.pironnec.1@gmail.com</a>
+        </footer>
+
+        <sc-if value="{{ drawer }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;z-index:50;background:rgba(26,26,26,0.5);animation:fadeIn 160ms ease-out"></div>
+          <div role="dialog" aria-label="Menu de navigation" style="position:absolute;top:0;right:0;bottom:0;width:280px;max-width:82%;z-index:51;background:var(--color-surface);border-top-left-radius:8px;border-bottom-left-radius:8px;box-shadow:0 18px 44px rgba(26,26,26,0.28);display:flex;flex-direction:column;padding:8px 0 16px;animation:slideInRight 220ms ease-out">
+            <button onClick="{{ closeDrawer }}" aria-label="Fermer le menu" style="align-self:flex-end;margin-right:10px;width:34px;height:34px;border:1px solid rgba(0,0,0,0.14);border-radius:8px;background:transparent;color:var(--color-ink);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+            <div style="display:flex;flex-direction:column;padding-top:6px">
+              <span onClick="{{ goGallery }}" style="display:flex;align-items:center;height:48px;padding:0 20px;font-family:var(--font-interface);font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-ink);cursor:pointer">Galerie</span>
+              <span onClick="{{ goTimeline }}" style="display:flex;align-items:center;height:48px;padding:0 20px;font-family:var(--font-interface);font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-ink);cursor:pointer">Frise</span>
+              <span onClick="{{ goAbout }}" style="display:flex;align-items:center;height:48px;padding:0 20px;font-family:var(--font-interface);font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-ink);cursor:pointer">À propos</span>
+              <span onClick="{{ goProfile }}" style="display:flex;align-items:center;gap:12px;height:48px;padding:0 20px;font-family:var(--font-interface);font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-ink);cursor:pointer">
+                <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Avatar" name="Étienne L" tone="primary" size="{{ 28 }}" hint-size="28px,28px"></x-import>
+                Mon profil
+              </span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ identify }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Dialog" title="S&apos;identifier" eyebrow="Profil visiteur" onClose="{{ closeIdentify }}" width="{{ 420 }}" hint-size="100%,100%">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <span style="font-family:var(--font-editorial);font-style:italic;font-size:16px;line-height:1.45;color:var(--color-ink)">Votre numéro de téléphone est votre identifiant. Pas de mot de passe.</span>
+              <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Votre nom ou pseudo" placeholder="Ex : Sophie M." hint-size="100%,70px"></x-import>
+              <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Téléphone" placeholder="+33612345678" hint="Format international, il sert à retrouver votre compte." hint-size="100%,86px"></x-import>
+              <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Field" label="Email (optionnel)" placeholder="sophie@exemple.fr" hint-size="100%,70px"></x-import>
+              <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
+                <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="quiet" onClick="{{ closeIdentify }}" hint-size="auto,44px">Annuler</x-import>
+                <x-import component-from-global-scope="GaleriePOFDesignSystem_019e22.Button" variant="primary" onClick="{{ confirmIdentify }}" hint-size="auto,44px">Continuer</x-import>
+              </div>
+            </div>
+          </x-import>
+        </sc-if>
+
+        <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+          <div role="status" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:60;padding:11px 16px;border-radius:8px;background:{{ toastBg }};border:1px solid {{ toastBc }};color:{{ toastInk }};font-family:var(--font-interface);font-size:13px;letter-spacing:0.02em;box-shadow:0 2px 16px rgba(26,26,26,0.12);animation:fadeIn 160ms ease-out">{{ toastText }}</div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const WAVES = `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280"><g fill="none" stroke="#1a1a1a" stroke-width="1" stroke-linecap="round"><path d="M0 10 Q70 -55 140 10 T280 10"/><path d="M0 35 Q70 -30 140 35 T280 35"/><path d="M0 60 Q70 -5 140 60 T280 60"/><path d="M0 85 Q70 20 140 85 T280 85"/><path d="M0 110 Q70 45 140 110 T280 110"/><path d="M0 135 Q70 70 140 135 T280 135"/><path d="M0 160 Q70 95 140 160 T280 160"/><path d="M0 185 Q70 120 140 185 T280 185"/><path d="M0 210 Q70 145 140 210 T280 210"/><path d="M0 235 Q70 170 140 235 T280 235"/><path d="M0 260 Q70 195 140 260 T280 260"/></g></svg>`;
+
+const STATUS = {
+  available: { label: 'Disponible', tone: 'primary', edge: 'var(--color-primary)', badge: false, dot: 'var(--color-primary)' },
+  reserved:  { label: 'Réservé',    tone: 'warning', edge: 'var(--color-warning)', badge: true, dot: 'var(--color-warning)',
+    msg: "Réservée — l'artiste réfléchit à une offre en cours.", bg: 'var(--tint-warning-bg)', bc: 'var(--tint-warning-bc)', ink: 'var(--color-warning-ink)' },
+  sold:      { label: 'Vendu',      tone: 'critical', edge: 'var(--color-critical)', badge: true, dot: 'var(--color-critical)',
+    msg: 'Cette œuvre a trouvé son acquéreur.', bg: 'var(--tint-critical-bg)', bc: 'var(--tint-critical-bc)', ink: 'var(--color-critical-ink)' },
+  given:     { label: 'Donné',      tone: 'success', edge: 'var(--color-success)', badge: true, dot: 'var(--color-success)',
+    msg: "Cette œuvre n'est plus disponible — elle a été donnée.", bg: 'var(--tint-success-bg)', bc: 'var(--tint-success-bc)', ink: 'var(--color-success-ink)' },
+};
+
+const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const eur = (n) => `${n.toLocaleString('fr-FR')} €`;
+
+class Component extends DCLogic {
+  state = { route: 'gallery', viewport: 'desktop', filter: 'all', drawer: false, identify: false, adminTab: 'artworks', detailId: 2, saved: [3, 6], breakdown: false, history: false, hover: null };
+
+  artworks = [
+    { id: 1, title: 'Marée basse', type: 'Peinture', medium: 'Aquarelle', w: 40, h: 30, price: 380, status: 'available', offers: 1, year: 2025, month: 7, note: 'Peinte en une séance, au retour de la plage.' },
+    { id: 2, title: 'Atelier, fenêtre nord', type: 'Peinture', medium: 'Huile', w: 50, h: 65, price: 620, status: 'available', offers: 3, year: 2024, month: 3, note: 'La lumière du nord ne bouge pas. C’est ce qui rend la fenêtre peignable.' },
+    { id: 3, title: 'Portrait de dos', type: 'Dessin', medium: 'Graphite', w: 30, h: 40, price: 210, status: 'reserved', offers: 2, year: 2025, month: 11, note: 'Un dos dit souvent plus qu’un visage.' },
+    { id: 4, title: 'Verger en janvier', type: 'Dessin', medium: 'Encre', w: 42, h: 30, price: 260, status: 'available', offers: 0, year: 2026, month: 1, note: 'Les arbres nus sont les plus faciles à lire.' },
+    { id: 5, title: 'Quai des Bercs', type: 'Peinture', medium: 'Aquarelle', w: 56, h: 38, price: 440, status: 'sold', offers: 4, year: 2024, month: 9, note: 'Vendue à un voisin, deux rues plus loin.' },
+    { id: 6, title: 'Étude de mains', type: 'Dessin', medium: 'Graphite', w: 30, h: 30, price: 150, status: 'available', offers: 1, year: 2025, month: 5, note: 'Quatre positions, une seule séance.' },
+    { id: 7, title: 'Toits gris', type: 'Peinture', medium: 'Huile', w: 46, h: 34, price: 500, status: 'given', offers: 0, year: 2023, month: 12, note: 'Offerte. Elle n’a jamais eu de prix.' },
+    { id: 8, title: 'Chien endormi', type: 'Dessin', medium: 'Encre', w: 36, h: 26, price: 180, status: 'available', offers: 2, year: 2026, month: 2, note: 'Modèle immobile, enfin.' },
+    { id: 9, title: 'Falaise, contre-jour', type: 'Peinture', medium: 'Aquarelle', w: 38, h: 52, price: 410, status: 'available', offers: 0, year: 2025, month: 8, note: 'Le contre-jour simplifie tout.' },
+  ];
+
+  form = { title: '', type: null, month: '', year: '2026', mediums: [], w: '', h: '', unit: 'cm', status: 'available', price: '', currency: 'EUR', description: '', tagDraft: '', tags: ['atelier'], hasImage: false, showErrors: false, saveStatus: 'editing' };
+
+  set = (patch) => this.setState(patch);
+
+  setForm = (patch) => { this.form = { ...this.form, ...patch }; this.forceUpdate(); };
+
+  edit = (patch) => this.setForm({ ...patch, saveStatus: this.form.saveStatus === 'editing' ? 'editing' : 'editing' });
+
+  toast = (kind, text) => {
+    this.setState({ toastKind: kind, toastText: text });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toastText: null }), 3200);
+  };
+
+  resetForm = () => {
+    this.form = { ...this.form, title: '', type: null, month: '', year: '2026', mediums: [], w: '', h: '', unit: 'cm', status: 'available', price: '', currency: 'EUR', description: '', tagDraft: '', tags: [], hasImage: false, showErrors: false, saveStatus: 'editing' };
+    this.forceUpdate();
+  };
+
+  editForm = null;
+
+  openEdit = (a) => {
+    this.editForm = {
+      id: a.id, title: a.title, type: a.type, mediums: [a.medium], w: String(a.w), h: String(a.h),
+      unit: 'cm', month: String(a.month), year: String(a.year), status: a.status, price: String(a.price),
+      description: a.note, priceOpen: false, dirty: false,
+      parts: { hours: String(Math.round(a.price * 0.45)), format: String(Math.round(a.price * 0.2)), framing: '40', materials: String(Math.round(a.price * 0.12)), technicality: '4', attachment: '3' },
+      deleted: [],
+    };
+    this.setState({ route: 'admin', adminTab: 'artworks', adminView: 'edit' });
+  };
+
+  setEdit = (patch) => { this.editForm = { ...this.editForm, ...patch, dirty: true }; this.forceUpdate(); };
+
+  formErrors() {
+    const f = this.form;
+    return {
+      title: !f.title.trim() ? 'Donner un titre, même provisoire.' : null,
+      year: f.year && !/^\d{4}$/.test(f.year) ? 'Quatre chiffres.' : null,
+      w: f.w && !/^\d+([.,]\d+)?$/.test(f.w) ? 'Nombre uniquement.' : null,
+      h: f.h && !/^\d+([.,]\d+)?$/.test(f.h) ? 'Nombre uniquement.' : null,
+    };
+  }
+
+  toggleSave = (id) => this.setState(s => ({ saved: s.saved.includes(id) ? s.saved.filter(x => x !== id) : s.saved.concat(id) }));
+
+  decorate(a) {
+    const st = STATUS[a.status];
+    const saved = this.state.saved.includes(a.id);
+    const hours = Math.round(a.price * 0.45 / 10) * 10;
+    const format = Math.round(a.price * 0.2 / 10) * 10;
+    const materials = Math.round(a.price * 0.12 / 5) * 5;
+    const best = a.offers ? Math.round(a.price * 0.88 / 10) * 10 : 0;
+    const offerList = Array.from({ length: a.offers }, (_, i) => ({
+      date: `${String(4 + i * 6).padStart(2, '0')}/0${2 + i}/2026`,
+      amount: eur(best - (a.offers - 1 - i) * 40),
+    })).reverse();
+    return {
+      ...a,
+      num: String(a.id).padStart(3, '0'),
+      ratio: `${a.w} / ${a.h}`,
+      meta: `${a.medium} · ${a.w}×${a.h} cm`,
+      cartelMeta: `${a.type} · ${a.medium} · ${MONTHS[a.month - 1]} ${a.year}`,
+      dimsLabel: `${a.w} × ${a.h} cm`,
+      dot: st.dot,
+      priceEdge: a.status === 'available' ? 'var(--color-primary)' : 'rgba(0,0,0,0.15)',
+      isAvailable: a.status === 'available',
+      isSold: a.status === 'sold',
+      notAvailable: a.status !== 'available',
+      statusMessage: st.msg || '',
+      msgBg: st.bg || 'transparent',
+      msgBorder: st.bc || 'transparent',
+      msgInk: st.ink || 'var(--color-ink)',
+      hasOffers: a.offers > 0,
+      bestOfferLabel: eur(best),
+      offerList,
+      breakdown: [
+        { label: 'Temps de travail', display: `+${eur(hours)}` },
+        { label: 'Format', display: `+${eur(format)}` },
+        { label: 'Encadrement', display: a.status === 'given' ? 'Inclus' : `+${eur(40)}` },
+        { label: 'Matériaux', display: `+${eur(materials)}` },
+        { label: 'Complexité technique', display: '4/5' },
+        { label: 'Attachement', display: '3/5' },
+      ],
+      priceLabel: eur(a.price),
+      offersLabel: a.offers === 0 ? 'aucune offre' : a.offers === 1 ? '1 offre' : `${a.offers} offres`,
+      statusLabel: st.label,
+      tone: st.tone,
+      edge: st.edge,
+      hasBadge: st.badge,
+      heart: saved ? '♥' : '♡',
+      heartColor: saved ? 'var(--color-critical-ink)' : 'var(--color-ink-muted)',
+      overlay: this.state.hover === a.id ? 1 : 0,
+      onEnter: () => this.setState({ hover: a.id }),
+      onLeave: () => this.setState(p => (p.hover === a.id ? { hover: null } : null)),
+      onOpen: () => this.setState({ route: 'detail', detailId: a.id, drawer: false }),
+      onEdit: () => this.openEdit(a),
+      onSave: (e) => { if (e) e.stopPropagation(); this.toggleSave(a.id); },
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const f = this.form;
+    const ed = this.editForm;
+    const VISITORS = [
+      { visitor: 'Sophie M.', phone: '••••5678', message: 'Elle irait très bien dans l’entrée.' },
+      { visitor: 'Marc D.', phone: '••••1204', message: '' },
+      { visitor: 'Claire B.', phone: '••••8890', message: 'Possible de la voir en vrai ?' },
+      { visitor: 'Yanis R.', phone: '••••3345', message: '' },
+    ];
+    const editOffers = ed ? VISITORS.slice(0, (this.artworks.find(a => a.id === ed.id) || { offers: 0 }).offers)
+      .filter((_, i) => !ed.deleted.includes(i))
+      .map((v, i) => {
+        const base = Number(String(ed.price).replace(',', '.')) || 0;
+        const amount = Math.round(base * 0.88 / 10) * 10 - i * 40;
+        return {
+          ...v,
+          message: v.message || '—',
+          date: `${String(4 + i * 6).padStart(2, '0')}/0${2 + i}/2026`,
+          amount: eur(amount),
+          amountInk: i === 0 ? 'var(--color-primary-ink)' : 'var(--color-ink)',
+          edge: i === 0 ? 'var(--color-primary)' : 'transparent',
+          bg: i === 0 ? 'var(--tint-primary-bg)' : 'transparent',
+          onDelete: () => { this.editForm = { ...ed, deleted: ed.deleted.concat(i) }; this.forceUpdate(); this.toast('ok', 'Offre supprimée.'); },
+        };
+      }) : [];
+    const key = (a) => a.year * 12 + (a.month - 1);
+    const sorted = this.artworks.map(a => this.decorate(a)).sort((a, b) => key(a) - key(b));
+    const kMin = key(sorted[0]);
+    const kMax = key(sorted[sorted.length - 1]);
+    const span = Math.max(1, kMax - kMin);
+    const pos = (a) => 6 + ((key(a) - kMin) / span) * 88;
+    const frise = {
+      min: sorted[0], max: sorted[sorted.length - 1],
+      years: Array.from({ length: sorted[sorted.length - 1].year - sorted[0].year + 1 }, (_, i) => {
+        const y = sorted[0].year + i;
+        return { label: String(y), pos: 6 + ((y * 12 - kMin) / span) * 88 };
+      }).filter(y => y.pos >= 0 && y.pos <= 100),
+      above: [], below: [],
+    };
+    sorted.forEach((a, i) => {
+      const hovered = s.hover === a.id;
+      const item = {
+        ...a,
+        pos: pos(a),
+        stem: i % 4 === 0 || i % 4 === 1 ? '28px' : '72px',
+        dateShort: `${MONTHS[a.month - 1].slice(0, 4)} ${a.year}`,
+        dot: hovered ? 'var(--color-primary)' : 'var(--color-ink)',
+        cardBg: 'var(--color-surface)',
+        cardBc: hovered ? 'var(--color-primary)' : 'rgba(0,0,0,0.08)',
+        shadow: hovered ? '0 2px 16px rgba(26,26,26,0.12)' : 'none',
+      };
+      (i % 2 === 0 ? frise.above : frise.below).push(item);
+    });
+    const errs = this.formErrors();
+    const hasFormErrors = !!(errs.title || errs.year || errs.w || errs.h);
+    const items = this.artworks.map(a => this.decorate(a));
+    const match = (a, f) => f === 'all' || (f.startsWith('type:') && a.type === f.slice(5)) || (f.startsWith('medium:') && a.medium === f.slice(7));
+    const filters = ['all', 'type:Peinture', 'type:Dessin', 'medium:Aquarelle', 'medium:Huile', 'medium:Encre', 'medium:Graphite'];
+    const labels = { all: 'Tous', 'type:Peinture': 'Peintures', 'type:Dessin': 'Dessins', 'medium:Aquarelle': 'Aquarelle', 'medium:Huile': 'Huile', 'medium:Encre': 'Encre', 'medium:Graphite': 'Graphite' };
+    const filterTabs = filters.map(f => ({ id: f, label: `${labels[f]} ${items.filter(a => match(a, f)).length}` }));
+
+    const mobile = s.viewport === 'mobile';
+    const current = items.find(a => a.id === s.detailId) || items[0];
+    const idx = items.indexOf(current);
+    const prev = items[(idx - 1 + items.length) % items.length];
+    const next = items[(idx + 1) % items.length];
+    const savedList = items.filter(a => s.saved.includes(a.id));
+    const myOffers = [
+      { id: 2, title: 'Atelier, fenêtre nord', date: '14/02/2026', amount: eur(540) },
+      { id: 5, title: 'Quai des Bercs', date: '02/12/2025', amount: eur(400) },
+      { id: 8, title: 'Chien endormi', date: '20/11/2025', amount: eur(160) },
+    ].map(o => ({ ...o, onOpen: () => this.set({ route: 'detail', detailId: o.id }) }));
+    const acquisitions = [{ id: 5, title: 'Quai des Bercs', onOpen: () => this.set({ route: 'detail', detailId: 5 }) }];
+    const routeNames = { gallery: 'Galerie', timeline: 'Frise', detail: current.title, about: 'À propos', profile: 'Mon profil', admin: 'Administration' };
+    const sold = this.artworks.filter(a => a.status === 'sold').length;
+    const offers = this.artworks.reduce((n, a) => n + a.offers, 0);
+
+    return {
+      route: s.route, viewport: s.viewport, filter: s.filter, filterTabs, adminTab: s.adminTab,
+      drawer: s.drawer, identify: s.identify,
+      isGallery: s.route === 'gallery', isDetail: s.route === 'detail', isAbout: s.route === 'about',
+      isProfile: s.route === 'profile', isAdmin: s.route === 'admin',
+      isTimeline: s.route === 'timeline',
+      friseOverflow: mobile ? 'auto' : 'hidden',
+      friseWidth: mobile ? '1500px' : '100%',
+      friseMinWidth: mobile ? '1500px' : '0',
+      friseHeight: mobile ? '400px' : '460px',
+      friseThumb: mobile ? '92px' : '104px',
+      friseHint: mobile ? 'Faites glisser la frise vers la gauche pour avancer dans le temps.' : 'La frise tient dans la page, de la plus ancienne à la plus récente.',
+      friseSpan: `${frise.min.year} – ${frise.max.year}`,
+      friseYears: frise.years,
+      friseAbove: frise.above,
+      friseBelow: frise.below,
+      isMobile: mobile, isDesktop: !mobile,
+      isPublicNavDesktop: !mobile && s.route !== 'admin',
+      isPublicNavMobile: mobile && s.route !== 'admin',
+      isLoggedIn: true, isGuest: false,
+      showBack: s.route === 'detail', hideBack: s.route !== 'detail',
+      navSub: routeNames[s.route],
+      decorUrl: `url("data:image/svg+xml;utf8,${encodeURIComponent(WAVES)}")`,
+      decorOpacity: 0.07,
+      framePad: mobile ? '28px 20px 40px' : '0',
+      frameW: mobile ? '390px' : '100%',
+      frameH: mobile ? '780px' : 'auto',
+      frameShadow: mobile ? '0 18px 44px rgba(26,26,26,0.28)' : 'none',
+      mainPad: s.route === 'detail' ? '0' : (mobile ? '20px 16px 0' : '20px 24px 0'),
+      detailMinH: mobile ? 'auto' : 'calc(100vh - 56px)',
+      detailImgPad: mobile ? '48px 20px 32px' : '40px 48px',
+      detailImgMaxH: mobile ? 'none' : 'calc(100vh - 176px)',
+      panelPos: mobile ? 'static' : 'sticky',
+      panelMaxH: mobile ? 'none' : 'calc(100vh - 56px)',
+      panelOverflow: mobile ? 'visible' : 'auto',
+      gridCols: mobile ? '1fr' : 'repeat(3, 1fr)',
+      cols: mobile ? 1 : 3,
+      adminCols: mobile ? '1fr' : 'repeat(2, 1fr)',
+      detailCols: mobile ? '1fr' : '1fr 420px',
+      totalCount: this.artworks.length,
+      artworks: items,
+      filterRowDir: mobile ? 'column' : 'row',
+      filterRowAlign: mobile ? 'flex-start' : 'center',
+      filterRowGap: mobile ? '12px' : '16px',
+      filterOverflow: mobile ? 'visible' : 'auto',
+      sort: s.sort || 'recent',
+      sortTabs: mobile
+        ? [{ id: 'recent', label: 'Récentes' }, { id: 'old', label: 'Anciennes' }]
+        : [{ id: 'recent', label: 'Plus récentes' }, { id: 'old', label: 'Plus anciennes' }],
+      setSort: (v) => this.set({ sort: v }),
+      visible: items.filter(a => match(a, s.filter))
+        .sort((a, b) => ((s.sort === 'old' ? 1 : -1) * ((a.year * 12 + a.month) - (b.year * 12 + b.month)))),
+      savedList, hasSaved: savedList.length > 0, noSaved: savedList.length === 0, savedCount: savedList.length,
+      current,
+      currentSaveLabel: s.saved.includes(current.id) ? 'Enregistrée' : 'Enregistrer',
+      toggleCurrentSave: () => this.toggleSave(current.id),
+      showBreakdown: s.breakdown,
+      breakdownLabel: s.breakdown ? 'Masquer le détail ↑' : 'Voir le détail du prix ↓',
+      toggleBreakdown: () => this.setState(p => ({ breakdown: !p.breakdown })),
+      showHistory: s.history,
+      historyLabel: s.history ? 'Masquer les offres ↑' : 'Voir le détail des offres ↓',
+      toggleHistory: () => this.setState(p => ({ history: !p.history })),
+      prevTitle: prev.title, nextTitle: next.title,
+      goPrev: () => this.set({ detailId: prev.id, breakdown: false, history: false }),
+      goNext: () => this.set({ detailId: next.id, breakdown: false, history: false }),
+      myOffers, myOffersCount: myOffers.length,
+      acquisitions, acquisitionsCount: acquisitions.length,
+      adminTiles: [
+        { value: String(this.artworks.length), label: 'Œuvres publiées' },
+        { value: String(offers), label: 'Offres reçues', tone: 'primary' },
+        { value: String(sold), label: 'Vendues', tone: 'critical' },
+        { value: '2', label: 'Brouillons', tone: 'warning' },
+      ],
+      isListTab: s.adminTab !== 'upload' && s.adminView !== 'edit',
+      isUploadTab: s.adminTab === 'upload' && s.adminView !== 'edit',
+      isEditView: s.adminView === 'edit' && !!ed,
+      editHeroCols: mobile ? '1fr' : 'minmax(0, 1fr) 400px',
+      editGridCols: mobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(6, minmax(0,1fr))',
+      offerRowCols: mobile ? '1fr' : 'minmax(0,1.1fr) minmax(0,1.4fr) auto auto',
+      priceOpenLabel: ed && ed.priceOpen ? 'Masquer ↑' : 'Déplier ↓',
+      togglePriceOpen: () => this.setEdit({ priceOpen: !ed.priceOpen }),
+      e: ed ? {
+        ...ed,
+        num: String(ed.id).padStart(3, '0'),
+        slug: ed.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        ratio: `${ed.w || 1} / ${ed.h || 1}`,
+        statusLabel: STATUS[ed.status].label,
+        tone: STATUS[ed.status].tone,
+        priceLabel: ed.price ? eur(Number(String(ed.price).replace(',', '.'))) : '—',
+        dirtyLabel: ed.dirty ? 'Modifications non enregistrées' : 'À jour',
+        quickInfo: [
+          { label: 'Type', value: ed.type || '—' },
+          { label: 'Médium', value: ed.mediums.join(', ') || '—' },
+          { label: 'Dimensions', value: ed.w && ed.h ? `${ed.w} × ${ed.h} ${ed.unit}` : '—' },
+          { label: 'Créée', value: ed.month ? `${MONTHS[Number(ed.month) - 1]} ${ed.year}` : ed.year || '—' },
+        ],
+        mediumChips: ['Aquarelle', 'Huile', 'Encre', 'Graphite'].map(name => {
+          const on = ed.mediums.includes(name);
+          return {
+            name,
+            bg: on ? 'var(--color-primary)' : 'var(--color-bg)',
+            bc: on ? 'var(--color-primary)' : 'rgba(0,0,0,0.08)',
+            ink: on ? 'var(--color-ink-inverse)' : 'var(--color-ink)',
+            onToggle: () => this.setEdit({ mediums: on ? ed.mediums.filter(x => x !== name) : ed.mediums.concat(name) }),
+          };
+        }),
+        priceFields: [
+          { key: 'hours', label: 'Temps de travail' }, { key: 'format', label: 'Format' },
+          { key: 'framing', label: 'Encadrement' }, { key: 'materials', label: 'Matériaux' },
+          { key: 'technicality', label: 'Technicité /5' }, { key: 'attachment', label: 'Attachement /5' },
+        ].map(p => ({
+          label: p.label, value: ed.parts[p.key],
+          onChange: (ev) => this.setEdit({ parts: { ...ed.parts, [p.key]: ev.target.value.replace(/[^\d.,]/g, '') } }),
+        })),
+        offers: editOffers.length,
+        hasOffers: editOffers.length > 0,
+        noOffers: editOffers.length === 0,
+        offerRows: editOffers,
+        viewPublic: () => this.set({ route: 'detail', detailId: ed.id, adminView: 'list' }),
+      } : null,
+      setEditTitle: (ev) => this.setEdit({ title: ev.target.value }),
+      setEditType: (v) => this.setEdit({ type: v }),
+      setEditStatus: (v) => this.setEdit({ status: v }),
+      setEditW: (ev) => this.setEdit({ w: ev.target.value.replace(/[^\d.,]/g, '') }),
+      setEditH: (ev) => this.setEdit({ h: ev.target.value.replace(/[^\d.,]/g, '') }),
+      setEditUnit: (v) => this.setEdit({ unit: v }),
+      setEditMonth: (ev) => this.setEdit({ month: ev.target.value }),
+      setEditYear: (ev) => this.setEdit({ year: ev.target.value.replace(/\D/g, '').slice(0, 4) }),
+      setEditPrice: (ev) => this.setEdit({ price: ev.target.value.replace(/[^\d.,]/g, '') }),
+      setEditDescription: (ev) => this.setEdit({ description: ev.target.value }),
+      saveEdit: () => {
+        const src = this.artworks.find(a => a.id === ed.id);
+        if (src) Object.assign(src, {
+          title: ed.title, type: ed.type, medium: ed.mediums[0] || src.medium, status: ed.status,
+          w: Number(String(ed.w).replace(',', '.')) || src.w, h: Number(String(ed.h).replace(',', '.')) || src.h,
+          price: Number(String(ed.price).replace(',', '.')) || src.price,
+          month: Number(ed.month) || src.month, year: Number(ed.year) || src.year, note: ed.description,
+        });
+        this.editForm = { ...ed, dirty: false };
+        this.toast('ok', 'Œuvre mise à jour.');
+      },
+      deleteArtwork: () => {
+        this.artworks = this.artworks.filter(a => a.id !== ed.id);
+        this.editForm = null;
+        this.set({ adminView: 'list' });
+        this.toast('ok', 'Œuvre supprimée.');
+      },
+      backToList: () => this.set({ adminTab: 'artworks', adminView: 'list' }),
+      uploadCols: mobile ? '1fr' : '1fr 460px',
+      dropHeight: mobile ? '260px' : '420px',
+      dropText: f.hasImage ? 'Photo prête — traitement au moment de la publication.' : 'Déposer la photo de l’œuvre, ou choisir un fichier.',
+      dropAction: f.hasImage ? 'Remplacer la photo' : 'Choisir un fichier',
+      pickFile: () => this.setForm({ hasImage: !f.hasImage }),
+      fileName: f.hasImage ? 'IMG_4821.jpeg — 4,2 Mo' : 'aucun fichier',
+      variants: f.hasImage ? '4096 / 2048 / 1024 / 320 px — WebP' : '—',
+      fileInk: f.hasImage ? 'var(--color-ink)' : 'var(--color-ink-muted)',
+      saveTone: f.saveStatus === 'published' ? 'success' : f.saveStatus === 'saved' ? 'primary' : 'warning',
+      saveLabel: { editing: 'Modifications non enregistrées', saving: 'Enregistrement…', saved: 'Enregistré', publishing: 'Publication…', published: 'Publiée' }[f.saveStatus],
+      pipeline: ['Photo', 'Traitement', 'À valider', 'Publiée'].map((label, i) => {
+        const cur = f.hasImage ? 1 : 0;
+        const state = i < cur ? 'done' : i === cur ? 'current' : 'todo';
+        return {
+          n: i + 1, label,
+          bg: state === 'current' ? 'var(--color-primary)' : state === 'done' ? 'var(--tint-success-bg)' : 'transparent',
+          bc: state === 'current' ? 'var(--color-primary)' : state === 'done' ? 'var(--tint-success-bc)' : 'rgba(0,0,0,0.14)',
+          ink: state === 'current' ? 'var(--color-ink-inverse)' : state === 'done' ? 'var(--color-success-ink)' : 'var(--color-ink-muted)',
+          labelInk: state === 'todo' ? 'var(--color-ink-muted)' : 'var(--color-ink)',
+        };
+      }),
+      f: {
+        ...f,
+        titleError: f.showErrors ? errs.title : null,
+        yearError: f.showErrors ? errs.year : null,
+      },
+      typeItems: [{ id: 'Dessin', label: 'Dessin' }, { id: 'Peinture', label: 'Peinture' }],
+      unitItems: [{ id: 'cm', label: 'cm' }, { id: 'in', label: 'in' }, { id: 'mm', label: 'mm' }],
+      statusItems: [
+        { id: 'available', label: 'Disponible' }, { id: 'reserved', label: 'Réservé' },
+        { id: 'sold', label: 'Vendu' }, { id: 'given', label: 'Donné' },
+      ],
+      currencyItems: [{ id: 'EUR', label: '€ EUR' }, { id: 'USD', label: '$ USD' }, { id: 'GBP', label: '£ GBP' }, { id: 'CHF', label: 'CHF' }],
+      monthOptions: [{ value: '', label: '— Non défini —' }, ...MONTHS.map((m, i) => ({ value: String(i + 1), label: m }))],
+      mediumChips: ['Aquarelle', 'Huile', 'Encre', 'Graphite'].map(name => {
+        const on = f.mediums.includes(name);
+        return {
+          name,
+          bg: on ? 'var(--color-primary)' : 'var(--color-bg)',
+          bc: on ? 'var(--color-primary)' : 'rgba(0,0,0,0.08)',
+          ink: on ? 'var(--color-ink-inverse)' : 'var(--color-ink)',
+          onToggle: () => this.setForm({ mediums: on ? f.mediums.filter(x => x !== name) : f.mediums.concat(name) }),
+        };
+      }),
+      tagChips: f.tags.map(label => ({ label, onRemove: () => this.setForm({ tags: f.tags.filter(t => t !== label) }) })),
+      setTitle: (e) => this.setForm({ title: e.target.value, saveStatus: 'editing' }),
+      setType: (v) => this.setForm({ type: v, saveStatus: 'editing' }),
+      setMonth: (e) => this.setForm({ month: e.target.value, saveStatus: 'editing' }),
+      setYear: (e) => this.setForm({ year: e.target.value.replace(/\D/g, '').slice(0, 4), saveStatus: 'editing' }),
+      setW: (e) => this.setForm({ w: e.target.value, saveStatus: 'editing' }),
+      setH: (e) => this.setForm({ h: e.target.value, saveStatus: 'editing' }),
+      setUnit: (v) => this.setForm({ unit: v }),
+      setStatus: (v) => this.setForm({ status: v, saveStatus: 'editing' }),
+      setPrice: (e) => this.setForm({ price: e.target.value.replace(/[^\d.,]/g, ''), saveStatus: 'editing' }),
+      setCurrency: (v) => this.setForm({ currency: v }),
+      setDescription: (e) => this.setForm({ description: e.target.value, saveStatus: 'editing' }),
+      setTagDraft: (e) => this.setForm({ tagDraft: e.target.value }),
+      tagKeyDown: (e) => {
+        if (e.key !== 'Enter' && e.key !== ',') return;
+        e.preventDefault();
+        const v = this.form.tagDraft.trim();
+        if (v && !this.form.tags.includes(v)) this.setForm({ tags: this.form.tags.concat(v), tagDraft: '' });
+        else this.setForm({ tagDraft: '' });
+      },
+      resetForm: this.resetForm,
+      saveDraft: () => {
+        this.setForm({ showErrors: true });
+        if (hasFormErrors) return this.toast('error', 'Quelques champs à corriger avant d’enregistrer.');
+        this.setForm({ saveStatus: 'saved' });
+        this.toast('ok', 'Brouillon enregistré.');
+      },
+      publish: () => {
+        this.setForm({ showErrors: true });
+        if (!this.form.hasImage) return this.toast('error', 'Ajoutez une photo avant de publier.');
+        if (hasFormErrors) return this.toast('error', 'Corrigez les champs en rouge avant de publier.');
+        this.setForm({ saveStatus: 'published' });
+        this.toast('ok', 'Œuvre publiée — le traitement continue en arrière-plan.');
+      },
+      hasToast: !!s.toastText,
+      toastText: s.toastText || '',
+      toastBg: s.toastKind === 'error' ? 'var(--tint-critical-bg)' : 'var(--tint-success-bg)',
+      toastBc: s.toastKind === 'error' ? 'var(--tint-critical-bc)' : 'var(--tint-success-bc)',
+      toastInk: s.toastKind === 'error' ? 'var(--color-critical-ink)' : 'var(--color-success-ink)',
+      routeTabs: [
+        { id: 'gallery', label: 'Galerie' }, { id: 'timeline', label: 'Frise' }, { id: 'detail', label: 'Œuvre' },
+        { id: 'about', label: 'À propos' }, { id: 'profile', label: 'Profil' }, { id: 'admin', label: 'Admin' },
+      ],
+      viewportTabs: [{ id: 'desktop', label: 'Desktop' }, { id: 'mobile', label: 'Mobile' }],
+      adminTabs: [
+        { id: 'artworks', label: 'Mes œuvres' }, { id: 'upload', label: 'Ajouter une œuvre' },
+      ],
+      setRoute: (r) => this.set({ route: r, drawer: false }),
+      setViewport: (v) => this.set({ viewport: v, drawer: false }),
+      setFilter: (f) => this.set({ filter: f }),
+      setAdminTab: (t) => this.set({ adminTab: t, adminView: 'list' }),
+      goGallery: () => this.set({ route: 'gallery', drawer: false }),
+      goAbout: () => this.set({ route: 'about', drawer: false }),
+      goTimeline: () => this.set({ route: 'timeline', drawer: false }),
+      goProfile: () => this.set({ route: 'profile', drawer: false }),
+      goAdmin: () => this.set({ route: 'admin', drawer: false }),
+      openDrawer: () => this.set({ drawer: true }),
+      closeDrawer: () => this.set({ drawer: false }),
+      openIdentify: () => this.set({ identify: true, drawer: false }),
+      closeIdentify: () => this.set({ identify: false }),
+      confirmIdentify: () => this.set({ identify: false, route: 'profile' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

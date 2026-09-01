@@ -100,7 +100,7 @@ export function AdminHeaderStrip({ userEmail }: AdminHeaderStripProps) {
               padding: '6px 12px',
               background: 'transparent',
               border: '1px solid rgba(0,0,0,0.12)',
-              borderRadius: 0,  /* D-03 */
+              borderRadius: 'var(--radius-sm)',
               fontFamily: 'var(--font-space-mono)',
               fontSize: 11,
               letterSpacing: '0.08em',

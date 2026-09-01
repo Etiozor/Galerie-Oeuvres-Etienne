@@ -22,7 +22,7 @@
  */
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { Oswald, Space_Mono, Cormorant_Garamond } from 'next/font/google'
+import { Oswald, Barlow, Cormorant_Garamond } from 'next/font/google'
 import { ModalTrigger } from '@/components/layout/ModalTrigger'
 import './globals.css'
 
@@ -36,10 +36,14 @@ const oswald = Oswald({
   display: 'swap',
 })
 
-const spaceMono = Space_Mono({
-  weight: ['400', '700'],
+// Police d'interface (nouveau design) : Barlow remplace Space Mono.
+// La variable --font-interface est l'alias canonique ; globals.css repointe
+// --font-space-mono → --font-interface pour que tout le markup existant
+// (qui référence var(--font-space-mono)) passe à Barlow sans édition ligne à ligne.
+const barlow = Barlow({
+  weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
-  variable: '--font-space-mono',
+  variable: '--font-interface',
   display: 'swap',
 })
 
@@ -65,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // pour être accessibles dans tout le CSS via var(--font-oswald), etc.
     <html
       lang="fr"
-      className={`${oswald.variable} ${spaceMono.variable} ${cormorantGaramond.variable}`}
+      className={`${oswald.variable} ${barlow.variable} ${cormorantGaramond.variable}`}
     >
       <body>
         {children}

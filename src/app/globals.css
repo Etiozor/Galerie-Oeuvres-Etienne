@@ -11,22 +11,66 @@
  * Règle D-03 : zéro coins arrondis sur tous les éléments.
  */
 @theme inline {
-  /* Palette 60/30/10 (D-01) */
-  --color-bg: #f2e8cf;          /* 60% — fond principal (pages, grille masonry) */
-  --color-surface: #ede0b8;     /* 30% — navigation, info panel page détail, filtres */
-  --color-teal: #5b8e7d;        /* Accent — badge disponible, CTA principal */
-  --color-orange: #f4a259;      /* Accent — bouton "Faire une offre", hover actif */
-  --color-green: #8cb369;       /* Accent — badge "donné" */
-  --color-yellow: #f4e285;      /* Accent — filtre actif sélectionné */
-  --color-red: #bc4b51;         /* Destructif — badge "vendu" (stamp diagonal) */
+  /* ---------- Surfaces (60/30/10) — nouveau design (tokens.css) ---------- */
+  --color-bg: #fdf8e8;          /* 60% — fond de page et de champ */
+  --color-surface: #f0e6c8;     /* 30% — cartes, barres, panneaux */
+  --color-desk: #e6dfcb;        /* fond hors-cadre, autour d'une planche */
+  --color-ink-surface: #1a1a1a; /* bandeau sombre, en-tête de marque */
+
+  /* ---------- Accents (10%) — aplats vifs ---------- */
+  --color-teal: #5b8e7d;        /* primaire — badge disponible, CTA */
+  --color-orange: #f4a259;      /* warning — hover actif */
+  --color-green: #8cb369;       /* success — badge "donné" */
+  --color-yellow: #f4e285;      /* highlight — filtre actif */
+  --color-red: #bc4b51;         /* critical — badge "vendu" */
+
+  /* Variantes foncées — texte/liens/chiffres posés sur clair ou sur teinte.
+     Règle : un accent vif ne sert jamais de couleur de texte. */
+  --color-teal-ink: #3f6b5c;
+  --color-green-ink: #4a6b2f;
+  --color-orange-ink: #7a3f14;
+  --color-red-ink: #9c3b41;
+
+  /* ---------- Texte ---------- */
   --color-ink: #1a1a1a;         /* Texte principal (quasi-noir) */
   --color-ink-muted: #5a5244;   /* Texte secondaire — méta, labels discrets */
+  --color-ink-inverse: #fdf8e8; /* Texte sur fond sombre */
 
-  /* Variables polices — injectées par next/font/google dans <html className="..."> */
-  /* Ces variables sont définies par next/font et passées via les classes CSS sur <html> */
+  /* ---------- Rôles sémantiques — préférer ces noms ---------- */
+  --color-primary: var(--color-teal);
+  --color-primary-ink: var(--color-teal-ink);
+  --color-success: var(--color-green);
+  --color-success-ink: var(--color-green-ink);
+  --color-warning: var(--color-orange);
+  --color-warning-ink: var(--color-orange-ink);
+  --color-critical: var(--color-red);
+  --color-critical-ink: var(--color-red-ink);
+  --color-highlight: var(--color-yellow);
+
+  /* ---------- Teintes de pastille (fond ~16%, bordure ~50%, texte ink) ---------- */
+  --tint-primary-bg: rgba(91,142,125,0.16);  --tint-primary-bc: rgba(91,142,125,0.55);
+  --tint-success-bg: rgba(140,179,105,0.18); --tint-success-bc: rgba(140,179,105,0.50);
+  --tint-warning-bg: rgba(244,162,89,0.22);  --tint-warning-bc: rgba(244,162,89,0.60);
+  --tint-critical-bg: rgba(188,75,81,0.14);  --tint-critical-bc: rgba(188,75,81,0.45);
+  --tint-neutral-bg: rgba(26,26,26,0.08);    --tint-neutral-bc: rgba(26,26,26,0.28);
+
+  /* ---------- Rayon unique — le nouveau design abandonne le "zéro coin" ---------- */
+  --radius-sm: 8px;
+
+  /* ---------- Variables polices — injectées par next/font/google sur <html> ----------
+   * --font-interface est la police d'interface canonique (Barlow, cf. layout.tsx).
+   * --font-space-mono est repointé vers --font-interface : tout le markup existant
+   * qui référence var(--font-space-mono) bascule sur Barlow sans édition fichier par fichier. */
   --font-oswald: var(--font-oswald);
-  --font-space-mono: var(--font-space-mono);
+  --font-interface: var(--font-interface);
+  --font-space-mono: var(--font-interface);
+  --font-barlow: var(--font-interface);
   --font-cormorant: var(--font-cormorant);
+  --font-display: var(--font-oswald);
+  --font-editorial: var(--font-cormorant);
+  /* --font-geist-sans n'a jamais été chargé (référencé dans le détail, le profil
+     et l'admin) : on l'aligne sur la police d'interface Barlow. */
+  --font-geist-sans: var(--font-interface);
 }
 
 /* Base : fond et texte par défaut du site */
@@ -73,7 +117,7 @@ body {
   --color-admin-mute-2:   #a3a3a3;
   --color-admin-mute-3:   #525252;
   --color-admin-ink:      #171717;
-  --radius-sm: 3px; /* D-03 révisé : coins 3px */
+  --radius-sm: 8px; /* Nouveau design : rayon unique 8px (public + admin) */
   --border-hairline: 1px solid rgba(0,0,0,0.08);
   --shadow-artwork: 0 2px 16px rgba(26,26,26,0.12);
 
@@ -97,12 +141,15 @@ body {
 }
 .pof-admin *, .pof-admin *::before, .pof-admin *::after { box-sizing: border-box; }
 
-/* ── Chrome admin ── */
+/* ── Chrome admin ──
+ * Nouveau design : bandeau + onglets en crème (--color-surface) pour rester
+ * cohérent avec AdminHeaderStrip (page d'édition, déjà en crème). La surface
+ * de travail dense (formulaires, tables) reste blanche pour la lisibilité. */
 .pof-admin .a-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 32px;
-  border-bottom: 1px solid var(--color-admin-divider);
-  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  background: var(--color-surface);
 }
 .pof-admin .a-brand {
   font: 700 20px/1 var(--font-oswald), 'Arial Narrow', sans-serif;
@@ -115,7 +162,7 @@ body {
 }
 .pof-admin .a-tabs {
   display: flex; gap: 2px; padding: 0 24px;
-  border-bottom: 1px solid var(--color-admin-divider); background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08); background: var(--color-surface);
 }
 .pof-admin .a-tab {
   padding: 14px; font: 500 13px var(--font-geist-sans), sans-serif;

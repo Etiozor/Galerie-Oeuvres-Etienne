@@ -66,7 +66,7 @@ function Chip({ value, label, active, color, onToggle }: {
         color: active ? '#fff' : 'var(--color-ink)',
         fontFamily: 'var(--font-space-mono)', fontSize: 12,
         letterSpacing: '0.06em', textTransform: 'uppercase',
-        cursor: 'pointer', borderRadius: 0, whiteSpace: 'nowrap', /* D-03 */
+        cursor: 'pointer', borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap',
         transition: 'background 140ms, color 140ms',
       }}
     >{label}</button>
@@ -211,7 +211,7 @@ export function GalleryClient({ artworks, types, mediums, visitorId, savedArtwor
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
             border: '1px solid rgba(0,0,0,0.12)', background: 'var(--color-bg)',
-            borderRadius: 3, padding: '0 12px', height: 36, minWidth: 180, flex: '0 1 220px',
+            borderRadius: 'var(--radius-sm)', padding: '0 12px', height: 36, minWidth: 180, flex: '0 1 220px',
             color: 'var(--color-ink-muted)',
           }}>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
@@ -290,7 +290,7 @@ export function GalleryClient({ artworks, types, mediums, visitorId, savedArtwor
                 border: '1px solid rgba(0,0,0,0.12)', background: 'var(--color-surface)',
                 fontFamily: 'var(--font-space-mono)', fontSize: 11,
                 letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: 'var(--color-ink)', cursor: 'pointer', height: 36, borderRadius: 3,
+                color: 'var(--color-ink)', cursor: 'pointer', height: 36, borderRadius: 'var(--radius-sm)',
               }}
             >
               <option value="date-desc">Récentes d&apos;abord</option>

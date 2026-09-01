@@ -1,0 +1,3 @@
+/* DesignSystemePersoMain — point d'entrée unique.
+   Les projets consommateurs lient ce fichier ; il importe le reste. */
+@import url('tokens.css');
