@@ -46,8 +46,10 @@ export default defineConfig({
       // (Safari), qu'il faudrait installer en plus. Pour détecter un débordement
       // horizontal, seule la LARGEUR compte (les media queries CSS réagissent à la
       // largeur) — Chromium à 390px reproduit fidèlement la mise en page mobile.
+      // 360px = largeur d'écran très répandue (beaucoup d'Android) et plus stricte
+      // que 390 : si ça tient à 360, ça tient sur la grande majorité des téléphones.
       name: 'mobile',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 360, height: 800 } },
     },
     {
       name: 'desktop',
