@@ -20,10 +20,17 @@
  * L'oxc parser de Vite ne transforme pas le JSX dans les fichiers .ts,
  * seulement dans les .tsx. React.createElement est équivalent. [Pattern existant]
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 import '@testing-library/jest-dom'
+
+// OfferHistory appelle useRouter() de next/navigation, qui exige un contexte
+// App Router monté (absent en test isolé). On mocke next/navigation pour fournir
+// un routeur factice — le composant peut alors se rendre hors de Next.js.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn(), forward: vi.fn(), prefetch: vi.fn() }),
+}))
 
 // Import différé — le composant n'existe pas encore lors de la RED phase
 import { OfferHistory } from '@/components/artwork/OfferHistory'
@@ -126,12 +133,14 @@ describe('OfferHistory', () => {
       expect(screen.getByText(/850/)).toBeInTheDocument()
     })
 
-    it('affiche le bouton "Voir toutes les offres" par défaut', () => {
+    it('affiche le résumé cliquable (toggle) par défaut', () => {
       render(
         makeHistory({ offerCount: 3, bestOffer: '850.00', allOffers: [offer1, offer2, offer3] })
       )
-      // POURQUOI ce bouton ? L'historique est en opt-in (CLAUDE.md — évite l'ancrage)
-      expect(screen.getByRole('button', { name: /voir toutes les offres/i })).toBeInTheDocument()
+      // POURQUOI ce toggle ? L'historique est en opt-in (CLAUDE.md — évite l'ancrage).
+      // Le résumé pleine largeur « {N} offres reçues · Meilleure {montant} » fait office
+      // de bouton d'ouverture/fermeture de la liste complète.
+      expect(screen.getByRole('button', { name: /offres? reçues?/i })).toBeInTheDocument()
     })
 
     it("ne montre pas la liste complete par defaut (avant clic)", () => {
@@ -147,14 +156,14 @@ describe('OfferHistory', () => {
 
   // ── Cas : toggle — révéler la liste complète ─────────────────────────────
 
-  describe('après clic sur "Voir toutes les offres"', () => {
+  describe('après clic sur le toggle', () => {
     it('affiche la liste complète avec les noms et montants', () => {
       render(
         makeHistory({ offerCount: 3, bestOffer: '850.00', allOffers: [offer1, offer2, offer3] })
       )
 
-      // Cliquer sur le bouton toggle (fireEvent.click est synchrone — pas besoin de userEvent ici)
-      fireEvent.click(screen.getByRole('button', { name: /voir toutes les offres/i }))
+      // Cliquer sur le toggle (fireEvent.click est synchrone — pas besoin de userEvent ici)
+      fireEvent.click(screen.getByRole('button', { name: /offres? reçues?/i }))
 
       // Vérifier que les noms des visiteurs sont maintenant visibles
       expect(screen.getByText('Marie Dupont')).toBeInTheDocument()
@@ -167,7 +176,7 @@ describe('OfferHistory', () => {
         makeHistory({ offerCount: 3, bestOffer: '850.00', allOffers: [offer1, offer2, offer3] })
       )
 
-      fireEvent.click(screen.getByRole('button', { name: /voir toutes les offres/i }))
+      fireEvent.click(screen.getByRole('button', { name: /offres? reçues?/i }))
 
       // Les montants doivent être visibles dans la liste (en euros, formatés)
       const allText = document.body.textContent ?? ''
@@ -177,16 +186,20 @@ describe('OfferHistory', () => {
       expect(allText).toContain('750')
     })
 
-    it('masque le bouton "Voir toutes les offres" une fois la liste ouverte', () => {
+    it('un second clic sur le toggle referme la liste', () => {
       render(
         makeHistory({ offerCount: 3, bestOffer: '850.00', allOffers: [offer1, offer2, offer3] })
       )
 
-      fireEvent.click(screen.getByRole('button', { name: /voir toutes les offres/i }))
+      const toggle = screen.getByRole('button', { name: /offres? reçues?/i })
 
-      // Le bouton ne doit plus être visible une fois la liste ouverte
-      // POURQUOI ? Évite que l'utilisateur clique à nouveau sur un bouton sans effet
-      expect(screen.queryByRole('button', { name: /voir toutes les offres/i })).not.toBeInTheDocument()
+      // Ouvrir : les noms apparaissent
+      fireEvent.click(toggle)
+      expect(screen.getByText('Marie Dupont')).toBeInTheDocument()
+
+      // Refermer : le toggle reste (design "cartel") mais la liste disparaît
+      fireEvent.click(toggle)
+      expect(screen.queryByText('Marie Dupont')).not.toBeInTheDocument()
     })
 
     it("n'affiche jamais le numero de telephone du visiteur", () => {
@@ -205,7 +218,7 @@ describe('OfferHistory', () => {
         makeHistory({ offerCount: 1, bestOffer: '500.00', allOffers: [offerWithName] })
       )
 
-      fireEvent.click(screen.getByRole('button', { name: /voir toutes les offres/i }))
+      fireEvent.click(screen.getByRole('button', { name: /offres? reçues?/i }))
 
       const allText = document.body.textContent ?? ''
 

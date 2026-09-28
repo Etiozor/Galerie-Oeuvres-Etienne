@@ -183,8 +183,9 @@ describe('deleteArtwork', () => {
     expect(db.query.artworks.findFirst).not.toHaveBeenCalled()
   })
 
-  it('Test 5 — session valide → storage.delete appelé 3 fois, db.delete appelé, redirect(/admin/artworks) appelé', async () => {
-    // Scénario : artiste connecté, œuvre existante avec 3 chemins
+  it('Test 5 — session valide → storage.delete appelé pour originalPath, db.delete appelé, redirect(/admin/artworks) appelé', async () => {
+    // Scénario : artiste connecté, œuvre existante
+    // NB : upload direct sans traitement → un seul chemin stocké (originalPath).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(auth.api.getSession).mockResolvedValue(mockArtistSession as any)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -216,12 +217,10 @@ describe('deleteArtwork', () => {
 
     await deleteArtwork(10)
 
-    // Vérifier que storage.delete est appelé 3 fois (un par chemin)
+    // Vérifier que storage.delete est appelé une fois, pour le fichier original
     const storageMock = getStorage()
-    expect(storageMock.delete).toHaveBeenCalledTimes(3)
+    expect(storageMock.delete).toHaveBeenCalledTimes(1)
     expect(storageMock.delete).toHaveBeenCalledWith('uploads/original-10.jpg')
-    expect(storageMock.delete).toHaveBeenCalledWith('uploads/processed-10.webp')
-    expect(storageMock.delete).toHaveBeenCalledWith('uploads/thumbnail-10.webp')
 
     // Vérifier que la DB est supprimée après les fichiers
     expect(db.delete).toHaveBeenCalledOnce()

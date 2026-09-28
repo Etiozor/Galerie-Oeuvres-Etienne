@@ -17,12 +17,12 @@ const mockArtwork = {
   description: 'Une étude soignée du visage humain.',
   widthCm: '30',
   heightCm: '40',
-  processedPath: 'processed/abc123.webp',
+  originalPath: 'originals/abc123.jpg',
   type: { name: 'Dessin' },
   medium: { name: 'Crayon graphite' },
 }
 
-const storageBaseUrl = 'http://localhost:3000/api/uploads/processed/abc123.webp'
+const storageBaseUrl = 'http://localhost:3000/api/uploads/originals/abc123.jpg'
 
 describe('truncateDescription', () => {
   it('retourne la description sans modification si < 160 chars', () => {
@@ -62,14 +62,14 @@ describe('buildArtworkMetadata', () => {
     expect(meta.openGraph?.description).toContain('30×40 cm')
   })
 
-  it("inclut l'URL d'image dans og:images si processedPath présent", () => {
+  it("inclut l'URL d'image dans og:images si originalPath présent", () => {
     const meta = buildArtworkMetadata(mockArtwork, storageBaseUrl)
     expect(meta.openGraph?.images).toHaveLength(1)
-    expect((meta.openGraph?.images as string[])[0]).toContain('processed/abc123.webp')
+    expect((meta.openGraph?.images as string[])[0]).toContain('originals/abc123.jpg')
   })
 
-  it('retourne og:images vide si pas de processedPath', () => {
-    const artwork = { ...mockArtwork, processedPath: null }
+  it('retourne og:images vide si pas de originalPath', () => {
+    const artwork = { ...mockArtwork, originalPath: null }
     const meta = buildArtworkMetadata(artwork, storageBaseUrl)
     expect(meta.openGraph?.images).toHaveLength(0)
   })
