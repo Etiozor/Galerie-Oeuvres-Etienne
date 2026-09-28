@@ -24,8 +24,9 @@ const baseURL = `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './e2e',
-  // Un test qui traîne = bug ; on coupe à 30s pour un retour rapide.
-  timeout: 30_000,
+  // 60s par test : en mode dev, la première compilation d'une page lourde
+  // (ex. /admin/artworks) peut être longue. En CI (build de prod), c'est rapide.
+  timeout: 60_000,
   // En CI, échoue si un test.only a été oublié dans le code.
   forbidOnly: !!process.env.CI,
   // En CI, réessaie une fois (démarrages de serveur parfois lents) ; 0 en local.
@@ -40,8 +41,13 @@ export default defineConfig({
 
   projects: [
     {
+      // Mobile = Chromium avec un viewport étroit (largeur d'un téléphone).
+      // POURQUOI pas devices['iPhone 12'] ? Ce descripteur force le moteur WebKit
+      // (Safari), qu'il faudrait installer en plus. Pour détecter un débordement
+      // horizontal, seule la LARGEUR compte (les media queries CSS réagissent à la
+      // largeur) — Chromium à 390px reproduit fidèlement la mise en page mobile.
       name: 'mobile',
-      use: { ...devices['iPhone 12'] },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } },
     },
     {
       name: 'desktop',

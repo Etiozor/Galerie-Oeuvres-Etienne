@@ -66,7 +66,10 @@ async function login(page: Page) {
   await page.fill('#email', ADMIN_EMAIL!)
   await page.fill('#password', ADMIN_PASSWORD!)
   await page.click('button[type="submit"]')
-  await page.waitForURL('**/admin/artworks', { timeout: 15_000 })
+  // waitUntil:'commit' → on valide dès que l'URL passe à /admin/artworks (auth OK),
+  // sans attendre le chargement complet de cette page lourde. En mode dev, sa
+  // première compilation peut être longue, d'où le timeout généreux.
+  await page.waitForURL('**/admin/artworks', { timeout: 45_000, waitUntil: 'commit' })
 }
 
 // skip() si pas d'identifiants de test → ne casse pas les runs locaux sans DB.
@@ -82,4 +85,22 @@ test.describe('pages admin', () => {
       await expectNoHorizontalOverflow(page, path)
     })
   }
+
+  // Page d'édition d'une œuvre — /admin/artworks/[id].
+  // C'est la page admin la plus complexe (colonnes, grilles) — donc la plus
+  // susceptible de déborder. On ne connaît pas l'ID à l'avance : on récupère le
+  // lien « Éditer » de la première œuvre de la liste. Si la base ne contient
+  // aucune œuvre (pas de seed), le test est ignoré proprement.
+  test("page admin édition d'une œuvre ne déborde pas en largeur", async ({ page }) => {
+    await login(page)
+    await page.goto('/admin/artworks')
+    await page.waitForLoadState('networkidle')
+
+    const editLinks = page.getByRole('link', { name: 'Éditer' })
+    const count = await editLinks.count()
+    test.skip(count === 0, 'aucune œuvre à éditer (base non seedée)')
+
+    const editHref = await editLinks.first().getAttribute('href')
+    await expectNoHorizontalOverflow(page, editHref!)
+  })
 })

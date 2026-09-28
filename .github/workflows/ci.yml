@@ -78,6 +78,11 @@ jobs:
       - name: Créer l'artiste de test
         run: npx tsx scripts/create-artist.ts "$E2E_ARTIST_PASSWORD"
 
+      # Peuple des œuvres de démo → la liste admin et la page d'édition sont
+      # testées avec du vrai contenu (le seed n'efface pas le compte artiste).
+      - name: Peupler des données de démo
+        run: npm run db:seed
+
       # Installe le navigateur Playwright (+ dépendances système).
       - name: Installer Playwright
         run: npx playwright install --with-deps chromium
