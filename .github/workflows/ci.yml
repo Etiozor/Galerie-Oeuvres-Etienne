@@ -1,0 +1,99 @@
+# Intégration continue — Galerie POF
+#
+# Ce workflow tourne sur GitHub à chaque push et chaque pull request.
+# Il valide qu'aucune fonctionnalité n'a été cassée par un nouveau développement.
+# Un ✅ vert = c'est bon à fusionner ; un ❌ rouge = quelque chose est cassé.
+#
+# Deux jobs indépendants :
+#   1. unit  — tests de logique (Vitest, mockés) : rapides, pas de base de données.
+#   2. e2e   — tests navigateur (Playwright) : lance une vraie base + l'app,
+#              vérifie notamment qu'aucune page ne déborde en largeur sur mobile.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  # ── Tests unitaires (logique métier, composants) ──────────────────────────
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # ── Tests end-to-end navigateur (mise en page, responsive, parcours admin) ─
+  e2e:
+    runs-on: ubuntu-latest
+
+    # Base PostgreSQL éphémère, recréée à chaque run (mêmes identifiants que docker-compose).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: galerie_pof
+          POSTGRES_USER: pof_user
+          POSTGRES_PASSWORD: pof_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pof_user -d galerie_pof"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://pof_user:pof_dev_password@localhost:5432/galerie_pof
+      BETTER_AUTH_URL: http://localhost:3000
+      # Secrets factices — valides uniquement pour cette base jetable de CI.
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-change-me-32chars
+      VISITOR_SESSION_SECRET: ci-only-visitor-session-secret-change-me-32chars
+      STORAGE_BACKEND: local
+      # Identifiants du compte artiste de test (créé plus bas).
+      ARTIST_EMAIL: e2e-artist@example.com
+      E2E_ARTIST_EMAIL: e2e-artist@example.com
+      E2E_ARTIST_PASSWORD: e2e-test-password-123
+      CI: 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # Crée les tables dans la base éphémère.
+      - name: Migrer le schéma
+        run: npm run db:push
+
+      # Crée le compte artiste de test pour les pages admin.
+      - name: Créer l'artiste de test
+        run: npx tsx scripts/create-artist.ts "$E2E_ARTIST_PASSWORD"
+
+      # Installe le navigateur Playwright (+ dépendances système).
+      - name: Installer Playwright
+        run: npx playwright install --with-deps chromium
+
+      # Build de production — Playwright lancera `next start` sur ce build.
+      - name: Build de l'application
+        run: npm run build
+
+      # Lance les tests E2E (Playwright démarre l'app tout seul via webServer).
+      - name: Tests E2E
+        run: npm run test:e2e
+
+      # Conserve le rapport HTML en cas d'échec pour diagnostiquer.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
