@@ -8,7 +8,9 @@
 import { auth } from '../src/lib/auth'
 
 async function main() {
-  const email = 'etienne.le.pironnec1@gmail.com'
+  // Email paramétrable via ARTIST_EMAIL (utilisé par la CI pour un compte de test),
+  // sinon l'email de l'artiste par défaut.
+  const email = process.env.ARTIST_EMAIL ?? 'etienne.le.pironnec1@gmail.com'
   const password = process.argv[2]
 
   if (!password) {
