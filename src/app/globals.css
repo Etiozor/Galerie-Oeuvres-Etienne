@@ -674,10 +674,14 @@ body {
 /* ── Split 1fr / 460px (miroir ArtworkDetail D-14) ── */
 .pof-gallery .split {
   position: relative; z-index: 1;
-  display: grid; grid-template-columns: 1fr 460px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 460px;
   border-top: 1px solid rgba(0,0,0,0.08); flex: 1;
 }
-@media (max-width: 1023px) { .pof-gallery .split { grid-template-columns: 1fr; } }
+/* minmax(0, 1fr) et non 1fr : '1fr' seul = minmax(auto, 1fr), ce qui empêche la
+   colonne de rétrécir sous la largeur "min-content" de son contenu → la colonne
+   gonflait (491px) au lieu de se caler sur l'écran mobile. minmax(0, ...) permet
+   à la piste de descendre jusqu'à 0, donc la colonne suit la largeur de l'écran. */
+@media (max-width: 1023px) { .pof-gallery .split { grid-template-columns: minmax(0, 1fr); } }
 
 .pof-gallery .image-col {
   padding: 40px 32px 56px; background: var(--color-bg);
@@ -877,7 +881,11 @@ body {
 }
 
 /* Helpers */
-.pof-gallery .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+/* minmax(0, 1fr) partout : '1fr' seul = minmax(auto, 1fr) et empêche les colonnes
+   de rétrécir sous la largeur de leur contenu (inputs, boutons), provoquant un
+   débordement rogné sur mobile. minmax(0, ...) laisse les colonnes se caler sur
+   la largeur disponible. */
+.pof-gallery .row-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .pof-gallery .price-input { position: relative; }
 .pof-gallery .price-input .suffix {
   position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
@@ -885,7 +893,7 @@ body {
   color: var(--color-ink-muted); pointer-events: none;
 }
 .pof-gallery .dim-input {
-  display: grid; grid-template-columns: 1fr 16px 1fr 32px; align-items: center; gap: 8px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 32px; align-items: center; gap: 8px;
 }
 .pof-gallery .dim-input .x {
   text-align: center; font: 400 14px var(--font-space-mono), monospace;
@@ -898,7 +906,7 @@ body {
 
 /* Segmented (Type / Statut) */
 .pof-gallery .seg {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   border: 1px solid rgba(0,0,0,0.18); border-radius: var(--radius-sm);
   overflow: hidden; background: var(--color-bg);
 }
@@ -978,7 +986,9 @@ body {
 /* Barre d'action sticky (bas de la colonne formulaire) */
 .pof-gallery .actionbar {
   position: sticky; bottom: 0;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  /* flex-wrap : sur écran étroit, le groupe de boutons passe sous "Réinitialiser"
+     au lieu de déborder la colonne (les 3 boutons ne tiennent pas sur une ligne à 270px). */
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   padding: 18px 0 24px; margin-top: 32px;
   background: linear-gradient(to top, var(--color-surface) 70%, rgba(240,230,200,0));
   border-top: 1px solid rgba(0,0,0,0.06);
