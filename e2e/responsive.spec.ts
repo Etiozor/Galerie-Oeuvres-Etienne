@@ -24,23 +24,59 @@ import { test, expect, type Page } from '@playwright/test'
 const OVERFLOW_TOLERANCE = 2
 
 /**
- * Vérifie qu'une page ne déborde pas horizontalement.
- * Compare la largeur totale du contenu (scrollWidth) à la largeur visible.
+ * Vérifie qu'une page ne déborde pas horizontalement — DEUX contrôles :
+ *
+ * 1. scrollWidth vs innerWidth : détecte un vrai scroll horizontal de page.
+ *
+ * 2. Éléments plus larges que l'écran : détecte le débordement « rogné » —
+ *    un élément à largeur fixe qui dépasse l'écran mais qu'un ancêtre en
+ *    `overflow:hidden` masque (donc invisible au contrôle scrollWidth, mais
+ *    le contenu est coupé sur un vrai téléphone). C'était le bug des grilles
+ *    admin en `1fr` (colonne figée à 432/491px). On ignore les éléments situés
+ *    dans un conteneur volontairement scrollable (`overflow-x: auto/scroll`),
+ *    comme le pipeline de la page upload.
  */
 async function expectNoHorizontalOverflow(page: Page, path: string) {
   await page.goto(path)
-  // Attendre que le rendu soit stabilisé (réseau au repos).
-  await page.waitForLoadState('networkidle')
+  // 'load' plutôt que 'networkidle' : des images de démo peuvent renvoyer 404
+  // et empêcher le réseau de se calmer, ce qui bloquerait le test.
+  await page.waitForLoadState('load')
+  await page.waitForTimeout(500) // laisser la mise en page se stabiliser
 
-  const { scrollWidth, innerWidth } = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    innerWidth: window.innerWidth,
-  }))
+  const res = await page.evaluate((tol) => {
+    const clientW = document.documentElement.clientWidth
+    // Un ancêtre scrollable horizontalement (auto/scroll) légitime le débordement.
+    const inScrollable = (el: Element): boolean => {
+      let p: Element | null = el.parentElement
+      while (p) {
+        const ox = getComputedStyle(p).overflowX
+        if (ox === 'auto' || ox === 'scroll') return true
+        p = p.parentElement
+      }
+      return false
+    }
+    const wide: string[] = []
+    document.querySelectorAll('body *').forEach((el) => {
+      const r = el.getBoundingClientRect()
+      if (r.width === 0 || r.height === 0) return
+      if (r.right > clientW + tol && !inScrollable(el)) {
+        const e = el as HTMLElement
+        const cls = typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/).join('.') : ''
+        wide.push(`${e.tagName.toLowerCase()}${cls} (right=${Math.round(r.right)}, w=${Math.round(r.width)})`)
+      }
+    })
+    return { clientW, scrollWidth: document.documentElement.scrollWidth, wide: wide.slice(0, 8) }
+  }, OVERFLOW_TOLERANCE)
 
   expect(
-    scrollWidth,
-    `${path} déborde en largeur : contenu ${scrollWidth}px pour une fenêtre de ${innerWidth}px`,
-  ).toBeLessThanOrEqual(innerWidth + OVERFLOW_TOLERANCE)
+    res.scrollWidth,
+    `${path} : scroll horizontal de page (contenu ${res.scrollWidth}px > écran ${res.clientW}px)`,
+  ).toBeLessThanOrEqual(res.clientW + OVERFLOW_TOLERANCE)
+
+  expect(
+    res.wide,
+    `${path} : éléments plus larges que l'écran (${res.clientW}px), rognés sur mobile :\n  ${res.wide.join('\n  ')}`,
+  ).toEqual([])
 }
 
 // ── Pages publiques (aucune connexion requise) ──────────────────────────────

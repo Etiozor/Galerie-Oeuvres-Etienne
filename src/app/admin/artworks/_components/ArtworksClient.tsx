@@ -79,10 +79,15 @@ export function ArtworksClient({ artworks, userEmail }: ArtworksClientProps) {
     <div style={{ minHeight: '100vh', background: 'var(--color-bg)', color: 'var(--color-ink)' }}>
       <style>{`
         .admin-wrap { max-width: 1180px; margin: 0 auto; padding: 20px 24px 48px; }
-        .admin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
+        /* minmax(0, 1fr) et non 1fr : '1fr' seul vaut minmax(auto, 1fr), ce qui
+           empêche la colonne de descendre sous la largeur "min-content" de son
+           contenu → la carte gonflait (432px) au lieu de se caler sur l'écran.
+           minmax(0, ...) autorise la piste à rétrécir jusqu'à 0, donc la carte
+           suit la largeur du conteneur et son contenu s'adapte. */
+        .admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
         @media (max-width: 768px) {
           .admin-wrap { padding: 16px 16px 40px; }
-          .admin-grid { grid-template-columns: 1fr; }
+          .admin-grid { grid-template-columns: minmax(0, 1fr); }
         }
       `}</style>
 
