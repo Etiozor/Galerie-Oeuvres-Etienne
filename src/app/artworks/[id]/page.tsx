@@ -206,6 +206,16 @@ export default async function ArtworkDetailPage({ params }: Props) {
   const offerCount = Number(offerAggregates[0]?.total ?? 0)
   const bestOffer = offerAggregates[0]?.best ?? null
 
+  // ── Session visiteur — lecture côté serveur ───────────────────────────────
+  // DOIT être lue AVANT allOffers : le .map() ci-dessous utilise visitorSession.visitorId
+  // pour calculer isOwn. Déclarer visitorSession après provoquerait une ReferenceError
+  // (zone morte temporelle du const) dès qu'une œuvre a au moins une offre.
+  //
+  // CRUCIAL : on lit seulement la session ici — on ne sauvegarde JAMAIS dans un Server Component.
+  // session.save() est réservé aux Server Actions (createOrLoginVisitor). [Piège 2, T-04-01-02]
+  // POURQUOI await getVisitorSession() ? Next.js 15 : cookies() est async. [Piège 1]
+  const visitorSession = await getVisitorSession()
+
   // Mapper les résultats vers le type OfferHistoryItem
   // Filtrer les lignes où le visiteur aurait été supprimé (LEFT JOIN → visitorName peut être null)
   // SÉCURITÉ : .filter() garantit que visitorName est non-null avant l'affichage
@@ -223,18 +233,6 @@ export default async function ArtworkDetailPage({ params }: Props) {
         ? o.visitorId === visitorSession.visitorId
         : undefined,
     }))
-
-  // ── Session visiteur — lecture côté serveur ───────────────────────────────
-  // POURQUOI ici et pas dans ArtworkInfoPanel ?
-  // ArtworkInfoPanel est un Server Component sans cookies() — il reçoit les données en props.
-  // La lecture de session doit se faire dans le Server Component de niveau page,
-  // qui a accès au contexte de requête Next.js (cookies disponibles).
-  //
-  // CRUCIAL : on lit seulement la session ici — on ne sauvegarde JAMAIS dans un Server Component.
-  // session.save() est réservé aux Server Actions (createOrLoginVisitor). [Piège 2, T-04-01-02]
-  //
-  // POURQUOI await getVisitorSession() ? Next.js 15 : cookies() est async. [Piège 1]
-  const visitorSession = await getVisitorSession()
 
   // ── Vérifier si l'œuvre est dans les favoris du visiteur connecté ─────────
   // Initialise l'état du SaveButton côté serveur pour éviter un flash visuel
